@@ -15,6 +15,27 @@
           "tul_email": "roman.spanek@tul.cz"
         }
       ]
+    },
+    {
+        "project_name": "QuizApp",
+        "github_repo_url": "https://github.com/myalias/my-awesome-project",
+        "members": [
+          {
+            "name": "Vlastimil Pálfi",
+            "github_alias": "PalfiVlastimil",
+            "tul_email": "vlastimil.palfi@tul.cz"
+          },
+          {
+            "name": "Jan Reisiegel",
+            "github_alias": "JanReisiegel",
+            "tul_email": "jan.reisiegel@tul.cz"
+          },
+          {
+            "name": "Dan Keršláger",
+            "github_alias": "DanKerslager",
+            "tul_email": "dan.kerslager@tul.cz"
+          }
+        ]
     }
   ]
 }
