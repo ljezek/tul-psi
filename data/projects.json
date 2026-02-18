@@ -15,6 +15,17 @@
           "tul_email": "roman.spanek@tul.cz"
         }
       ]
+    },
+    {
+      "project_name": "LOL tracker",
+      "github_repo_url": "https://github.com/rutaji/loltracker",
+      "members": [
+        {
+          "name": "Jiří Růta",
+          "github_alias": "rutaji",
+          "tul_email": "jiri.ruta@tul.cz"
+        }
+      ]
     }
   ]
 }
