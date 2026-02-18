@@ -1,0 +1,26 @@
+name: Prototype Gate 			    # Název v záložce "Actions" na GitHubu 
+on: 							    # Kdy se to má spustit?
+  pull_request:
+    paths:
+      - 'prototype/**'              # Jen když někdo upraví soubory ve složce /prototype
+    branches: [ main ] 			    # Jen když někdo chce mergovat do main
+
+jobs:						        # Joby se pouští paralelně
+  test-and-lint-prototype:		    # ID jobu (testy kódu ve folderu /prototype)
+    runs-on: ubuntu-latest  		# "Půjč mi od GitHubu čisté Ubuntu"
+    defaults:                       # Defaultní working directory pro všechny steps
+      run:
+        working-directory: ./prototype
+    steps:					        # Stepy v rámci jobu běží sekvenčně
+      - name: Checkout code 		# 1: Stáhni kód z repo do toho Ubuntu
+        uses: actions/checkout@v4	# Reference na existující akci
+      - name: Setup Node.js		    # 2: Nainstaluj prostředí (Node.js)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies  # 3: Nainstaluj závislosti
+        run: npm ci
+      - name: Run Lint			    # 4: Spusť linter
+        run: npm run lint
+      - name: Run Unit Tests		# 5: Spusť testy
+        run: npm test
