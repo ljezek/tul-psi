@@ -21,6 +21,11 @@
       "github_repo_url": "https://github.com/martinrenner/PSI",
       "members": [
         {
+          "name": "David Šálek",
+          "github_alias": "ddeejjvviidd",
+          "tul_email": "david.salek@tul.cz"
+        },
+        {
           "name": "Lilian Luca",
           "github_alias": "lilianlucatul",
           "tul_email": "lilian.luca@tul.cz"
