@@ -21,6 +21,11 @@
       "github_repo_url": "https://github.com/rutaji/loltracker",
       "members": [
         {
+          "name": "Martin Čížek",
+          "github_alias": "cizek-maritn",
+          "tul_email": "martin.cizek@tul.cz"
+        },
+        {
           "name": "Jiří Růta",
           "github_alias": "rutaji",
           "tul_email": "jiri.ruta@tul.cz"
