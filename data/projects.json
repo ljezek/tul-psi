@@ -1,0 +1,20 @@
+{
+  "2026": [
+    {
+      "project_name": "Lectors - Student Projects Catalogue",
+      "github_repo_url": "https://github.com/ljezek/tul-psi",
+      "members": [
+        {
+          "name": "Lukáš Ježek",
+          "github_alias": "ljezek",
+          "tul_email": "lukas.jezek@tul.cz"
+        },
+        {
+          "name": "Roman Špánek",
+          "github_alias": "roman-spanek",
+          "tul_email": "roman.spanek@tul.cz"
+        }
+      ]
+    }
+  ]
+}
