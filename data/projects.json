@@ -15,6 +15,17 @@
           "tul_email": "roman.spanek@tul.cz"
         }
       ]
+    },
+    {
+      "project_name": "PSI - Kanban Board",
+      "github_repo_url": "https://github.com/martinrenner/PSI",
+      "members": [
+        {
+          "name": "Lilian Luca",
+          "github_alias": "lilianlucatul",
+          "tul_email": "lilian.luca@tul.cz"
+        }
+      ]
     }
   ]
 }
