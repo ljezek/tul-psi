@@ -17,25 +17,51 @@
       ]
     },
     {
-        "project_name": "QuizApp",
-        "github_repo_url": "https://github.com/PSI-RDB-2026/QuizApp",
-        "members": [
-          {
-            "name": "Vlastimil Pálfi",
-            "github_alias": "PalfiVlastimil",
-            "tul_email": "vlastimil.palfi@tul.cz"
-          },
-          {
-            "name": "Jan Reisiegel",
-            "github_alias": "JanReisiegel",
-            "tul_email": "jan.reisiegel@tul.cz"
-          },
-          {
-            "name": "Dan Keršláger",
-            "github_alias": "DanKerslager",
-            "tul_email": "dan.kerslager@tul.cz"
-          }
-        ]
+      "project_name": "PSI - Kanban Board",
+      "github_repo_url": "https://github.com/martinrenner/PSI",
+      "members": [
+        {
+          "name": "David Šálek",
+          "github_alias": "ddeejjvviidd",
+          "tul_email": "david.salek@tul.cz"
+        },
+        {
+          "name": "Lilian Luca",
+          "github_alias": "lilianlucatul",
+          "tul_email": "lilian.luca@tul.cz"
+        },
+        {
+          "name": "Martin Renner",
+          "github_alias": "martinrenner",
+          "tul_email": "martin.renner@tul.cz"
+        },
+        {
+          "name": "Zakhar Fedorov",
+          "github_alias": "zakharfedorov",
+          "tul_email": "zakhar.fedorov@tul.cz"
+        }
+      ]
+    },
+    {
+      "project_name": "QuizApp",
+      "github_repo_url": "https://github.com/PSI-RDB-2026/QuizApp",
+      "members": [
+        {
+          "name": "Vlastimil Pálfi",
+          "github_alias": "PalfiVlastimil",
+          "tul_email": "vlastimil.palfi@tul.cz"
+        },
+        {
+          "name": "Jan Reisiegel",
+          "github_alias": "JanReisiegel",
+          "tul_email": "jan.reisiegel@tul.cz"
+        },
+        {
+          "name": "Dan Keršláger",
+          "github_alias": "DanKerslager",
+          "tul_email": "dan.kerslager@tul.cz"
+        }
+      ]
     }
   ]
 }
