@@ -17,7 +17,6 @@
       ]
     },
     {
-<<<<<<< feat/loltracker
       "project_name": "LOL tracker",
       "github_repo_url": "https://github.com/rutaji/loltracker",
       "members": [
@@ -35,7 +34,10 @@
           "name": "Ondřej Braunšveig",
           "github_alias": "OndrejBraunsveig",
           "tul_email": "ondrej.braunsveig@tul.cz"
-=======
+        }
+      ]
+    },
+    {
       "project_name": "PSI - Kanban Board",
       "github_repo_url": "https://github.com/martinrenner/PSI",
       "members": [
@@ -79,7 +81,6 @@
           "name": "Dan Keršláger",
           "github_alias": "DanKerslager",
           "tul_email": "dan.kerslager@tul.cz"
->>>>>>> main
         }
       ]
     }
