@@ -17,6 +17,27 @@
       ]
     },
     {
+      "project_name": "LOL tracker",
+      "github_repo_url": "https://github.com/rutaji/loltracker",
+      "members": [
+        {
+          "name": "Martin Čížek",
+          "github_alias": "cizek-maritn",
+          "tul_email": "martin.cizek@tul.cz"
+        },
+        {
+          "name": "Jiří Růta",
+          "github_alias": "rutaji",
+          "tul_email": "jiri.ruta@tul.cz"
+        },
+        {
+          "name": "Ondřej Braunšveig",
+          "github_alias": "OndrejBraunsveig",
+          "tul_email": "ondrej.braunsveig@tul.cz"
+        }
+      ]
+    },
+    {
       "project_name": "PSI - Kanban Board",
       "github_repo_url": "https://github.com/martinrenner/PSI",
       "members": [
