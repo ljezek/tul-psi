@@ -7,7 +7,7 @@
    * `git clone https://github.com/[YOUR-NAME]/tul-psi.git`
 3. Create your feature branch.
    * `git checkout -b feature/[MY-BRANCH]`
-4. Add your project definition to the [`projects.json`](./projects.json) - include project name, GitHub repo URL and your own user entry.
+4. Add your project definition to the [`/data/projects.json`](/data/projects.json) - include project name, GitHub repo URL and your own user entry.
 5. Commit and push your changes to your feature branch.
    * `git commit -a -m 'Define [MY AWESOME PROJECT] for PSI 2026'`
    * `git push` - publishes the branch to your fork of the repo
@@ -15,7 +15,7 @@
 7. Your teammates clone the repo on their machines & switch to your branch (see 2 & 3 above).
 8. Your teammates add themselves to your shared project and commit & push (see 5).
    * Keep the projects and team members sorted alphabetically by name.
-9. After your team is complete, one member creates a Pull Request to integrate your change into the `main` branch of the [official repo](https://github.com/ljezek/tul-psi/) ([guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)).
+9. After your team definition is complete in your fork, one team member creates a Pull Request to integrate your change into the `main` branch of the [official repo](https://github.com/ljezek/tul-psi/) ([guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)).
 
 ### Conflict resolution
 
@@ -35,7 +35,7 @@ The [`projects.json`](./projects.json) configuration file stores academic years,
 
 Please keep entries in all the lists alphabetically sorted by their name (i.e., projects by `project_name` and members by `name`).
 
-Example definition of projects.json:
+Example definition of [`projects.json`](./projects.json):
 
 ```json
 {
