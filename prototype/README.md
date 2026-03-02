@@ -1,20 +1,16 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Student Projects Catalogue Prototype
 
-# Run and deploy your AI Studio app
+The prototype of the SPC was created in Google AI Studio: https://ai.studio/apps/drive/1PRcyKxDGk0XJLBwoz7lRSUmtBYde11pg
 
-This contains everything you need to run your app locally.
+See more details about the app in the [specification](./SPECIFICATION.md).
 
-View your app in AI Studio: https://ai.studio/apps/drive/1PRcyKxDGk0XJLBwoz7lRSUmtBYde11pg
-
-## Run Locally
+## Running Locally
 
 **Prerequisites:**  Node.js
 
-
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Optional: Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+4. Open the app at [localhost:3000](http://localhost:3000/)
