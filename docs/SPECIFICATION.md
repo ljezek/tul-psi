@@ -30,15 +30,16 @@ At the end of the term, they review the **Feedback** tab. They see anonymized co
 
 ## UX Flow
 
-The application uses OTP-based authentication for Students and Lecturers, and their role is derived from the authenticated account. Public visitors can access the Project Dashboard without authentication. There is no manual role-picking step in the production flow; instead, authenticated users are automatically routed based on their stored role.
+The application will use OTP-based authentication for Students and Lecturers, and their role is derived from the authenticated account. Public visitors can access the Project Dashboard without authentication.
+
 ```mermaid
 graph TD
-    Start[App Entry] --> RoleRoute{Role-based Routing (derived from account)}
-    RoleRoute -->|Public (unauthenticated)| Dashboard[Project Dashboard]
-    RoleRoute -->|Student (authenticated)| StudentZone[Student Zone]
-    RoleRoute -->|Lecturer (authenticated)| AdminPanel[Admin Panel]
+    Start[App Entry] --> RoleRoute{Role-based Routing}
+    RoleRoute -->|Public - unauthenticated| Dashboard[Project Dashboard]
+    RoleRoute -->|Student| StudentZone[Student Zone]
+    RoleRoute -->|Lecturer| AdminPanel[Admin Panel]
     
-    Dashboard --> ProjectDetail[Project Detail (Modal)]
+    Dashboard --> ProjectDetail[Project Detail]
     
     StudentZone --> CourseEval[Course Evaluation Form]
     StudentZone --> PeerEval[Peer Feedback Form]
@@ -65,6 +66,7 @@ graph TD
     *    Course feedback is presented to lecturers without student names to ensure honesty.
     *    Students can view anonymized feedback received from their peers to help them grow.
 *   **Collaboration Analytics:** Lecturers can view for each student average peer bonus points and anonymized peer feedback.
+*   **Web and Mobile:** Reactive web app that supports both web and mobile clients.
 
 ### Could have
 *   **Bilingual Interface:** Full support for Czech and English languages.
@@ -72,9 +74,9 @@ graph TD
 *   **Student-driven Project Management:** Student interface for managing their projects: adding description, project links and peers. This would help offload lecturers (who would only send project invite to lead student in each project).
 
 ## Prototype
-The working prototype of this application is available at:
-[https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app](https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app)
-This URL points to a temporary prototype deployment hosted on Google Cloud Run; the production system will be deployed on Microsoft Azure in accordance with the Non-Functional Requirements.
+
+Working prototype of this application is available at:
+[https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app](https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app) (temporarily hosted on Google AI Studio, the final application will be hosted in Azure - inline with the NFRs below).
 
 ## Non-Goals: Out of Scope
 *   **Integration with TUL SSO:** For simplicity we plan to use One-Time-Password for authentication rather than integration with TUL SSO (Shibboleth).
