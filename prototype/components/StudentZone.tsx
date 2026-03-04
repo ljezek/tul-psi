@@ -127,6 +127,8 @@ export const StudentZone: React.FC<StudentZoneProps> = ({
       }
     });
 
+    // TODO(ljezek): If the remaining diff can’t be distributed due to others hitting 0/20,
+    // the last value may become negative or >20 (even though the slider max is 20).
     setPeerEvals(roundedEvals);
   };
 
