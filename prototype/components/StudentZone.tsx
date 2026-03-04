@@ -133,12 +133,15 @@ export const StudentZone: React.FC<StudentZoneProps> = ({
   const handleFeedbackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const peerEvaluations: PeerEvaluation[] = teammates.map(mate => ({
-      toStudentId: mate.id,
-      strengths: peerEvals[mate.id].strengths,
-      improvements: peerEvals[mate.id].improvements,
-      points: peerEvals[mate.id].points
-    }));
+    const peerEvaluations: PeerEvaluation[] = teammates.map(mate => {
+      const evaluation = peerEvals[mate.id] || { strengths: '', improvements: '', points: 10 };
+      return {
+        toStudentId: mate.id,
+        strengths: evaluation.strengths,
+        improvements: evaluation.improvements,
+        points: evaluation.points
+      };
+    });
 
     const newFeedback: Feedback = {
       id: `f${Date.now()}`,
