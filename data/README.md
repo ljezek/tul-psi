@@ -15,7 +15,7 @@
 7. Your teammates clone the repo on their machines & switch to your branch (see 2 & 3 above).
 8. Your teammates add themselves to your shared project and commit & push (see 5).
    * Keep the projects and team members sorted alphabetically by name.
-9. After your team is complete, one member creates a Pull Request to integrate your change into the `main` branch of the [official repo](https://github.com/ljezek/tul-psi/) ([guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)).
+9. After your team definition is complete in your fork, one team member creates a Pull Request to integrate your change into the `main` branch of the [official repo](https://github.com/ljezek/tul-psi/) ([guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)).
 
 ### Conflict resolution
 
@@ -35,7 +35,7 @@ The [`projects.json`](./projects.json) configuration file stores academic years,
 
 Please keep entries in all the lists alphabetically sorted by their name (i.e., projects by `project_name` and members by `name`).
 
-Example definition of projects.json:
+Example definition of [`projects.json`](./projects.json):
 
 ```json
 {
