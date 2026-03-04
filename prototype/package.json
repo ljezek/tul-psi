@@ -6,29 +6,33 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",    
+    "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.563.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "lucide-react": "^0.563.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.14.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "eslint": "^4.1.1",
+    "eslint": "^10.0.2",
+    "globals": "^15.0.0",
     "jsdom": "^26.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^3.0.0",
-    "vitest-dom": "^0.1.1"
-  }
+    "vitest-dom": "^0.1.1"    
+    }
 }

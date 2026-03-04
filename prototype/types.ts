@@ -26,13 +26,20 @@ export interface Project {
   imageUrl?: string;
 }
 
+export interface PeerEvaluation {
+  toStudentId: string;
+  strengths: string;
+  improvements: string;
+  points: number;
+}
+
 export interface Feedback {
   id: string;
   projectId: string;
   fromStudentId: string;
-  toStudentId: string;
-  strengths: string;
-  improvements: string;
+  subjectStrengths: string;
+  subjectImprovements: string;
+  peerEvaluations: PeerEvaluation[];
   createdAt: string;
 }
 

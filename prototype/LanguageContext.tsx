@@ -86,6 +86,16 @@ const translations: Record<string, Record<Language, string>> = {
   'student.label_strengths': { cs: 'Silné stránky', en: 'Strengths' },
   'student.label_improvements': { cs: 'Ke zlepšení', en: 'To Improve' },
   'student.success_sent': { cs: 'Hodnocení odesláno!', en: 'Feedback sent!' },
+  'student.subject_eval': { cs: 'Hodnocení předmětu', en: 'Subject Evaluation' },
+  'student.subject_strengths': { cs: 'Silné stránky předmětu', en: 'Subject Strengths' },
+  'student.subject_improvements': { cs: 'Prostor ke zlepšení předmětu', en: 'Subject Areas for Improvement' },
+  'student.peer_eval': { cs: 'Peer feedback (kolegové)', en: 'Peer Feedback (Colleagues)' },
+  'student.points_allocation': { cs: 'Přidělení bodů', en: 'Points Allocation' },
+  'student.points_remaining': { cs: 'Zbývající body', en: 'Remaining Points' },
+  'student.avg_points': { cs: 'Průměrné peer body', en: 'Average Peer Points' },
+  'student.received_feedback': { cs: 'Obdržená hodnocení od kolegů', en: 'Received Feedback from Colleagues' },
+  'student.subject_feedback_title': { cs: 'Zpětná vazba na předmět', en: 'Subject Feedback' },
+  'student.anonymous_notice': { cs: 'Hodnocení předmětu je anonymizované.', en: 'Subject evaluation is anonymized.' },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
