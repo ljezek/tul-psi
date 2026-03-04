@@ -33,7 +33,7 @@ flowchart TD
 * **Database** (PostgreSQL)
 * **Infrastructure**
    * Monitoring: Storage for monitoring data and logs.
-   * Testing: using Vitest/node:test (unit) & Playwright (integration).
+   * Testing: currently using Vitest for unit tests; planned future tooling includes node:test (unit) and Playwright for integration/UI tests.
    * Deployment: Azure Cloud, GitHub Actions (CI/CD)
    * Local development: Docker
 
@@ -65,8 +65,10 @@ flowchart LR
     DEV -- Integration Tests --> PROD
 ```
 
-## Reliability & Observability  & Security
-Plan for Logging, Monitoring, Alerting, and defined SLA/SLO/SLI metrics & Auth: OTP/MFA, XSRF, CORS
+## Reliability & Observability
+Plan for Logging, Monitoring, Alerting, and defined SLA/SLO/SLI metrics.
 
+## Security Architecture
+Auth: OTP/MFA, XSRF, CORS.
 ## Testing Strategy
 Overview of Unit, Integration, and UI testing approaches
