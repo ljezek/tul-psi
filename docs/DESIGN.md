@@ -51,7 +51,19 @@ Azure cloud environment setup, resource selection, and the CI/CD pipeline archit
 
 High-level plan:
 
-Feature Branch -- Unit Tests & Code Style --> PR merge `main` -- Build --> DEV environment -- Integration Tests --> PROD environment
+```mermaid
+flowchart LR
+    FB[Feature Branch]
+    PR[Pull Request]
+    MAIN[Main Branch]
+    DEV[DEV environment]
+    PROD[PROD environment]
+
+    FB -- Unit Test & Code Style --> PR
+    PR -- Code Review --> MAIN
+    MAIN -- Build & Test --> DEV
+    DEV -- Integration Tests --> PROD
+```
 
 ## Reliability & Observability  & Security
 Plan for Logging, Monitoring, Alerting, and defined SLA/SLO/SLI metrics & Auth: OTP/MFA, XSRF, CORS
