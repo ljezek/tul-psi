@@ -9,7 +9,7 @@ The **Student Projects Catalogue** is a centralized platform designed for the Fa
 *   **General Public / Partners:** To explore the innovative outputs of the faculty's students and identify potential talent or collaboration opportunities.
 
 **Success metrics:**
-*   >90% of students provide course and peer feedback.
+*   More than 90% of students provide course and peer feedback.
 
 ## User Scenarios
 
@@ -49,6 +49,10 @@ graph TD
     AdminPanel --> CourseMgmt[Course Management]
     AdminPanel --> FeedbackReview[Feedback Review & Stats]
 ```
+## Prototype
+
+Working prototype of this application is available at:
+[https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app](https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app) (temporarily hosted on Google AI Studio, the final application will be hosted in Azure - inline with the NFRs below).
 
 ## Functional Requirements
 
@@ -73,18 +77,15 @@ graph TD
 *   **Feedback Moderation:** Filtering/flagging of inappropriate comments in the feedback.
 *   **Student-driven Project Management:** Student interface for managing their projects: adding description, project links and peers. This would help offload lecturers (who would only send project invite to lead student in each project).
 
-## Prototype
+## Non-Goals
 
-Working prototype of this application is available at:
-[https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app](https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app) (temporarily hosted on Google AI Studio, the final application will be hosted in Azure - inline with the NFRs below).
-
-## Non-Goals: Out of Scope
+The following functionality is intentionally Out of Scope of the project:
 *   **Integration with TUL SSO:** For simplicity we plan to use One-Time-Password for authentication rather than integration with TUL SSO (Shibboleth).
 *   **Direct Messaging:** No real-time chat functionality between users.
 *   **Grade Automation:** The system provides data to lecturers but does not automatically calculate final grades.
 *   **Asset Hosting:** The platform links to external repositories (GitHub) rather than hosting project binaries or datasets.
 
-## Non-Functional Requirements (NFR)
+## Non-Functional Requirements
 
 *   **Availability & Reliability:** The system must be hosted on Azure with a target availability of 99.5% (SLA), particularly during the final submission and exam periods.
     * **Health checks** must be implemented to facilitate automated instance recovery within the cloud environment.
