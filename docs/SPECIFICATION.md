@@ -17,7 +17,7 @@ The **Student Projects Catalogue** is a centralized platform designed for the Fa
 A visitor arrives at the site to see the faculty's ongoing and finished projects. They use the **Dashboard** to filter by course, academic year or search for specific technologies (e.g., "AI", "SQL"). They click on a project card to see a full description, the student team, and links to source code or live demos.
 
 ### 2. Student Reflection & Peer Evaluation
-After a student completes a project, they switch to the **Student Zone**, where they fill out course evaluation to help the lecturer(s) improve the course for future students.
+After a student completes a project, they switch to the **Student Zone**, where they fill out a course evaluation to help the lecturer(s) improve the course for future students.
 
 Additionally, for team projects students evaluate their peers: fill out qualitative peer feedback and distribute bonus points. After all project feedback is collected, the app displays anonymized feedback to each student.
 
@@ -29,12 +29,14 @@ A lecturer uses the **Admin Panel** to set up the courses and manage projects. T
 At the end of the term, they review the **Feedback** tab. They see anonymized courses feedback to identify course pain points and check the **Average Peer Bonus Points** to identify high-performers or potential team conflicts.
 
 ## UX Flow
+
+The application uses OTP-based authentication for Students and Lecturers, and their role is derived from the authenticated account. Public visitors can access the Project Dashboard without authentication. There is no manual role-picking step in the production flow; instead, authenticated users are automatically routed based on their stored role.
 ```mermaid
 graph TD
-    Start[App Entry] --> RoleSelect{Role Selection}
-    RoleSelect -->|Public| Dashboard[Project Dashboard]
-    RoleSelect -->|Student| StudentZone[Student Zone]
-    RoleSelect -->|Lecturer| AdminPanel[Admin Panel]
+    Start[App Entry] --> RoleRoute{Role-based Routing (derived from account)}
+    RoleRoute -->|Public (unauthenticated)| Dashboard[Project Dashboard]
+    RoleRoute -->|Student (authenticated)| StudentZone[Student Zone]
+    RoleRoute -->|Lecturer (authenticated)| AdminPanel[Admin Panel]
     
     Dashboard --> ProjectDetail[Project Detail (Modal)]
     
@@ -72,9 +74,10 @@ graph TD
 ## Prototype
 The working prototype of this application is available at:
 [https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app](https://ais-dev-wraur5d2xxu7fjsci5byoi-507011329275.europe-west2.run.app)
+This URL points to a temporary prototype deployment hosted on Google Cloud Run; the production system will be deployed on Microsoft Azure in accordance with the Non-Functional Requirements.
 
 ## Non-Goals: Out of Scope
-*   **Integration with TUL SSO:** For simplicity we plan to use One-Time-Password for authentication rather than integration with TUL SSO (Shibo).
+*   **Integration with TUL SSO:** For simplicity we plan to use One-Time-Password for authentication rather than integration with TUL SSO (Shibboleth).
 *   **Direct Messaging:** No real-time chat functionality between users.
 *   **Grade Automation:** The system provides data to lecturers but does not automatically calculate final grades.
 *   **Asset Hosting:** The platform links to external repositories (GitHub) rather than hosting project binaries or datasets.
@@ -82,9 +85,9 @@ The working prototype of this application is available at:
 ## Non-Functional Requirements (NFR)
 
 *   **Availability & Reliability:** The system must be hosted on Azure with a target availability of 99.5% (SLA), particularly during the final submission and exam periods.
-    * **Health checks** must be implemented to facilitate automated instance recovery within the cloud environment
+    * **Health checks** must be implemented to facilitate automated instance recovery within the cloud environment.
 *   **Scalability:** To handle traffic spikes near project deadlines, the application shall utilize Azure Auto-scaling and capacity planning.
-*   **Security:** The platform must implement protection against CORS and XSRF vulnerabilities. User authentication will use OTP and secure credential management.
+*   **Security:** The platform must implement CSRF/XSRF protection and enforce a strict CORS policy configuration. User authentication will use OTP and secure credential management.
 *   **Observability (Monitoring & Logging):** Real-time monitoring, alerting, and logging must be configured using *Azure Application Insights* to track system health and errors.
 *   **CI/CD Pipeline:** A fully automated CI/CD pipeline must be established to execute unit and integration tests on every commit to the `main` branch. Successful builds must be automatically deployed to the Azure environment (guarded by quality checks, unit and integration tests).
 *   **Code Quality & Maintainability:** The project must adhere to "Clean Code" principles.
