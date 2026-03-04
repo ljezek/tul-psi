@@ -24,7 +24,7 @@ export const MOCK_PROJECTS: Project[] = [
     academicYear: '2023/2024',
     subjectId: 's4',
     tags: ['C++', 'Arduino', 'IoT', 'Hardware'],
-    authorIds: ['u1', 'u2'],
+    authorIds: ['u1', 'u2', 'u3'],
     githubUrl: 'https://github.com/example/robot',
     liveUrl: 'https://youtube.com/demo',
     imageUrl: 'https://picsum.photos/400/300?random=1'
@@ -50,7 +50,7 @@ export const MOCK_PROJECTS: Project[] = [
     academicYear: '2022/2023',
     subjectId: 's1',
     tags: ['Python', 'AI', 'NLP', 'Data Science'],
-    authorIds: ['u5', 'u1'],
+    authorIds: ['u5', 'u1', 'u2', 'u4'],
     githubUrl: 'https://github.com/example/nlp',
     imageUrl: 'https://picsum.photos/400/300?random=3'
   }
@@ -61,10 +61,67 @@ export const MOCK_FEEDBACKS: Feedback[] = [
     id: 'f1',
     projectId: 'p1',
     fromStudentId: 'u1',
-    toStudentId: 'u2',
-    strengths: 'Skvělá práce na hardwarové části, výborné znalosti elektroniky.',
-    improvements: 'Dokumentace by mohla být detailnější, chybí schémata zapojení.',
+    subjectStrengths: 'Praktické zaměření, práce s reálným hardwarem.',
+    subjectImprovements: 'Více času na testování v laboratoři.',
+    peerEvaluations: [
+      {
+        toStudentId: 'u2',
+        strengths: 'Skvělá práce na hardwarové části, výborné znalosti elektroniky.',
+        improvements: 'Dokumentace by mohla být detailnější, chybí schémata zapojení.',
+        points: 12
+      },
+      {
+        toStudentId: 'u3',
+        strengths: 'Dobrá pomoc s testováním senzorů.',
+        improvements: 'Mohl by se více zapojit do psaní kódu.',
+        points: 8
+      }
+    ],
     createdAt: '2024-05-20'
+  },
+  {
+    id: 'f2',
+    projectId: 'p1',
+    fromStudentId: 'u2',
+    subjectStrengths: 'Zajímavé téma, dobrá podpora od lektora.',
+    subjectImprovements: 'Méně administrativy kolem odevzdávání.',
+    peerEvaluations: [
+      {
+        toStudentId: 'u1',
+        strengths: 'Výborný v programování řídicí jednotky.',
+        improvements: 'Mohl by více komunikovat o změnách v kódu.',
+        points: 10
+      },
+      {
+        toStudentId: 'u3',
+        strengths: 'Spolehlivost při plnění úkolů.',
+        improvements: 'Větší iniciativa při řešení problémů.',
+        points: 10
+      }
+    ],
+    createdAt: '2024-05-21'
+  },
+  {
+    id: 'f3',
+    projectId: 'p1',
+    fromStudentId: 'u3',
+    subjectStrengths: 'Skvělá atmosféra v týmu a zajímavý projekt.',
+    subjectImprovements: 'Více hardwarových komponent k dispozici.',
+    peerEvaluations: [
+      {
+        toStudentId: 'u1',
+        strengths: 'Vedení týmu a technický přehled.',
+        improvements: 'Někdy příliš rychlé tempo.',
+        points: 11
+      },
+      {
+        toStudentId: 'u2',
+        strengths: 'Preciznost v návrhu schémat.',
+        improvements: 'Dodržování termínů.',
+        points: 9
+      }
+    ],
+    createdAt: '2024-05-22'
   }
 ];
 

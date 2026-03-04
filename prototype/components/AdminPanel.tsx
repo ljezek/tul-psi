@@ -315,50 +315,137 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           )}
 
           {activeTab === 'feedback' && (
-             <div className="space-y-8">
+             <div className="space-y-12">
                {projects.map(project => {
                  const projectFeedbacks = feedbacks.filter(f => f.projectId === project.id);
                  if (projectFeedbacks.length === 0) return null;
 
+                 // Calculate average peer points for each student in the project
+                 const studentStats: Record<string, { totalPoints: number, count: number }> = {};
+                 projectFeedbacks.forEach(f => {
+                   f.peerEvaluations.forEach(pe => {
+                     if (!studentStats[pe.toStudentId]) {
+                       studentStats[pe.toStudentId] = { totalPoints: 0, count: 0 };
+                     }
+                     studentStats[pe.toStudentId].totalPoints += pe.points;
+                     studentStats[pe.toStudentId].count += 1;
+                   });
+                 });
+
                  return (
-                   <div key={project.id} className="border border-slate-200 rounded-xl overflow-hidden">
-                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                       <h3 className="font-bold text-lg text-slate-800">{project.title}</h3>
-                       <span className="text-sm text-slate-500">{projectFeedbacks.length} {t('feedback.count_suffix')}</span>
+                   <div key={project.id} className="space-y-6">
+                     <div className="bg-slate-800 text-white px-6 py-4 rounded-xl shadow-md flex justify-between items-center">
+                       <div>
+                         <h3 className="font-bold text-xl">{project.title}</h3>
+                         <p className="text-slate-400 text-sm">{subjects.find(s => s.id === project.subjectId)?.name}</p>
+                       </div>
+                       <div className="text-right">
+                         <span className="text-2xl font-black text-tul-blue">{projectFeedbacks.length}</span>
+                         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">{t('feedback.count_suffix')}</p>
+                       </div>
                      </div>
-                     <div className="divide-y divide-slate-100">
-                       {projectFeedbacks.map(f => (
-                         <div key={f.id} className="p-6">
-                            <div className="flex items-center gap-3 mb-4 text-sm">
-                                <div className="flex items-center gap-1 font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                                    <User size={14}/> {getStudentName(f.fromStudentId)}
-                                </div>
-                                <ArrowRight size={14} className="text-slate-300"/>
-                                <div className="flex items-center gap-1 font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded">
-                                    <User size={14}/> {getStudentName(f.toStudentId)}
-                                </div>
-                                <span className="text-slate-400 ml-auto">{f.createdAt}</span>
-                            </div>
-                            
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="bg-green-50/50 p-3 rounded-lg border border-green-100">
-                                    <h4 className="text-xs font-bold text-green-700 uppercase mb-2">{t('student.label_strengths')}</h4>
-                                    <p className="text-sm text-slate-700">{f.strengths}</p>
-                                </div>
-                                <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                    <h4 className="text-xs font-bold text-orange-700 uppercase mb-2">{t('student.label_improvements')}</h4>
-                                    <p className="text-sm text-slate-700">{f.improvements}</p>
-                                </div>
-                            </div>
+
+                     {/* Subject Feedback (Anonymized) */}
+                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                       <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
+                         <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                           <BookOpen size={16} /> {t('student.subject_feedback_title')}
+                         </h4>
+                       </div>
+                       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div className="space-y-4">
+                           <h5 className="text-xs font-black text-green-700 uppercase tracking-wider">{t('student.label_strengths')}</h5>
+                           <ul className="space-y-2">
+                             {projectFeedbacks.map((f, i) => (
+                               <li key={i} className="text-sm text-slate-600 bg-green-50/30 p-2 rounded border-l-2 border-green-500 italic">
+                                 "{f.subjectStrengths}"
+                               </li>
+                             ))}
+                           </ul>
                          </div>
-                       ))}
+                         <div className="space-y-4">
+                           <h5 className="text-xs font-black text-orange-700 uppercase tracking-wider">{t('student.label_improvements')}</h5>
+                           <ul className="space-y-2">
+                             {projectFeedbacks.map((f, i) => (
+                               <li key={i} className="text-sm text-slate-600 bg-orange-50/30 p-2 rounded border-l-2 border-orange-500 italic">
+                                 "{f.subjectImprovements}"
+                               </li>
+                             ))}
+                           </ul>
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* Peer Feedback Stats */}
+                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                       {project.authorIds.map(studentId => {
+                         const stats = studentStats[studentId];
+                         const avg = stats ? (stats.totalPoints / stats.count).toFixed(1) : '0.0';
+                         return (
+                           <div key={studentId} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                             <div className="flex items-center gap-3">
+                               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
+                                 {getStudentName(studentId).charAt(0)}
+                               </div>
+                               <span className="text-sm font-bold text-slate-800">{getStudentName(studentId)}</span>
+                             </div>
+                             <div className="text-right">
+                               <span className={`text-lg font-black ${parseFloat(avg) >= 10 ? 'text-green-600' : 'text-orange-600'}`}>{avg}</span>
+                               <p className="text-[8px] uppercase font-bold text-slate-400">{t('student.avg_points')}</p>
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+
+                     {/* Detailed Peer Feedback */}
+                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
+                          <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                            <User size={16} /> {t('student.peer_eval')}
+                          </h4>
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                          {projectFeedbacks.map(f => (
+                            <div key={f.id} className="p-6 space-y-6">
+                              {f.peerEvaluations.map((pe, idx) => (
+                                <div key={idx} className="space-y-4">
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-center gap-1 font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                                      {getStudentName(f.fromStudentId)}
+                                    </div>
+                                    <ArrowRight size={14} className="text-slate-300"/>
+                                    <div className="flex items-center gap-1 font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                                      {getStudentName(pe.toStudentId)}
+                                    </div>
+                                    <div className="ml-auto flex items-center gap-2">
+                                      <span className="text-xs font-black bg-slate-800 text-white px-2 py-0.5 rounded">{pe.points} b.</span>
+                                      <span className="text-xs text-slate-400">{f.createdAt}</span>
+                                    </div>
+                                  </div>
+                                  <div className="grid md:grid-cols-2 gap-4 ml-4 border-l-2 border-slate-100 pl-4">
+                                    <div>
+                                      <span className="text-[10px] font-bold text-green-700 uppercase block mb-1">{t('student.label_strengths')}</span>
+                                      <p className="text-sm text-slate-600 italic">"{pe.strengths}"</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] font-bold text-orange-700 uppercase block mb-1">{t('student.label_improvements')}</span>
+                                      <p className="text-sm text-slate-600 italic">"{pe.improvements}"</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
                      </div>
                    </div>
                  );
                })}
                {feedbacks.length === 0 && (
-                   <div className="text-center py-12 text-slate-500">
-                       {t('feedback.no_feedback')}
+                   <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300 text-slate-400">
+                       <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
+                       <p className="text-lg font-medium">{t('feedback.no_feedback')}</p>
                    </div>
                )}
              </div>
