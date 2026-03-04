@@ -25,7 +25,7 @@ flowchart TD
    * `EvaluationModule`: Forms for Course Grading and Student Peer Feedback.
    * `State Management` (React Query): Handles data fetching and caching.
 * **Backend** (Node.js / Fastify):
-   * `Auth Middleware`: Validation of TUL identity/JWT.
+   * `Auth Middleware`: Validation of authentication state (validates JWT).
    * `Course Service`: Logic for CRUD operations on courses.
    * `Project Service`: Logic for CRUD operations on projects.
    * `Evaluation Service`: Business logic for calculating final scores and peer review budgets.
@@ -69,6 +69,9 @@ flowchart LR
 Plan for Logging, Monitoring, Alerting, and defined SLA/SLO/SLI metrics.
 
 ## Security Architecture
-Auth: OTP/MFA, XSRF, CORS.
+Auth login flow: backend issues OTP with @tul.cz email and stores it in PostgreSQL. User presents the token and upon validation backend issues JSON Web Token back to the React app which stores it `localStorage`.
+
+Additional planned security: XSRF, CORS.
+
 ## Testing Strategy
 Overview of Unit, Integration, and UI testing approaches
