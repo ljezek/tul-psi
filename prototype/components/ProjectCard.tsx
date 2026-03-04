@@ -1,6 +1,6 @@
 import React from 'react';
 import { Project, Subject, Student } from '../types';
-import { Github, ExternalLink, Users, Calendar, Tag } from 'lucide-react';
+import { Github, ExternalLink, Users, Tag } from 'lucide-react';
 
 interface ProjectCardProps {
   project: Project;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Project, Subject, Student } from '../types';
-import { X, Github, ExternalLink, Calendar, Users, BookOpen } from 'lucide-react';
+import { X, Github, ExternalLink, Calendar, Users } from 'lucide-react';
 import { Button } from './Button';
 import { useLanguage } from '../LanguageContext';
 

@@ -115,7 +115,7 @@ export const StudentZone: React.FC<StudentZoneProps> = ({
 
     // Final pass to ensure integers and exact sum
     // (Sliders usually use integers, let's stick to that for simplicity)
-    const roundedEvals: Record<string, any> = {};
+    const roundedEvals: Record<string, { strengths: string; improvements: string; points: number }> = {};
     let sum = 0;
     teammates.forEach((t, index) => {
       if (index === teammates.length - 1) {
@@ -156,7 +156,7 @@ export const StudentZone: React.FC<StudentZoneProps> = ({
     // Reset form
     setSubjectStrengths('');
     setSubjectImprovements('');
-    const resetPeerEvals: Record<string, any> = {};
+    const resetPeerEvals: Record<string, { strengths: string; improvements: string; points: number }> = {};
     teammates.forEach(m => {
       resetPeerEvals[m.id] = { strengths: '', improvements: '', points: 10 };
     });
