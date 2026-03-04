@@ -1,7 +1,7 @@
 # Product Specification: Student Projects Catalogue
 
 ## Product Vision & Target Audience
-The **Student Projects Catalogue** is a centralized platform designed for the Faculty of Mechatronics, Informatics and Interdisciplinary Studies at the Technical University of Liberec (_TUL_). Its vision is to provide a centralized repository of various student projects created at TUL and foster a culture of constructive feedback by allowing students to evaluate the courses and peers.
+The **Student Projects Catalogue** is a centralized platform designed for the Faculty of Mechatronics, Informatics and Interdisciplinary Studies at the Technical University of Liberec (_TUL_). Its vision is to provide a centralized repository of various student projects created at TUL and foster a culture of constructive feedback by allowing students to evaluate courses and their peers.
 
 **Target Audience:**
 *   **Students:** To present their work, reflect on their learning experience, and provide/receive peer feedback.
@@ -26,7 +26,7 @@ The evaluation forms are designed to promote constructive feedback (i.e., 1 stre
 ### 3. Lecturer Administration & Quality Control
 A lecturer uses the **Admin Panel** to set up the courses and manage projects. They create projects and assign students to their respective teams.
 
-At the end of the term, they review the **Feedback** tab. They see anonymized courses feedback to identify course pain points and check the **Average Peer Bonus Points** to identify high-performers or potential team conflicts.
+At the end of the term, they review the **Feedback** tab. They see anonymized course feedback to identify course pain points and check the **Average Peer Bonus Points** to identify high-performers or potential team conflicts.
 
 ## UX Flow
 ```mermaid
