@@ -7,7 +7,7 @@
    * `git clone https://github.com/[YOUR-NAME]/tul-psi.git`
 3. Create your feature branch.
    * `git checkout -b feature/[MY-BRANCH]`
-4. Add your project definition to the [`/data/projects.json`](/data/projects.json) - include project name, GitHub repo URL and your own user entry.
+4. Add your project definition to the [`projects.json`](./projects.json) - include project name, GitHub repo URL and your own user entry.
 5. Commit and push your changes to your feature branch.
    * `git commit -a -m 'Define [MY AWESOME PROJECT] for PSI 2026'`
    * `git push` - publishes the branch to your fork of the repo
