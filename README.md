@@ -2,7 +2,7 @@
 
 Repository with supporting code for PSI (Pokročilé Softwarové Inženýrství) course at Technická Univerzita of Liberec (_TUL_).
 
-Primarily the repository hosts a demo project - **Student Projects Catalogue** (_SPC_).
+Primarily the repository hosts a demo project - **Student Projects Catalogue** (_SPC_) - which is a catalogue of student projects created at various courses at TUL and supports evaluating courses and peers.
 
 ## User scenarios
 
@@ -27,24 +27,6 @@ flowchart TD
   API -- Drizzle ORM --> DB
 ```
 
-* **Frontend** (React Single Page Application):
-   * Vite and Tailwind CSS
-   * `ProjectDashboard`: Displays the list of all student projects.
-   * `ProjectDetails`: View for specific project info, including links to GitHub and Azure.
-   * `EvaluationModule`: Forms for Course Grading and Student Peer Feedback.
-   * `State Management` (React Query): Handles data fetching and caching.
-* **Backend** (Node.js / Fastify):
-   * `Auth Middleware`: Validation of TUL identity/JWT.
-   * `Project Service`: Logic for CRUD operations on projects.
-   * `Evaluation Service`: Business logic for calculating final scores and peer review budgets.
-   * `Persistence Layer`: Interface for database communication (using Drizzle ORM)
-* **Database** (PostgreSQL)
-* **Infrastructure**
-   * Monitoring: Storage for monitoring data and logs.
-   * Testing: using Vitest/node:test (unit) & Playwright (integration).
-   * Deployment: Azure Cloud, GitHub Actions (CI/CD)
-   * Local development: Docker
-
 ## 📖 Documentation
 
 * This `README.md` contains quick introduction to the product, onboarding guide, local setup of the project and a rough user guide.
@@ -53,7 +35,9 @@ flowchart TD
 
 ## 💻 Local development
 
-Currently the app only contains a prototype, see the [prototype/README.md](prototype/README.md) for instructions how to run it.
+Currently the app only contains a prototype, see the [prototype/README.md](prototype/README.md) for instructions how to run it locally and in Google AI Studio.
+
+TODO(ljezek): Add support for local development using Docker.
 
 ## 🎯 Project milestones
 
@@ -70,6 +54,7 @@ Currently the app only contains a prototype, see the [prototype/README.md](proto
 ## 📊 NFR Status
 
 TODO(ljezek): Complete the following items to fulfill the NFRs of PSI:
+* [ ] Production: Link to the app in Production and Dev environments
 * [ ] Monitoring: Link to Azure App Insights (monitoring dashboard)
 * [ ] Tests: Link to code coverage and latest unit & integration test results on `main` branch
 * [ ] CI/CD: Link to GitHub actions forming fully autonomous delivery of (working) code from `main` through `dev` to `prod` environments in a selected cloud (Azure is recommended).
