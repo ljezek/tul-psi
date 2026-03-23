@@ -28,7 +28,7 @@ def setup_metrics() -> None:
         unit="1",
     )
     http_request_latency_ms = _meter.create_histogram(
-        name="http_server_request_duration_ms",
+        name="http_server_request_duration",
         description="Inbound HTTP request duration",
         unit="ms",
     )
@@ -38,7 +38,7 @@ def setup_metrics() -> None:
         unit="1",
     )
     outbound_http_latency_ms = _meter.create_histogram(
-        name="http_client_request_duration_ms",
+        name="http_client_request_duration",
         description="Outbound HTTP request duration",
         unit="ms",
     )
@@ -48,7 +48,7 @@ def setup_metrics() -> None:
         unit="1",
     )
     db_query_latency_ms = _meter.create_histogram(
-        name="db_query_duration_ms",
+        name="db_query_duration",
         description="Database query duration",
         unit="ms",
     )

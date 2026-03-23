@@ -3,15 +3,16 @@ from __future__ import annotations
 import logging
 import time
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from api.health import router as health_router
 from api.projects import router as projects_router
+from observability import metrics as app_metrics
 from observability.context import detect_client_type
 from observability.logging_setup import configure_logging
 from observability.meter_provider import setup_meter_provider
-from observability.metrics import setup_metrics, http_requests_total, http_request_latency_ms
 from observability.tracing import setup_tracing
 from settings import get_settings
 
@@ -23,9 +24,14 @@ logger = logging.getLogger(__name__)
 if settings.otel_enabled:
     setup_tracing(settings)
     setup_meter_provider(settings)
-setup_metrics()
+app_metrics.setup_metrics()
 
 app = FastAPI(title=settings.app_name)
+
+
+@app.get(settings.metrics_path, include_in_schema=False)
+async def metrics_endpoint():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.middleware("http")
@@ -48,10 +54,10 @@ async def request_observability_middleware(request: Request, call_next):
             "http.status_code": status,
             "client.type": client_type,
         }
-        if http_requests_total:
-            http_requests_total.add(1, attributes=attrs)
-        if http_request_latency_ms:
-            http_request_latency_ms.record(elapsed_ms, attributes=attrs)
+        if app_metrics.http_requests_total:
+            app_metrics.http_requests_total.add(1, attributes=attrs)
+        if app_metrics.http_request_latency_ms:
+            app_metrics.http_request_latency_ms.record(elapsed_ms, attributes=attrs)
 
     return response
 

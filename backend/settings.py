@@ -20,9 +20,7 @@ class Settings(BaseSettings):
     otel_service_version: str = "0.1.0"
 
     otel_traces_exporter: str = "otlp"
-    otel_metrics_exporter: str = "prometheus"
-    otel_exporter_otlp_endpoint: str = "http://localhost:4317"
-    otel_exporter_otlp_insecure: bool = True
+    otel_exporter_otlp_endpoint: str = "http://localhost:4318"
 
     otel_traces_sampler: str = "parentbased_traceidratio"
     otel_traces_sampler_arg: float = 1.0

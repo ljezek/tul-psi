@@ -4,7 +4,7 @@ import asyncio
 import time
 from opentelemetry import trace
 
-from observability.metrics import db_queries_total, db_query_latency_ms
+from observability import metrics as app_metrics
 
 
 async def simulate_query(query_name: str, delay_ms: int) -> dict[str, str]:
@@ -16,10 +16,10 @@ async def simulate_query(query_name: str, delay_ms: int) -> dict[str, str]:
         await asyncio.sleep(delay_ms / 1000)
         elapsed_ms = (time.perf_counter() - start) * 1000
 
-        if db_queries_total:
-            db_queries_total.add(1, attributes={"query_name": query_name, "db_system": "mock-json"})
-        if db_query_latency_ms:
-            db_query_latency_ms.record(
+        if app_metrics.db_queries_total:
+            app_metrics.db_queries_total.add(1, attributes={"query_name": query_name, "db_system": "mock-json"})
+        if app_metrics.db_query_latency_ms:
+            app_metrics.db_query_latency_ms.record(
                 elapsed_ms,
                 attributes={"query_name": query_name, "db_system": "mock-json"},
             )
