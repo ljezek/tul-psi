@@ -1,0 +1,60 @@
+{
+  "projects": [
+    {
+      "id": 1,
+      "title": "Smart TUL Parking",
+      "academicYear": "2024/25",
+      "subject": "PSI",
+      "technologies": ["Python", "FastAPI", "Azure"]
+    },
+    {
+      "id": 2,
+      "title": "Campus Energy Twin",
+      "academicYear": "2024/25",
+      "subject": "PSI",
+      "technologies": ["TypeScript", "React", "IoT"]
+    },
+    {
+      "id": 3,
+      "title": "AI Study Assistant",
+      "academicYear": "2023/24",
+      "subject": "KIV",
+      "technologies": ["Python", "LLM", "Redis"]
+    },
+    {
+      "id": 4,
+      "title": "Industrial Robot Vision QA",
+      "academicYear": "2024/25",
+      "subject": "KIV",
+      "technologies": ["Python", "OpenCV", "PyTorch"]
+    },
+    {
+      "id": 5,
+      "title": "Adaptive CNC Toolpath Optimizer",
+      "academicYear": "2024/25",
+      "subject": "KME",
+      "technologies": ["C++", "CUDA", "FastAPI"]
+    },
+    {
+      "id": 6,
+      "title": "Predictive Maintenance for Lab Compressors",
+      "academicYear": "2023/24",
+      "subject": "KME",
+      "technologies": ["Python", "TimescaleDB", "Grafana"]
+    },
+    {
+      "id": 7,
+      "title": "AR Navigation for New Students",
+      "academicYear": "2024/25",
+      "subject": "KIV",
+      "technologies": ["Unity", "C#", "ARCore"]
+    },
+    {
+      "id": 8,
+      "title": "Thermal Drift Compensation in 3D Printing",
+      "academicYear": "2023/24",
+      "subject": "KME",
+      "technologies": ["Rust", "Embedded", "MQTT"]
+    }
+  ]
+}
