@@ -11,9 +11,11 @@ class Settings(BaseSettings):
     app_env: str = "local"
     log_level: str = "INFO"
 
-    projects_data_file: str = "data/projects.json"
+    projects_data_file: str = "db/fake_projects.json"
     simulated_db_delay_ms: int = 35
     simulated_http_delay_ms: int = 55
+    enrich_error_rate: float = 0.10
+    db_error_rate: float = 0.10
 
     otel_enabled: bool = True
     otel_service_name: str = "tul-psi-fastapi-sample"

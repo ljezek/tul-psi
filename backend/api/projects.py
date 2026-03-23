@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from models.project import Project
 from observability.context import detect_client_type
@@ -22,4 +22,7 @@ async def get_projects(
     service: ProjectsService = Depends(get_projects_service),
 ):
     client_type = detect_client_type(request)
-    return await service.get_projects(academic_year=academic_year, subject=subject, client_type=client_type)
+    try:
+        return await service.get_projects(academic_year=academic_year, subject=subject, client_type=client_type)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

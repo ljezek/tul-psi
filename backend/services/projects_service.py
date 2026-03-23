@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 import logging
-from pathlib import Path
 from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
-from clients.fake_http_client import call_backend_service
-from db.fake_db import simulate_query
+from clients.fake_http_client import enrich_project_info
+from db.fake_db import load_projects_from_db
 from models.project import Project
 from settings import Settings
 
@@ -29,21 +28,34 @@ class ProjectsService:
             span.set_attribute("filters.academic_year", academic_year or "")
             span.set_attribute("filters.subject", subject or "")
 
-            await simulate_query("load_projects_json", self.settings.simulated_db_delay_ms)
-            await call_backend_service(
-                service_name="student-profile-service",
-                operation="hydrate-project-owner",
-                delay_ms=self.settings.simulated_http_delay_ms,
-            )
+            try:
+                projects = await load_projects_from_db(
+                    self.settings.projects_data_file,
+                    self.settings.simulated_db_delay_ms,
+                    academic_year=academic_year,
+                    subject=subject,
+                    error_rate=self.settings.db_error_rate,
+                )
 
-            projects = self._load_projects_from_disk()
-
-            filtered = [
-                p
-                for p in projects
-                if (not academic_year or p.academic_year == academic_year)
-                and (not subject or p.subject.lower() == subject.lower())
-            ]
+                for project in projects:
+                    enrichment = await enrich_project_info(
+                        project_name=project.title,
+                        delay_ms=self.settings.simulated_http_delay_ms,
+                        error_rate=self.settings.enrich_error_rate,
+                    )
+                    project.students = enrichment["students"]
+            except RuntimeError as exc:
+                span.set_status(StatusCode.ERROR, str(exc))
+                logger.error(
+                    "get_projects_failed",
+                    extra={
+                        "client_type": client_type,
+                        "academic_year": academic_year,
+                        "subject": subject,
+                        "root_cause": str(exc),
+                    },
+                )
+                raise
 
             logger.info(
                 "projects_query_completed",
@@ -51,34 +63,8 @@ class ProjectsService:
                     "client_type": client_type,
                     "academic_year": academic_year,
                     "subject": subject,
-                    "projects_count": len(filtered),
+                    "projects_count": len(projects),
                 },
             )
-            span.set_attribute("projects.count", len(filtered))
-            return filtered
-
-    def _load_projects_from_disk(self) -> list[Project]:
-        file_path = Path(self.settings.projects_data_file)
-
-        if not file_path.exists():
-            raise FileNotFoundError(f"Projects data file not found: {file_path}")
-
-        with file_path.open("r", encoding="utf-8") as fp:
-            payload = json.load(fp)
-
-        projects: list[Project] = []
-        if isinstance(payload, dict) and "projects" in payload:
-            items = payload.get("projects", [])
-            for row in items:
-                projects.append(
-                    Project(
-                        id=row["id"],
-                        title=row["title"],
-                        academic_year=row["academicYear"],
-                        subject=row["subject"],
-                        technologies=row.get("technologies", []),
-                    )
-                )
+            span.set_attribute("projects.count", len(projects))
             return projects
-
-        raise ValueError("Unsupported projects data format")

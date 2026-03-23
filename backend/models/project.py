@@ -7,3 +7,4 @@ class Project(BaseModel):
     academic_year: str
     subject: str
     technologies: list[str]
+    students: list[str] = []
