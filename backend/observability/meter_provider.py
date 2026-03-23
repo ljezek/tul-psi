@@ -8,12 +8,7 @@ from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from settings import Settings
 
 
-prometheus_reader: PrometheusMetricReader | None = None
-
-
 def setup_meter_provider(settings: Settings) -> None:
-    global prometheus_reader
-
     resource = Resource.create(
         {
             "service.name": settings.otel_service_name,

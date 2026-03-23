@@ -23,5 +23,5 @@ async def ready(settings: Settings = Depends(get_settings)) -> dict[str, str]:
         return {"status": "not_ready", "reason": "projects_data_file_missing"}
 
     await load_projects_from_db(settings.projects_data_file, settings.simulated_db_delay_ms)
-    await enrich_project_info("readiness-check", settings.simulated_http_delay_ms)
+    await enrich_project_info("readiness-check", settings.simulated_http_delay_ms, error_rate=0.0)
     return {"status": "ready"}

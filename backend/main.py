@@ -38,6 +38,7 @@ async def metrics_endpoint():
 async def request_observability_middleware(request: Request, call_next):
     start = time.perf_counter()
     client_type = detect_client_type(request)
+    status = 500
 
     try:
         response = await call_next(request)
@@ -58,6 +59,18 @@ async def request_observability_middleware(request: Request, call_next):
             app_metrics.http_requests_total.add(1, attributes=attrs)
         if app_metrics.http_request_latency_ms:
             app_metrics.http_request_latency_ms.record(elapsed_ms, attributes=attrs)
+
+        log_extra = {
+            "method": request.method,
+            "path": route,
+            "status_code": status,
+            "duration_ms": round(elapsed_ms, 1),
+            "client_type": client_type,
+        }
+        if hasattr(request.state, "log_extra"):
+            log_extra.update(request.state.log_extra)
+        log_fn = logger.error if status >= 500 else logger.info
+        log_fn("request_completed", extra=log_extra)
 
     return response
 

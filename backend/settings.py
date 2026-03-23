@@ -24,9 +24,6 @@ class Settings(BaseSettings):
     otel_traces_exporter: str = "otlp"
     otel_exporter_otlp_endpoint: str = "http://localhost:4318"
 
-    otel_traces_sampler: str = "parentbased_traceidratio"
-    otel_traces_sampler_arg: float = 1.0
-
     otel_enable_azure_monitor: bool = False
     azure_monitor_connection_string: str = ""
 

@@ -57,14 +57,5 @@ class ProjectsService:
                 )
                 raise
 
-            logger.info(
-                "projects_query_completed",
-                extra={
-                    "client_type": client_type,
-                    "academic_year": academic_year,
-                    "subject": subject,
-                    "projects_count": len(projects),
-                },
-            )
             span.set_attribute("projects.count", len(projects))
             return projects

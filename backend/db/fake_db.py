@@ -71,7 +71,7 @@ async def load_projects_from_db(
         ]
 
         elapsed_ms = (time.perf_counter() - start) * 1000
-        attrs = {"query_name": "load_projects", "db_system": "mock-json"}
+        attrs = {"query_name": "load_projects", "db_system": "mock-json", "status": "ok"}
         if app_metrics.db_queries_total:
             app_metrics.db_queries_total.add(1, attributes=attrs)
         if app_metrics.db_query_latency_ms:
