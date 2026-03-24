@@ -2,7 +2,7 @@
 
 This sample backend demonstrates best practices for:
 
-- Health checks (`/health/live`, `/health/ready`)
+- Health check (`/health`)
 - Structured JSON logging for Log Analytics export
 - Metrics for RPS, error rate and latency (inbound and outbound)
 - End-to-end request tracing with OpenTelemetry
@@ -30,15 +30,13 @@ SIMULATED_HTTP_DELAY_MS=55
 DB_ERROR_RATE=0.10
 ENRICH_ERROR_RATE=0.10
 OTEL_ENABLED=true
-OTEL_TRACES_EXPORTER=otlp
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 ```
 
 Then open:
 
 - `http://localhost:8001/projects`
-- `http://localhost:8001/health/live`
-- `http://localhost:8001/health/ready`
+- `http://localhost:8001/health`
 
 ## Local Monitoring Stack
 
@@ -57,10 +55,12 @@ Services:
 
 This setup is intended for local teaching demos:
 
-- Jaeger receives OTLP HTTP traces on port `4318`
-- Prometheus scrapes the backend `http://host.docker.internal:8001/metrics` endpoint
-- Grafana is pre-provisioned with Prometheus and Jaeger datasources
-- A starter dashboard is included in Grafana
+- **OTel Collector** receives OTLP (HTTP/gRPC) from the app on ports `4317`/`4318`
+- Collector forwards **traces** to Jaeger via OTLP gRPC
+- Collector pushes **metrics** to Prometheus via remote write
+- Jaeger UI: trace visualisation
+- Prometheus: metrics storage
+- Grafana: pre-provisioned dashboards with Prometheus and Jaeger datasources
 
 ## Metrics
 
@@ -83,7 +83,7 @@ Default metrics reported by OpenTelemetry:
 - `http_server_duration`
 - `python_gc_*`
 
-The backend exposes a dedicated `/metrics` endpoint for the standard Prometheus pull model.
+Metrics are pushed to the OTel Collector via OTLP and forwarded to Prometheus via remote write — no pull endpoint is exposed.
 
 ## Simulated Behaviour
 
@@ -97,8 +97,8 @@ Error injection is controlled by these settings (default `0.10` = 10%):
 | `DB_ERROR_RATE` | `load_projects_from_db` raises a 500 error |
 | `ENRICH_ERROR_RATE` | `enrich_project_info` raises a 500 error |
 
-Errors are propagated to the caller and result in an HTTP 500 response. The readiness
-check (`/health/ready`) always bypasses error injection.
+Errors are propagated to the caller and result in an HTTP 500 response. The
+`/health` endpoint always bypasses error injection.
 
 ## Tracing
 
@@ -109,7 +109,7 @@ To generate traces:
 ```bash
 curl -H "X-Client-Type: mobile" "http://localhost:8001/projects?subject=PSI"
 curl -H "X-Client-Type: web" "http://localhost:8001/projects?academic_year=2024/25"
-curl -H "X-Client-Type: api" "http://localhost:8001/health/ready"
+curl -H "X-Client-Type: api" "http://localhost:8001/health"
 ```
 
 Then inspect traces in Jaeger by service name `tul-psi-fastapi-sample`.
@@ -119,9 +119,9 @@ Each successful `/projects` request produces three nested spans:
 
 ## Azure Compatibility Notes
 
-For Azure App Service + Application Insights / Log Analytics:
+The app emits all signals (traces and metrics) to the OTel Collector via OTLP.
+To route to Azure Monitor, only the **Collector config** changes — no app code changes required:
 
-- Keep using OpenTelemetry instrumentation in code.
-- Set `OTEL_ENABLE_AZURE_MONITOR=true`.
-- Set `AZURE_MONITOR_CONNECTION_STRING` to your App Insights connection string.
-- Keep structured JSON logs; add custom dimensions using `extra={...}` fields.
+- Add the `azuremonitor` exporter to `monitoring/otelcollector/config.yaml`
+- Set the App Insights connection string in the Collector's environment
+- Add the exporter to the `traces` and `metrics` pipelines

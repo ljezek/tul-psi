@@ -3,9 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from fastapi.responses import JSONResponse
 
 from api.health import router as health_router
 from api.projects import router as projects_router
@@ -27,11 +25,6 @@ if settings.otel_enabled:
 app_metrics.setup_metrics()
 
 app = FastAPI(title=settings.app_name)
-
-
-@app.get(settings.metrics_path, include_in_schema=False)
-async def metrics_endpoint():
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.middleware("http")
@@ -96,4 +89,5 @@ app.include_router(health_router)
 app.include_router(projects_router)
 
 if settings.otel_enabled:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     FastAPIInstrumentor.instrument_app(app)

@@ -78,7 +78,7 @@ async def load_projects_from_db(
             app_metrics.db_query_latency_ms.record(elapsed_ms, attributes=attrs)
 
         span.set_attribute("db.duration_ms", elapsed_ms)
-        span.set_attribute("db.projects_loaded", len(projects))
+        span.set_attribute("db.projects_loaded", len(items))
         span.set_attribute("db.projects_after_filter", len(projects))
 
     return projects

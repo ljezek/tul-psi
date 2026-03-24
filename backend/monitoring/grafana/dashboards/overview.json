@@ -4,7 +4,7 @@
   "graphTooltip": 0,
   "panels": [
     {
-      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
       "id": 1,
@@ -19,7 +19,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
       "id": 2,
@@ -27,6 +27,7 @@
         {
           "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_milliseconds_bucket[5m])) by (le, http_route))",
           "legendFormat": "{{http_route}}",
+          "exemplar": true,
           "refId": "A"
         }
       ],
@@ -34,7 +35,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
       "id": 3,
@@ -49,7 +50,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
       "id": 4,
@@ -57,6 +58,7 @@
         {
           "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_milliseconds_bucket[5m])) by (le, query_name))",
           "legendFormat": "{{query_name}}",
+          "exemplar": true,
           "refId": "A"
         }
       ],
@@ -64,7 +66,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
       "id": 5,
@@ -79,7 +81,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
       "id": 6,
@@ -87,6 +89,7 @@
         {
           "expr": "histogram_quantile(0.95, sum(rate(http_client_request_duration_milliseconds_bucket[5m])) by (le, service, operation))",
           "legendFormat": "{{service}} / {{operation}}",
+          "exemplar": true,
           "refId": "A"
         }
       ],

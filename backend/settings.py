@@ -21,13 +21,7 @@ class Settings(BaseSettings):
     otel_service_name: str = "tul-psi-fastapi-sample"
     otel_service_version: str = "0.1.0"
 
-    otel_traces_exporter: str = "otlp"
     otel_exporter_otlp_endpoint: str = "http://localhost:4318"
-
-    otel_enable_azure_monitor: bool = False
-    azure_monitor_connection_string: str = ""
-
-    metrics_path: str = "/metrics"
 
 
 @lru_cache
