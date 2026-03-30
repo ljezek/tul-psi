@@ -1,0 +1,14 @@
+# Frontend dependencies
+node_modules/
+dist/
+build/
+.vite/
+
+# Environment files (keep .env.example in git, but not real secrets)
+.env
+.env.local
+.env.*.local
+
+# OS & editor
+.DS_Store
+*.swp

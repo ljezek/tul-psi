@@ -1,0 +1,28 @@
+name: Frontend Gate
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+    branches: [ main ]
+
+jobs:
+  test-and-lint-frontend:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Lint
+        run: npm run lint
+      - name: Run Unit Tests
+        run: npm test
