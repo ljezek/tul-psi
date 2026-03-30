@@ -3,6 +3,9 @@ name = "student-projects-catalogue-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
 
+[tool.setuptools.packages.find]
+exclude = ["migrations*", "tests*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
@@ -20,6 +23,8 @@ extend-immutable-calls = ["Depends", "fastapi.Depends", "Query", "fastapi.Query"
 [tool.ruff.lint.per-file-ignores]
 # Test files: relax S101 (assert used) and all annotation rules (ANN*) to keep tests lightweight
 "tests/**/*.py" = ["S101", "ANN"]
+# Migration files: generated code may not follow all conventions
+"migrations/versions/*.py" = ["ANN", "I", "UP"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

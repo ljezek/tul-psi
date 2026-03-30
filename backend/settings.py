@@ -10,6 +10,9 @@ class Settings(BaseSettings):
 
     app_name: str = "student-projects-catalogue-backend"
     app_env: str = "local"
+    # Full SQLAlchemy connection URL.  Set DATABASE_URL in the environment or
+    # .env file.  See .env.example for the local-development value.
+    database_url: str
 
 
 @lru_cache
