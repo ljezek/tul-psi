@@ -117,7 +117,15 @@ erDiagram
         int bonus_points
     }
 
+    COURSE_LECTURER {
+        int course_id FK
+        int user_id FK
+        timestamp assigned_at
+    }
+
     USER }o--o{ COURSE : "COURSE_LECTURER"
+    COURSE_LECTURER }|--|| COURSE : "course"
+    COURSE_LECTURER }|--|| USER : "lecturer"
     USER ||--o{ COURSE : "created_by"
     COURSE ||--o{ PROJECT : "contains"
     PROJECT ||--o{ PROJECT_MEMBER : "members"
@@ -225,7 +233,7 @@ sequenceDiagram
     end
 ```
 
-Results become visible to each student once **both** conditions are met: **all** assigned lecturers have submitted a project evaluation **and** every team member has published their course evaluation. Peer feedback sections are only included in the form for **TEAM** projects; `peer_bonus_budget` on the course controls whether bonus-point distribution is shown (null = disabled). A student passes if their final score (sum of average lecturer criterion scores + average received peer bonus points) meets `COURSE.min_score`.
+Results become visible to each student once **both** conditions are met: **all** assigned lecturers have submitted a project evaluation **and** every team member has published their course evaluation. Any assigned lecturer can also trigger an early unlock via `POST /projects/{id}/unlock` to unblock results in cases where a student is absent or a lecturer cannot submit (preventing a deadlock). Peer feedback sections are only included in the form for **TEAM** projects; `peer_bonus_budget` on the course controls whether bonus-point distribution is shown (null = disabled). A student passes if their final score (sum of average lecturer criterion scores + average received peer bonus points) meets `COURSE.min_score`.
 
 ## API & Interface Specification
 
@@ -331,6 +339,7 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes expect an `Autho
 | `PUT` | `/projects/{id}/course-evaluation` | STUDENT (member) | Save draft or publish course evaluation & peer feedback |
 | `GET` | `/projects/{id}/project-evaluation` | LECTURER | Get submitted project evaluation |
 | `POST` | `/projects/{id}/project-evaluation` | LECTURER | Submit project evaluation |
+| `POST` | `/projects/{id}/unlock` | LECTURER | Manually unlock results (overrides automatic unlock condition) |
 | `GET` | `/projects/{id}/results` | STUDENT (member) | View received results (only when `results_unlocked = true`) |
 
 ```json
@@ -454,8 +463,8 @@ sequenceDiagram
     API->>API: Reject if domain ≠ tul.cz → 422 Unprocessable Entity
     API->>DB: SELECT user WHERE email = ?
     alt user not found
-        API-->>Frontend: 404 Not Found
-        Frontend-->>User: Email not registered
+        API-->>Frontend: 200 OK (same response as found)
+        Note over API: Silent success prevents user enumeration
     else user found
         API->>API: Generate random 6-digit OTP
         API->>API: token_hash = SHA-256(otp)
@@ -484,6 +493,9 @@ sequenceDiagram
         end
     end
 ```
+
+> [!NOTE]
+> `/auth/otp/request` returns `200 OK` regardless of whether the email is registered. Returning `404` for unknown addresses would allow an attacker to enumerate valid user accounts (user enumeration attack). The user sees the same "check your email" message either way; unregistered addresses simply receive no email.
 
 OTP tokens are **single-use** and expire after **15 minutes**. Only `@tul.cz` email addresses are accepted — the API returns `422 Unprocessable Entity` for any other domain. Only the SHA-256 hash of the raw OTP is persisted; the plaintext is never stored.
 
