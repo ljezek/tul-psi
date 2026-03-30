@@ -249,7 +249,8 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes expect an `Autho
 ```json
 // POST /auth/otp/request — request body
 { "email": "jan.novak@tul.cz" }
-// 200 → { "message": "OTP sent" } · 404 → { "detail": "Email not registered" }
+// 200 → { "message": "If this email is registered, an OTP has been sent." }
+// Note: always returns 200 regardless of whether the email exists to prevent user enumeration.
 
 // POST /auth/otp/verify — request body
 { "email": "jan.novak@tul.cz", "otp": "483921" }
