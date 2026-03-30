@@ -11,10 +11,11 @@ target-version = "py312"
 # E/W: pycodestyle errors/warnings, F: Pyflakes, I: isort, UP: pyupgrade,
 # B: flake8-bugbear, S: flake8-bandit (security), ANN: type annotations
 select = ["E", "W", "F", "I", "UP", "B", "S", "ANN"]
-ignore = [
-  # B008: FastAPI's Depends() is intentionally used in function argument defaults.
-  "B008",
-]
+ignore = []
+
+[tool.ruff.lint.flake8-bugbear]
+# Allow FastAPI's Depends(), Query(), etc. in function argument defaults (B008).
+extend-immutable-calls = ["Depends", "fastapi.Depends", "Query", "fastapi.Query"]
 
 [tool.ruff.lint.per-file-ignores]
 # Test files: relax S101 (assert used) and all annotation rules (ANN*) to keep tests lightweight
