@@ -40,7 +40,7 @@ Currently the app only contains a prototype, see the [prototype/README.md](proto
 
 ### Database
 
-A local PostgreSQL instance can be started with Docker Compose:
+A local PostgreSQL instance can be started with Docker Compose (see [`database/README.md`](database/README.md) for full details):
 
 ```bash
 cd database
@@ -48,7 +48,7 @@ cp .env.example .env   # first time only – adjust credentials if needed
 docker compose up -d
 ```
 
-The database is exposed on `localhost:5432`. The default credentials are defined in `database/.env.example`.
+The database is exposed on `localhost:5432`. The default credentials are defined in [`database/.env.example`](database/.env.example).
 
 To stop the database:
 
