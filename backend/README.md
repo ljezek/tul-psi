@@ -14,8 +14,15 @@ FastAPI backend service for the Student Projects Catalogue.
 
 ### 1. Create and activate a virtual environment
 
+**PowerShell (Windows):**
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+**bash/zsh (macOS/Linux):**
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
