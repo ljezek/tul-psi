@@ -40,11 +40,28 @@ Currently the app only contains a prototype, see the [prototype/README.md](proto
 
 The backend API is under development — see [backend/README.md](backend/README.md) for setup instructions.
 
+### Database
+
+A local PostgreSQL instance can be started with Docker Compose (see [`database/README.md`](database/README.md) for full details):
+
+```bash
+cd database
+cp .env.example .env   # first time only – adjust credentials if needed
+docker compose up -d
+```
+
+By default, the database is exposed on `localhost:${POSTGRES_PORT:-5432}` (that is, `localhost:5432` unless you override the `POSTGRES_PORT` environment variable in `docker-compose.yml`). The default credentials are defined in [`database/.env.example`](database/.env.example).
+
+To stop the database:
+
+```bash
+docker compose down          # stop containers (data is preserved)
+docker compose down -v       # stop containers and wipe all data
+```
+
 ## 🔍 Examples
 
 * [`examples/monitoring`](examples/monitoring/README.md) — FastAPI app demonstrating BigTech monitoring best practices: structured logging, Prometheus metrics, distributed tracing with OpenTelemetry/Jaeger. Includes a Docker Compose stack (Jaeger + Prometheus + Grafana).
-
-TODO(ljezek): Add support for local development using Docker.
 
 ## 🎯 Project milestones
 
