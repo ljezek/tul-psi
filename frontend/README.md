@@ -1,12 +1,11 @@
 # Frontend — Student Projects Catalogue
 
-React SPA for the Student Projects Catalogue (FM TUL).
+React SPA stub for the Student Projects Catalogue (FM TUL).
 
 ## Tech Stack
 
 - **React 19** + TypeScript
 - **Vite 6** — build tool & dev server
-- **React Router 7** — client-side routing
 - **Tailwind CSS 3** — utility-first styling
 - **Vitest** + **@testing-library/react** — unit tests
 - **ESLint** — linting
@@ -42,15 +41,6 @@ npm run dev   # starts on http://localhost:3000
 | `npm test` | Run unit tests once |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run preview` | Preview production build |
-
-## Routes
-
-| Path | Page |
-|------|------|
-| `/` | Landing page |
-| `/catalog` | Project catalogue (public) |
-| `/student` | Student Zone |
-| `/admin` | Lecturer Administration |
 
 ## Configuration
 

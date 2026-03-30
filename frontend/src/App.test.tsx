@@ -4,22 +4,13 @@ import React from 'react';
 import App from './App';
 
 describe('App', () => {
-  it('renders the landing page at root route', () => {
+  it('renders the landing page heading', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Katalog projektů FM TUL',
-    );
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Katalog Projektů');
   });
 
-  it('renders the navbar with logo', () => {
+  it('renders the university subtitle', () => {
     render(<App />);
-    expect(screen.getByText('FM')).toBeInTheDocument();
-  });
-
-  it('renders the footer', () => {
-    render(<App />);
-    expect(
-      screen.getByText(/Technická univerzita v Liberci/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Technická univerzita v Liberci/i)).toBeInTheDocument();
   });
 });
