@@ -26,11 +26,15 @@ class HealthResponse(BaseModel):
     ),
 )
 async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
-    """Return service health status.
+    """Return service liveness status.
 
-    Azure App Service (and similar platforms) poll this endpoint to decide
-    whether the instance is healthy.  Returning a non-2xx status causes the
-    platform to remove the instance from rotation, so we only return 200 when
-    the application is genuinely ready to serve traffic.
+    This endpoint is intended as a liveness probe for Azure App Service (and
+    similar platforms). It returns HTTP 200 as long as the API process is
+    running and able to load its configuration.
+
+    It does not perform deep readiness or dependency checks (for example,
+    database connectivity or external service availability). If you require
+    a stricter readiness signal, expose a separate readiness endpoint with
+    the appropriate checks.
     """
     return HealthResponse(status="ok", version=settings.app_version)
