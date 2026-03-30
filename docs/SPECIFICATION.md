@@ -22,10 +22,8 @@ A lecturer logs in and creates a new course (with its syllabus, evaluation crite
 ### 3. Student Project Editing
 After receiving an invite, the student owner logs in and fills in the full project details: title, link to the repository, link to the live application, project description, list of technologies used, and additional team members. Other invited team members can view and edit the same details.
 
-### 4. Student Course Feedback & Peer Evaluation
-After a student completes a project, they switch to the **Student Zone**, where they fill out a course evaluation to help the lecturer(s) improve the course for future students.
-
-For team projects, if enabled by the lecturer, students also evaluate their peers: they submit qualitative peer feedback (1 strength and 1 area for improvement) and optionally distribute bonus points. After all project feedback is collected, each student can view their received feedback in an anonymized form.
+### 4. Student Course & Peer Evaluation
+After a student completes a project, they switch to the **Student Zone** and open the **Course and Peer Evaluation Form**. The top section is a course evaluation to help the lecturer(s) improve the course for future students. If peer feedback is enabled for the course, the form continues with a dedicated section for every other team member, where the student submits qualitative feedback (1 strength and 1 area for improvement) and optionally distributes bonus points. After all feedback has been collected, each student can view their received peer feedback in an anonymized form.
 
 ### 5. Lecturer Project Evaluation
 At the end of the term, the lecturer opens the project in the admin panel and submits an evaluation across multiple criteria that were configured for the course. For each criterion the lecturer provides a numeric score (up to the configured maximum) and textual feedback (1 strength and 1 area for improvement).
@@ -50,8 +48,7 @@ graph TD
     Dashboard --> ProjectDetail[Project Detail]
 
     StudentZone --> ProjectEdit[Edit Project Details]
-    StudentZone --> CourseEval[Course Evaluation Form]
-    StudentZone --> PeerEval[Peer Feedback Form]
+    StudentZone --> EvalForm[Course and Peer Evaluation Form]
     StudentZone --> RecFeedback[View Received Evaluations & Feedback]
 
     AdminPanel --> CourseMgmt[Course Management]
@@ -73,12 +70,9 @@ Working prototype of this application is available at:
 *   **Project Seeding:** Lecturer selects a course and academic term, provides a project title and the student owner's email address; the platform sends the student owner an invite to complete all remaining project details.
 *   **Student Project Editing:** Students can edit their project's title, repository link, live app link, description, technologies, and team members after receiving an invite.
 *   **Lecturer Project Evaluation:** Lecturer form to submit evaluations across multiple criteria configured per course; each criterion has a numeric score (with a configured maximum) and textual feedback (1 strength, 1 area for improvement).
-*   **Peer Feedback System:**
-    *   Qualitative feedback (1 strength, 1 area for improvement) for each teammate.
-    *   Optional bonus point distribution to peers (if enabled for the course).
+*   **Course & Peer Evaluation Form:** A single combined form in the Student Zone. The course evaluation section (at the top) collects constructive feedback on course quality. If peer feedback is enabled for the course, the form continues with a per-teammate section where students submit qualitative feedback (1 strength, 1 area for improvement) and optionally distribute bonus points.
 
 ### Should have
-*   **Course Evaluation:** Student form for collecting constructive feedback on course quality and future improvements.
 *   **Anonymized Reporting:**
     *    Course feedback is presented to lecturers without student names to ensure honesty.
     *    Students can view anonymized peer feedback they received to help them grow.
