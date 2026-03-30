@@ -8,9 +8,9 @@ Primarily the repository hosts a demo project - **Student Projects Catalogue** (
 
 The **Student Projects Catalogue**:
 * Lists student IT projects developed at TUL (for example within PSI).
-   * Allows filtering by technologies, names, subjects, academic term, and students.
+   * Allows filtering by technologies, names, courses, academic term, and students.
 * Provides details about a selected project (link to GitHub & live app, list of authors, description).
-* Authenticated lecturers can create subjects, seed student projects (by supplying a project title and student owner email), and submit per-project evaluations with scores and textual feedback across multiple configurable criteria.
+* Authenticated lecturers can create courses, seed student projects (by supplying a project title and student owner email), and submit per-project evaluations with scores and textual feedback across multiple configurable criteria.
 * Authenticated students receive an invite to complete their project details (title, repository link, live app link, description, technologies, and team members). They can also submit course feedback and peer feedback for teammates.
 * Students can view the evaluations and feedback they received once all lector and peer feedback for their project has been submitted.
 
@@ -25,7 +25,7 @@ flowchart TD
   DB[(Database - PostgreSQL)]
 
   UI -- HTTPS/JSON --> API
-  API -- SQLAlchemy ORM --> DB
+  API -- SQLModel --> DB
 ```
 
 ## 📖 Documentation

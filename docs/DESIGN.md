@@ -15,7 +15,7 @@ flowchart TD
   DB[(Database - PostgreSQL)]
 
   UI -- HTTPS/JSON --> API
-  API -- SQLAlchemy ORM --> DB
+  API -- SQLModel --> DB
 ```
 
 * **Frontend** (React Single Page Application):
@@ -26,10 +26,10 @@ flowchart TD
    * `State Management` (React Query): Handles data fetching and caching.
 * **Backend** (Python / FastAPI):
    * `Auth Middleware`: Validation of authentication state (validates JWT).
-   * `Subject Service`: Logic for CRUD operations on subjects.
+   * `Course Service`: Logic for CRUD operations on courses (including academic terms and project configuration).
    * `Project Service`: Logic for CRUD operations on projects, including student invite flow.
    * `Evaluation Service`: Business logic for lecturer evaluations (per-criteria scoring) and peer review.
-   * `Persistence Layer`: Interface for database communication (using SQLAlchemy ORM)
+   * `Persistence Layer`: Interface for database communication (using SQLModel)
 * **Database** (PostgreSQL)
 * **Infrastructure**
    * Monitoring: Storage for monitoring data and logs.
