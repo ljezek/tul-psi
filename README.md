@@ -37,6 +37,10 @@ flowchart TD
 
 Currently the app only contains a prototype, see the [prototype/README.md](prototype/README.md) for instructions how to run it locally and in Google AI Studio.
 
+## 🔍 Examples
+
+* [`examples/monitoring`](examples/monitoring/README.md) — FastAPI app demonstrating BigTech monitoring best practices: structured logging, Prometheus metrics, distributed tracing with OpenTelemetry/Jaeger. Includes a Docker Compose stack (Jaeger + Prometheus + Grafana).
+
 TODO(ljezek): Add support for local development using Docker.
 
 ## 🎯 Project milestones

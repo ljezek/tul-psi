@@ -7,20 +7,20 @@ This sample backend demonstrates best practices for:
 - Metrics for RPS, error rate and latency (inbound and outbound)
 - End-to-end request tracing with OpenTelemetry
 
-It reads project data from `backend/db/fake_projects.json`, simulates outbound HTTP
+It reads project data from `examples/monitoring/db/fake_projects.json`, simulates outbound HTTP
 and DB calls (with configurable delays), and injects random errors to demonstrate
 error-rate monitoring.
 
 ## Run Backend
 
 ```bash
-cd backend
-../.venv/Scripts/Activate.ps1
+cd examples/monitoring
+../../.venv/Scripts/Activate.ps1
 pip install -r requirements.txt
 python -m uvicorn main:app --reload --app-dir . --port 8001
 ```
 
-Recommended `backend/.env` for local monitoring:
+Recommended `examples/monitoring/.env` for local monitoring:
 
 ```env
 APP_ENV=local
@@ -38,12 +38,16 @@ Then open:
 - `http://localhost:8001/projects`
 - `http://localhost:8001/health`
 
+
+## Generate Traffic
+Use either the OpenAPI endpoint `http://localhost:8001/docs` or a test script `python .\examples_demo_requests.py` to send traffic to the backend.
+
 ## Local Monitoring Stack
 
-Run the local observability stack from `backend/monitoring`:
+Run the local observability stack from `examples/monitoring/monitoring`:
 
 ```bash
-cd monitoring
+cd examples/monitoring/monitoring
 docker compose up -d
 ```
 
