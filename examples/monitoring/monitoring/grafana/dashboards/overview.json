@@ -1,0 +1,107 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_total[5m])) by (http_route, http_status_code)",
+          "legendFormat": "{{http_route}} / {{http_status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP RPS by Route and Status Code",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_milliseconds_bucket[5m])) by (le, http_route))",
+          "legendFormat": "{{http_route}}",
+          "exemplar": true,
+          "refId": "A"
+        }
+      ],
+      "title": "p95 Request Latency by Route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(rate(db_queries_total[5m])) by (query_name, status)",
+          "legendFormat": "{{query_name}} / {{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "DB Query Rate by Query Name and Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_milliseconds_bucket[5m])) by (le, query_name))",
+          "legendFormat": "{{query_name}}",
+          "exemplar": true,
+          "refId": "A"
+        }
+      ],
+      "title": "DB p95 Latency by Query Name",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum(rate(http_client_requests_total[5m])) by (service, operation, status)",
+          "legendFormat": "{{service}} / {{operation}} / {{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Outbound HTTP Rate by Service, Operation and Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 6,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_client_request_duration_milliseconds_bucket[5m])) by (le, service, operation))",
+          "legendFormat": "{{service}} / {{operation}}",
+          "exemplar": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Outbound HTTP p95 Latency",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["tul-psi", "observability"],
+  "templating": {"list": []},
+  "time": {"from": "now-30m", "to": "now"},
+  "title": "TUL PSI Backend Overview",
+  "version": 1
+}
