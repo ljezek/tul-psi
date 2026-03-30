@@ -38,6 +38,8 @@ flowchart TD
 
 Currently the app only contains a prototype, see the [prototype/README.md](prototype/README.md) for instructions how to run it locally and in Google AI Studio.
 
+The backend API is under development — see [backend/README.md](backend/README.md) for setup instructions.
+
 ### Database
 
 A local PostgreSQL instance can be started with Docker Compose (see [`database/README.md`](database/README.md) for full details):
