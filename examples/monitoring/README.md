@@ -51,11 +51,25 @@ cd examples/monitoring/monitoring
 docker compose up -d
 ```
 
+Prometheus and Grafana data are stored in named Docker volumes, so history is **preserved across restarts**:
+
+| Goal | Command |
+|---|---|
+| Start / resume | `docker compose up -d` |
+| Stop without losing data | `docker compose stop` |
+| Resume after stop | `docker compose start` |
+| Destroy containers (keep data) | `docker compose down` |
+| Full reset (wipe all history) | `docker compose down -v` |
+
+> Jaeger uses in-memory trace storage and does not persist across restarts.
+
 Services:
 
-- Jaeger UI: `http://localhost:16686`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000` (`admin` / `admin`)
+- Jaeger UI: `http://localhost:16686` (Trace store)
+- Prometheus: `http://localhost:9090` (Metric store)
+- Grafana: `http://localhost:3000` (Dashboards, `admin` / `admin`)
+    - You'll have to change the password
+    - Observe the dashboard in `Dashboards` -> `TUL-PSI`
 
 This setup is intended for local teaching demos:
 
