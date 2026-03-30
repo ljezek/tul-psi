@@ -47,7 +47,7 @@ TODO(ljezek): Add support for local development using Docker.
 ## 🎯 Project milestones
 
 * **Milestone 1: prototype** (3.3.2026): Specification, prototype & high-level design.
-* **Milestone 2: mvp** (7.4.2026): MVP is ready, CI/CD is working (dev environment).
+* **Milestone 2: core functionality** (7.4.2026): MVP is ready, CI/CD is working (dev environment).
 * **Product launch** (5.5.2026): Final demo, code/test/documentation is ready, deployed to Azure (dev & prod) with NFRs met (monitoring).
 
 ## 👥 Team

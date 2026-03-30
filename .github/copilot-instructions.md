@@ -32,7 +32,7 @@ data/       — Shared JSON project catalogue (seed of the data for this year's 
 docs/       — SPECIFICATION.md, DESIGN.md
 ```
 
-The system is a **three-tier web application**: React SPA ↔ FastAPI REST API ↔ PostgreSQL. The `prototype/` directory contains the full UI reference with mock data; `frontend/` is the production app that integrates with the real backend. Do not touch the `prototype/` implementation, your goal is to make a new fully tested and clean version of the full-stack application.
+The system is a **three-tier web application**: React SPA ↔ FastAPI REST API ↔ PostgreSQL. The `prototype/` directory contains the full UI reference with mock data; `frontend/` is the production app that integrates with the real backend. Do not touch the `prototype/` implementation, your goal is to make a new fully tested and clean version of the full-stack application (independent of the prototype).
 
 **Roles**: `host` (public/unauthenticated), `student`, `lecturer`, `admin` (superuser who can create courses and manage users). Route access and UI components are strictly role-gated.
 
@@ -49,7 +49,7 @@ The system is a **three-tier web application**: React SPA ↔ FastAPI REST API �
 - State management: local `useState` for UI state, React Context for cross-cutting concerns (auth, language). No Redux/Zustand unless explicitly added.
 - Path alias `@/*` maps to `src/*` in `frontend/`; use it for all internal imports.
 - **No `React` import** needed (React 17+ JSX transform is configured).
-- For i18n: use the `useLanguage` hook and translation key pattern `'section.key'` (e.g., `'role.lecturer'`). Missing keys return the key itself — do not hardcode user-visible strings.
+- For i18n: prepare the code for internationalization, do not hardcode user-visible strings.
 - Styling: Tailwind utility classes only. Follow the existing color system:
   - Brand: `tul-blue`
   - Neutrals: `slate` palette
@@ -92,18 +92,15 @@ The project uses ESLint 10 flat config (`@typescript-eslint` recommended). Key r
 - Assert on **user-visible outcomes** (text rendered, aria state), not implementation details.
 - `vitest.setup.ts` imports `@testing-library/jest-dom/vitest` — all jest-dom matchers are globally available.
 
-**Example pattern:**
+**Example pattern (pseudocode):**
 ```tsx
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { LanguageProvider } from '@/context/LanguageContext'
 
 describe('ProjectCard', () => {
   it('shows project title', () => {
     render(
-      <LanguageProvider>
-        <ProjectCard project={mockProject} />
-      </LanguageProvider>
+      <ProjectCard project={mockProject} />
     )
     expect(screen.getByRole('heading', { name: mockProject.title })).toBeInTheDocument()
   })
