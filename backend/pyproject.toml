@@ -13,6 +13,10 @@ target-version = "py312"
 select = ["E", "W", "F", "I", "UP", "B", "S", "ANN"]
 ignore = []
 
+[tool.ruff.lint.flake8-bugbear]
+# Allow FastAPI's Depends(), Query(), etc. in function argument defaults (B008).
+extend-immutable-calls = ["Depends", "fastapi.Depends", "Query", "fastapi.Query"]
+
 [tool.ruff.lint.per-file-ignores]
 # Test files: relax S101 (assert used) and all annotation rules (ANN*) to keep tests lightweight
 "tests/**/*.py" = ["S101", "ANN"]
