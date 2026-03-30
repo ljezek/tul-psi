@@ -1,0 +1,23 @@
+[project]
+name = "tul-psi-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W: pycodestyle errors/warnings, F: Pyflakes, I: isort, UP: pyupgrade,
+# B: flake8-bugbear, S: flake8-bandit (security), ANN: type annotations
+select = ["E", "W", "F", "I", "UP", "B", "S", "ANN"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Test files: relax security checks and allow missing return-type annotations
+"tests/**/*.py" = ["S101", "ANN"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
