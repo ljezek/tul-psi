@@ -29,7 +29,7 @@ The PostgreSQL server is now available at `localhost:5432` with the credentials 
 | `POSTGRES_USER` | `tul_psi` | Database user |
 | `POSTGRES_PASSWORD` | `tul_psi` | Database password |
 | `POSTGRES_PORT` | `5432` | Host port mapped to PostgreSQL |
-| `DATABASE_URL` | see `.env.example` | SQLAlchemy connection string used by the FastAPI backend |
+| `DATABASE_URL` | see `.env.example` | SQLAlchemy connection string — will be consumed by the FastAPI backend once database integration is added |
 
 > ⚠️ **Never commit `.env` or reuse these credentials outside local development.** Use your cloud provider's secrets management for staging and production environments.
 
