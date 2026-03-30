@@ -227,7 +227,7 @@ sequenceDiagram
             alt all members published AND all assigned lecturers have submitted project_evaluation
                 API->>DB: SET project.results_unlocked = true
             end
-            API-->>Frontend: 201 Created
+            API-->>Frontend: 200 OK
             Frontend-->>Student: Evaluation published successfully
         end
     end
