@@ -38,11 +38,28 @@ flowchart TD
 
 Currently the app only contains a prototype, see the [prototype/README.md](prototype/README.md) for instructions how to run it locally and in Google AI Studio.
 
+### Database
+
+A local PostgreSQL instance can be started with Docker Compose:
+
+```bash
+cd database
+cp .env.example .env   # first time only – adjust credentials if needed
+docker compose up -d
+```
+
+The database is exposed on `localhost:5432`. The default credentials are defined in `database/.env.example`.
+
+To stop the database:
+
+```bash
+docker compose down          # stop containers (data is preserved)
+docker compose down -v       # stop containers and wipe all data
+```
+
 ## 🔍 Examples
 
 * [`examples/monitoring`](examples/monitoring/README.md) — FastAPI app demonstrating BigTech monitoring best practices: structured logging, Prometheus metrics, distributed tracing with OpenTelemetry/Jaeger. Includes a Docker Compose stack (Jaeger + Prometheus + Grafana).
-
-TODO(ljezek): Add support for local development using Docker.
 
 ## 🎯 Project milestones
 

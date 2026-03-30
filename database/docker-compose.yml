@@ -1,0 +1,27 @@
+# Local PostgreSQL instance for Student Projects Catalogue development.
+#
+# Usage:
+#   cp .env.example .env        # first time only
+#   docker compose up -d        # start the database
+#   docker compose down         # stop the database
+#   docker compose down -v      # stop and wipe all data
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: tul-psi-db
+    # Do not restart automatically – in local dev the developer controls the lifecycle.
+    restart: "no"
+    env_file: .env
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tul_psi} -d ${POSTGRES_DB:-tul_psi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
