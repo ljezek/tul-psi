@@ -51,8 +51,9 @@ erDiagram
     }
     OTP_TOKEN {
         int id PK
-        string email
+        int user_id FK
         string token_hash
+        int attempts "failed verify attempts"
         timestamp expires_at
         bool used
         timestamp created_at
@@ -123,9 +124,9 @@ erDiagram
         timestamp assigned_at
     }
 
-    USER }o--o{ COURSE : "COURSE_LECTURER"
     COURSE_LECTURER }|--|| COURSE : "course"
     COURSE_LECTURER }|--|| USER : "lecturer"
+    USER ||--o{ OTP_TOKEN : "authenticates"
     USER ||--o{ COURSE : "created_by"
     COURSE ||--o{ PROJECT : "contains"
     PROJECT ||--o{ PROJECT_MEMBER : "members"
@@ -237,7 +238,7 @@ Results become visible to each student once **both** conditions are met: **all**
 
 ## API & Interface Specification
 
-All endpoints are prefixed with `/api/v1`. Authenticated routes expect an `Authorization: Bearer <jwt>` header. Required roles are noted inline.
+All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **HttpOnly session cookie** set by the server (see [Security Architecture](#security-architecture)); no `Authorization` header is needed. State-changing requests must also include the `X-XSRF-Token` header (Double Submit Cookie pattern). Required roles are noted inline.
 
 ### Auth
 
@@ -254,7 +255,8 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes expect an `Autho
 
 // POST /auth/otp/verify — request body
 { "email": "jan.novak@tul.cz", "otp": "483921" }
-// 200 → { "access_token": "<jwt>", "token_type": "bearer" } · 401 → { "detail": "Invalid or expired code" }
+// 200 + Set-Cookie: session=<jwt>; HttpOnly; Secure; SameSite=Strict
+// 200 → {} · 401 → { "detail": "Invalid or expired code" } · 429 → { "detail": "Too many attempts — request a new code" }
 ```
 
 ### Health
@@ -468,28 +470,34 @@ sequenceDiagram
         Note over API: Silent success prevents user enumeration
     else user found
         API->>API: Generate random 6-digit OTP
-        API->>API: token_hash = SHA-256(otp)
-        API->>DB: INSERT otp_tokens (email, token_hash, expires_at = now + 15 min)
+        API->>API: token_hash = bcrypt(otp, salt)
+        API->>DB: INSERT otp_tokens (user_id, token_hash, attempts=0, expires_at = now + 15 min)
         API->>SMTP: Send OTP email
         API-->>Frontend: 200 OK
         Frontend-->>User: Check your email for a one-time code
         User->>Frontend: Enter 6-digit OTP
         Frontend->>API: POST /api/v1/auth/otp/verify {email, otp}
-        API->>DB: SELECT token WHERE email=? AND used=false AND expires_at > now()
+        API->>DB: SELECT token JOIN user WHERE user.email=? AND used=false AND expires_at > now()
         alt not found or expired
             API-->>Frontend: 401 Unauthorized
             Frontend-->>User: Invalid or expired code
         else token found
-            API->>API: Verify SHA-256(otp) == token_hash
-            alt hash mismatch
-                API-->>Frontend: 401 Unauthorized
-                Frontend-->>User: Invalid or expired code
-            else hash matches
-                API->>DB: UPDATE otp_tokens SET used = true
-                API->>API: Sign JWT {user_id, role, exp: now + 8 h}
-                API-->>Frontend: 200 {access_token, token_type: "bearer"}
-                Frontend->>Frontend: Store JWT in localStorage
-                Frontend-->>User: Redirect to role-based route
+            API->>DB: INCREMENT otp_tokens SET attempts = attempts + 1
+            alt attempts > 5
+                API->>DB: SET used = true (invalidate token)
+                API-->>Frontend: 429 Too Many Requests
+                Frontend-->>User: Too many attempts — request a new code
+            else within attempt limit
+                API->>API: bcrypt.checkpw(otp, token_hash)
+                alt hash mismatch
+                    API-->>Frontend: 401 Unauthorized
+                    Frontend-->>User: Invalid or expired code
+                else hash matches
+                    API->>DB: UPDATE otp_tokens SET used = true
+                    API->>API: Sign JWT {user_id, role, exp: now + 8 h}
+                    API-->>Frontend: 200 + Set-Cookie: session=<jwt>; HttpOnly; Secure; SameSite=Strict
+                    Frontend-->>User: Redirect to role-based route
+                end
             end
         end
     end
@@ -498,12 +506,13 @@ sequenceDiagram
 > [!NOTE]
 > `/auth/otp/request` returns `200 OK` regardless of whether the email is registered. Returning `404` for unknown addresses would allow an attacker to enumerate valid user accounts (user enumeration attack). The user sees the same "check your email" message either way; unregistered addresses simply receive no email.
 
-OTP tokens are **single-use** and expire after **15 minutes**. Only `@tul.cz` email addresses are accepted — the API returns `422 Unprocessable Entity` for any other domain. Only the SHA-256 hash of the raw OTP is persisted; the plaintext is never stored.
+OTP tokens are **single-use**, expire after **15 minutes**, and are invalidated after **5 failed verification attempts**. Only `@tul.cz` email addresses are accepted — the API returns `422 Unprocessable Entity` for any other domain. The OTP is hashed with **bcrypt** (per-token salt) before storage; plain SHA-256 would be trivially reversible offline against a 6-digit space. The plaintext OTP is never stored.
 
 ### Additional Security Controls
 
+* **Session cookie** — on successful OTP verification the server sets `Set-Cookie: session=<jwt>; HttpOnly; Secure; SameSite=Strict`. The JWT is never exposed to JavaScript, eliminating token exfiltration via XSS.
+* **CSRF/XSRF** — because the JWT lives in a cookie, state-changing requests must include an `X-XSRF-Token` header following the **Double Submit Cookie** pattern; the backend validates that the header value matches the XSRF cookie.
 * **CORS** — strict allowlist of trusted frontend origins configured on the FastAPI app.
-* **CSRF/XSRF** — backend validates the `Origin` header; state-changing requests also require an `X-XSRF-Token` header following the Double Submit Cookie pattern.
 
 ## Testing Strategy
 
