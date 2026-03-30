@@ -22,7 +22,7 @@ flowchart TD
    * Vite and Tailwind CSS
    * `ProjectDashboard`: Displays the list of all student projects.
    * `ProjectDetails`: View for specific project info, including links to GitHub and live app.
-   * `EvaluationModule`: Forms for Lecturer Project Evaluation and Student Peer Feedback.
+   * `EvaluationModule`: Forms for Student Course Evaluation, Lecturer Project Evaluation, and Student Peer Feedback.
    * `State Management` (React Query): Handles data fetching and caching.
 * **Backend** (Python / FastAPI):
    * `Auth Middleware`: Validation of authentication state (validates JWT).

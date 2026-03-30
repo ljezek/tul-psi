@@ -29,10 +29,10 @@ After a student completes a project, they switch to the **Student Zone** and ope
 At the end of the term, the lecturer opens the project in the admin panel and submits an evaluation across multiple criteria that were configured for the course. For each criterion the lecturer provides a numeric score (up to the configured maximum) and textual feedback (1 strength and 1 area for improvement).
 
 ### 6. Lecturer Evaluation Overview
-The lecturer can view a summary of all project evaluations for the course and academic year: per-project scores and feedback for every criterion, as well as the average peer feedback scores received by each student.
+The lecturer can view a summary of all project evaluations for the course and academic term: per-project scores and feedback for every criterion, as well as the average peer feedback scores received by each student.
 
 ### 7. Student Evaluation View
-Once the lecturer has submitted the project evaluation and all peer feedbacks have been collected, the student can view their evaluation results: lecturer scores and feedback per criterion, as well as anonymized peer feedback they received.
+Once the lecturer has submitted the project evaluation and all peer feedback has been collected, the student can view their evaluation results: lecturer scores and feedback per criterion, as well as anonymized peer feedback they received.
 
 ## UX Flow
 
