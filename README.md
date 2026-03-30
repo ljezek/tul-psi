@@ -8,10 +8,11 @@ Primarily the repository hosts a demo project - **Student Projects Catalogue** (
 
 The **Student Projects Catalogue**:
 * Lists student IT projects developed at TUL (for example within PSI).
-   * Allows filtering by year and course.
+   * Allows filtering by technologies, names, subjects, academic term, and students.
 * Provides details about a selected project (link to GitHub & live app, list of authors, description).
-* Authenticated students can submit feedback - both for courses as well as peer feedback for other team members (in team projects). Students can also read feedback received from their peers.
-* Authenticated lecturers can create courses, subjects and browse course & student feedback in their courses.
+* Authenticated lecturers can create subjects, seed student projects (by supplying a project title and student owner email), and submit per-project evaluations with scores and textual feedback across multiple configurable criteria.
+* Authenticated students receive an invite to complete their project details (title, repository link, live app link, description, technologies, and team members). They can also submit course feedback and peer feedback for teammates.
+* Students can view the evaluations and feedback they received once all lector and peer feedback for their project has been submitted.
 
 ## 🛠️ Tech Stack
 
@@ -20,11 +21,11 @@ The following diagram depicts the layout of the project components and core tech
 ```mermaid
 flowchart TD
   UI[Frontend - React SPA]
-  API[Backend - Node.js / Fastify]
+  API[Backend - Python / FastAPI]
   DB[(Database - PostgreSQL)]
 
   UI -- HTTPS/JSON --> API
-  API -- Drizzle ORM --> DB
+  API -- SQLAlchemy ORM --> DB
 ```
 
 ## 📖 Documentation

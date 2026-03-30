@@ -14,19 +14,27 @@ The **Student Projects Catalogue** is a centralized platform designed for the Fa
 ## User Scenarios
 
 ### 1. Public Project Discovery
-A visitor arrives at the site to see the faculty's ongoing and finished projects. They use the **Dashboard** to filter by course, academic year or search for specific technologies (e.g., "AI", "SQL"). They click on a project card to see a full description, the student team, and links to source code or live demos.
+A visitor arrives at the site to see the faculty's ongoing and finished projects. They use the **Dashboard** to filter by technologies, project name, subject, academic term, or students. They click on a project card to see a full description, the student team, and links to source code or live demos.
 
-### 2. Student Reflection & Peer Evaluation
-After a student completes a project, they switch to the **Student Zone**, where they fill out a course evaluation to help the lecturer(s) improve the course for future students.
+### 2. Lecturer Subject & Project Setup
+A lecturer logs in and creates a new subject for the current academic term. For each student project they select the subject and academic term, enter a project title, and provide the email address of the student project owner. The platform sends the student owner an invite link to complete all remaining project details.
 
-Additionally, for team projects students evaluate their peers: fill out qualitative peer feedback and distribute bonus points. After all project feedback is collected, the app displays anonymized feedback to each student.
+### 3. Student Project Editing
+After receiving an invite, the student owner logs in and fills in the full project details: title, link to the repository, link to the live application, project description, list of technologies used, and additional team members. Other invited team members can view and edit the same details.
 
-The evaluation forms are designed to promote constructive feedback (i.e., 1 strength and 1 area for improvement).
+### 4. Student Subject Feedback & Peer Evaluation
+After a student completes a project, they switch to the **Student Zone**, where they fill out a subject evaluation to help the lecturer(s) improve the subject for future students.
 
-### 3. Lecturer Administration & Quality Control
-A lecturer uses the **Admin Panel** to set up the courses and manage projects. They create projects and assign students to their respective teams.
+For team projects, if enabled by the lecturer, students also evaluate their peers: they submit qualitative peer feedback (1 strength and 1 area for improvement) and optionally distribute bonus points. After all project feedback is collected, each student can view their received feedback in an anonymized form.
 
-At the end of the term, they review the **Feedback** tab. They see anonymized course feedback to identify course pain points and check the **Average Peer Bonus Points** to identify high-performers or potential team conflicts.
+### 5. Lecturer Project Evaluation
+At the end of the term, the lecturer opens the project in the admin panel and submits an evaluation across multiple criteria that were configured for the subject. For each criterion the lecturer provides a numeric score (up to the configured maximum) and textual feedback (1 strength and 1 area for improvement).
+
+### 6. Lecturer Evaluation Overview
+The lecturer can view a summary of all project evaluations for the subject and academic year: per-project scores and feedback for every criterion, as well as the average peer feedback scores received by each student.
+
+### 7. Student Evaluation View
+Once the lecturer has submitted the project evaluation and all peer feedbacks have been collected, the student can view their evaluation results: lecturer scores and feedback per criterion, as well as anonymized peer feedback they received.
 
 ## UX Flow
 
@@ -38,16 +46,18 @@ graph TD
     RoleRoute -->|Public - unauthenticated| Dashboard[Project Dashboard]
     RoleRoute -->|Student| StudentZone[Student Zone]
     RoleRoute -->|Lecturer| AdminPanel[Admin Panel]
-    
+
     Dashboard --> ProjectDetail[Project Detail]
-    
-    StudentZone --> CourseEval[Course Evaluation Form]
+
+    StudentZone --> ProjectEdit[Edit Project Details]
+    StudentZone --> SubjectEval[Subject Evaluation Form]
     StudentZone --> PeerEval[Peer Feedback Form]
-    StudentZone --> RecFeedback[View Received Feedback]
-    
-    AdminPanel --> ProjMgmt[Project Management]
-    AdminPanel --> CourseMgmt[Course Management]
-    AdminPanel --> FeedbackReview[Feedback Review & Stats]
+    StudentZone --> RecFeedback[View Received Evaluations & Feedback]
+
+    AdminPanel --> SubjectMgmt[Subject Management]
+    AdminPanel --> ProjectSeed[Seed Student Projects]
+    AdminPanel --> EvalSubmit[Submit Project Evaluations]
+    AdminPanel --> EvalOverview[Evaluation Overview & Stats]
 ```
 ## Prototype
 
@@ -57,25 +67,28 @@ Working prototype of this application is available at:
 ## Functional Requirements
 
 ### Must have
-*   **Project Catalogue:** Searchable and filterable list of student projects with detailed modals.
+*   **Project Catalogue:** Searchable and filterable list of student projects (filter by technologies, project name, subject, academic term, and students) with detailed project pages.
 *   **Role-Based Access:** Distinct views for Public, Student, and Lecturer roles.
-*   **Project Management:** Lecturer interface to create new courses, projects and assign students to teams.
-*   **Peer Feedback System:** 
-    *   Qualitative feedback (Strengths/Improvements) for each teammate.
-    *   Quantitative bonus point distribution to peers.
+*   **Subject Management:** Lecturer interface to create subjects and configure academic terms.
+*   **Project Seeding:** Lecturer provides a project title and the student owner's email address; the platform sends the student owner an invite to complete all remaining project details.
+*   **Student Project Editing:** Students can edit their project's title, repository link, live app link, description, technologies, and team members after receiving an invite.
+*   **Lecturer Project Evaluation:** Lecturer form to submit evaluations across multiple criteria configured per subject; each criterion has a numeric score (with a configured maximum) and textual feedback (1 strength, 1 area for improvement).
+*   **Peer Feedback System:**
+    *   Qualitative feedback (1 strength, 1 area for improvement) for each teammate.
+    *   Optional bonus point distribution to peers (if enabled for the subject).
 
 ### Should have
-*   **Course Evaluation:** Student form for collecting constructive feedback for course quality and future improvements.
+*   **Subject Evaluation:** Student form for collecting constructive feedback on subject quality and future improvements.
 *   **Anonymized Reporting:**
-    *    Course feedback is presented to lecturers without student names to ensure honesty.
-    *    Students can view anonymized feedback received from their peers to help them grow.
-*   **Collaboration Analytics:** Lecturers can view for each student average peer bonus points and anonymized peer feedback.
+    *    Subject feedback is presented to lecturers without student names to ensure honesty.
+    *    Students can view anonymized peer feedback they received to help them grow.
+*   **Evaluation Overview:** Lecturers can view per-project scores and feedback across all criteria for the whole subject and academic year, plus average peer feedback scores per student.
+*   **Student Evaluation View:** Students can view their lector evaluation results and received peer feedback after all lector and peer feedback for their project has been submitted.
 *   **Web and Mobile:** Reactive web app that supports both web and mobile clients.
 
 ### Could have
 *   **Bilingual Interface:** Full support for Czech and English languages.
 *   **Feedback Moderation:** Filtering/flagging of inappropriate comments in the feedback.
-*   **Student-driven Project Management:** Student interface for managing their projects: adding description, project links and peers. This would help offload lecturers (who would only send project invite to lead student in each project).
 
 ## Non-Goals
 
