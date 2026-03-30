@@ -11,29 +11,29 @@ The following diagram depicts the layout of the project components and core tech
 ```mermaid
 flowchart TD
   UI[Frontend - React SPA]
-  API[Backend - Node.js / Fastify]
+  API[Backend - Python / FastAPI]
   DB[(Database - PostgreSQL)]
 
   UI -- HTTPS/JSON --> API
-  API -- Drizzle ORM --> DB
+  API -- SQLModel --> DB
 ```
 
 * **Frontend** (React Single Page Application):
    * Vite and Tailwind CSS
    * `ProjectDashboard`: Displays the list of all student projects.
-   * `ProjectDetails`: View for specific project info, including links to GitHub and Azure.
-   * `EvaluationModule`: Forms for Course Grading and Student Peer Feedback.
+   * `ProjectDetails`: View for specific project info, including links to GitHub and live app.
+   * `EvaluationModule`: Forms for Student Course Evaluation, Lecturer Project Evaluation, and Student Peer Feedback.
    * `State Management` (React Query): Handles data fetching and caching.
-* **Backend** (Node.js / Fastify):
+* **Backend** (Python / FastAPI):
    * `Auth Middleware`: Validation of authentication state (validates JWT).
-   * `Course Service`: Logic for CRUD operations on courses.
-   * `Project Service`: Logic for CRUD operations on projects.
-   * `Evaluation Service`: Business logic for calculating final scores and peer review budgets.
-   * `Persistence Layer`: Interface for database communication (using Drizzle ORM)
+   * `Course Service`: Logic for CRUD operations on courses (including academic terms and project configuration).
+   * `Project Service`: Logic for CRUD operations on projects, including student invite flow.
+   * `Evaluation Service`: Business logic for lecturer evaluations (per-criteria scoring) and peer review.
+   * `Persistence Layer`: Interface for database communication (using SQLModel)
 * **Database** (PostgreSQL)
 * **Infrastructure**
    * Monitoring: Storage for monitoring data and logs.
-   * Testing: currently using Vitest for unit tests; planned future tooling includes node:test (unit) and Playwright for integration/UI tests.
+   * Testing: pytest for unit and integration tests; Playwright for UI tests.
    * Deployment: Azure Cloud, GitHub Actions (CI/CD)
    * Local development: Docker
 
