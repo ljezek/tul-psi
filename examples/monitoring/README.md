@@ -67,7 +67,7 @@ Services:
 
 - Jaeger UI: `http://localhost:16686` (Trace store)
 - Prometheus: `http://localhost:9090` (Metric store)
-- Grafana: `http://localhost:3000` (Dashboards, `admin` / `admin`)
+- Grafana: `http://localhost:3001` (Dashboards, `admin` / `admin`)
     - You'll have to change the password
     - Observe the dashboard in `Dashboards` -> `TUL-PSI`
 
