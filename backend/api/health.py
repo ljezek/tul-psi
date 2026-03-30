@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from importlib.metadata import PackageNotFoundError, version
+
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from settings import Settings, get_settings
+try:
+    # Single source of truth: version declared in pyproject.toml.
+    _APP_VERSION: str = version("student-projects-catalogue-backend")
+except PackageNotFoundError:
+    # Fallback for environments where the package is not installed (e.g. bare source checkout).
+    _APP_VERSION = "0.0.0"
 
 router = APIRouter(tags=["health"])
 
@@ -25,7 +32,7 @@ class HealthResponse(BaseModel):
         "always returns HTTP 200 while the process is running."
     ),
 )
-async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
+async def health() -> HealthResponse:
     """Return service liveness status.
 
     This endpoint is intended as a liveness probe for Azure App Service (and
@@ -37,4 +44,4 @@ async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
     a stricter readiness signal, expose a separate readiness endpoint with
     the appropriate checks.
     """
-    return HealthResponse(status="ok", version=settings.app_version)
+    return HealthResponse(status="ok", version=_APP_VERSION)
