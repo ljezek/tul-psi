@@ -1,5 +1,5 @@
 [project]
-name = "tul-psi-backend"
+name = "student-projects-catalogue-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
 
@@ -14,7 +14,7 @@ select = ["E", "W", "F", "I", "UP", "B", "S", "ANN"]
 ignore = []
 
 [tool.ruff.lint.per-file-ignores]
-# Test files: relax security checks and allow missing return-type annotations
+# Test files: relax S101 (assert used) and all annotation rules (ANN*) to keep tests lightweight
 "tests/**/*.py" = ["S101", "ANN"]
 
 [tool.pytest.ini_options]

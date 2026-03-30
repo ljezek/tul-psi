@@ -12,13 +12,17 @@ FastAPI backend service for the Student Projects Catalogue.
 
 ## Local Development
 
-### 1. Create and activate a virtual environment
+All commands in this guide are run from the **`backend/` directory** unless noted otherwise.
 
-**PowerShell (Windows):**
-```powershell
-py -3.12 -m venv .venv
-.venv\Scripts\Activate.ps1
+### 1. Navigate to the backend folder
+
+> Run from the **repository root**:
+
+```bash
+cd backend
 ```
+
+### 2. Create and activate a virtual environment
 
 **bash/zsh (macOS/Linux):**
 ```bash
@@ -26,13 +30,23 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 2. Install dependencies
+**PowerShell (Windows):**
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+### 3. Install dependencies
+
+> Run from **`backend/`**:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Run the development server
+### 4. Run the development server
+
+> Run from **`backend/`**:
 
 ```bash
 uvicorn main:app --reload
@@ -42,6 +56,8 @@ The API will be available at <http://localhost:8000>.
 Interactive docs (Swagger UI) at <http://localhost:8000/docs>.
 
 ## Available Commands
+
+All commands below are run from **`backend/`**.
 
 | Command | Description |
 |---------|-------------|
