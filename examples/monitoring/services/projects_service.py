@@ -46,6 +46,7 @@ class ProjectsService:
                     project.students = enrichment["students"]
             except RuntimeError as exc:
                 span.set_status(StatusCode.ERROR, str(exc))
+                span.record_exception(exc)
                 logger.error(
                     "get_projects_failed",
                     extra={
