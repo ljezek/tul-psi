@@ -50,7 +50,7 @@ cp .env.example .env   # first time only – adjust credentials if needed
 docker compose up -d
 ```
 
-The database is exposed on `localhost:5432`. The default credentials are defined in [`database/.env.example`](database/.env.example).
+By default, the database is exposed on `localhost:${POSTGRES_PORT:-5432}` (that is, `localhost:5432` unless you override the `POSTGRES_PORT` environment variable in `docker-compose.yml`). The default credentials are defined in [`database/.env.example`](database/.env.example).
 
 To stop the database:
 
