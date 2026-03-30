@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-# Version reported by the health endpoint — update when releasing a new version.
-_VERSION = "1.0.0"
+from settings import Settings, get_settings
 
 router = APIRouter(tags=["health"])
 
@@ -26,7 +25,7 @@ class HealthResponse(BaseModel):
         "always returns HTTP 200 while the process is running."
     ),
 )
-async def health() -> HealthResponse:
+async def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
     """Return service health status.
 
     Azure App Service (and similar platforms) poll this endpoint to decide
@@ -34,4 +33,4 @@ async def health() -> HealthResponse:
     platform to remove the instance from rotation, so we only return 200 when
     the application is genuinely ready to serve traffic.
     """
-    return HealthResponse(status="ok", version=_VERSION)
+    return HealthResponse(status="ok", version=settings.app_version)
