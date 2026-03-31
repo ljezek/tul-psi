@@ -23,15 +23,12 @@
 #   POSTGRES_DB             database name
 #   POSTGRES_APP_USER       application role name
 #   POSTGRES_APP_PASSWORD   application role password
-#
-# ⚠️  Passwords must not contain single quotes — they are embedded as SQL
-#     string literals.  Use your secrets manager for non-local environments.
 
 set -euo pipefail
 
 # Escape any single quotes in the password so the SQL literal is valid.
 # (Single quotes are doubled per the SQL standard: ' → '')
-ESCAPED_APP_PASSWORD="${POSTGRES_APP_PASSWORD//\'/\'\'}"
+ESCAPED_APP_PASSWORD=${POSTGRES_APP_PASSWORD//\'/\'\'}
 
 psql -v ON_ERROR_STOP=1 \
      --username "$POSTGRES_ADMIN_USER" \

@@ -85,7 +85,7 @@ All commands below are run from **`backend/`**.
 |---------|-------------|
 | `./start.sh --reload` | Apply migrations then start dev server with auto-reload |
 | `uvicorn main:app --reload` | Start dev server without running migrations |
-| `alembic upgrade head` | Apply all pending migrations (requires `DATABASE_ADMIN_URL`) |
+| `alembic upgrade head` | Apply all pending migrations (requires `DATABASE_MIGRATION_URL`) |
 | `ruff check .` | Run linter |
 | `ruff format --check .` | Check code formatting |
 | `ruff format .` | Auto-format code |
