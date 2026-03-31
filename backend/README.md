@@ -44,13 +44,35 @@ py -3.12 -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 4. Run the development server
+### 4. Configure environment variables
 
 > Run from **`backend/`**:
 
 ```bash
+cp .env.example .env
+```
+
+Edit `.env` to match your local database settings (see `database/.env.example`).
+
+### 5. Run the development server
+
+Use `start.sh` to apply any pending database migrations and then start the server:
+
+> Run from **`backend/`**:
+
+```bash
+./start.sh --reload
+```
+
+The `--reload` flag enables auto-reload (recommended during development).  
+The script is equivalent to running these two commands manually:
+
+```bash
+alembic upgrade head
 uvicorn main:app --reload
 ```
+
+Any extra arguments passed to `start.sh` are forwarded directly to `uvicorn`.
 
 The API will be available at <http://localhost:8000>.  
 Interactive docs (Swagger UI) at <http://localhost:8000/docs>.
@@ -61,7 +83,9 @@ All commands below are run from **`backend/`**.
 
 | Command | Description |
 |---------|-------------|
-| `uvicorn main:app --reload` | Start dev server with auto-reload |
+| `./start.sh --reload` | Apply migrations then start dev server with auto-reload |
+| `uvicorn main:app --reload` | Start dev server without running migrations |
+| `alembic upgrade head` | Apply all pending migrations (requires `DATABASE_ADMIN_URL`) |
 | `ruff check .` | Run linter |
 | `ruff format --check .` | Check code formatting |
 | `ruff format .` | Auto-format code |

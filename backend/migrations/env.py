@@ -15,9 +15,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url from application settings so the same DATABASE_URL
-# environment variable used by FastAPI also drives Alembic.
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# Override sqlalchemy.url from application settings so the same environment
+# variables used by FastAPI also drive Alembic.  migration_url prefers
+# DATABASE_ADMIN_URL (full DDL+DML) when set, falling back to DATABASE_URL.
+config.set_main_option("sqlalchemy.url", get_settings().migration_url)
 
 # Wire SQLModel metadata for autogenerate support.
 # Import all SQLModel table classes here once they exist so that Alembic can
