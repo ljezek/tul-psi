@@ -151,7 +151,7 @@ docker compose up -d
 - **PR-based workflow**: all changes via pull requests; CI must pass (lint + tests) before merge to `main`.
 - **Observability first on the backend**: every new endpoint, service method, and DB call must emit traces and metrics following the pattern in `examples/monitoring/`.
 - **Educational clarity**: this is a teaching codebase. Prefer **explicit over clever**. If a pattern is non-obvious, add a brief inline comment explaining the *why*, not the *what*.
-- **Comment style**: all inline code comments must be complete, properly capitalized sentences ending with a period (e.g. `# Null means no budget is set.`).
+- **Comment style**: all code comments and docstrings must be complete, properly capitalized sentences ending with a period (e.g. `# Null means no budget is set.`).
 - **OpenTelemetry spans** should use `snake_case` names in format `layer.operation` (e.g., `service.get_projects`, `db.query_projects`).
 - **Error handling**: propagate domain errors as typed exceptions, handle at the API layer and map to appropriate HTTP status codes. Never swallow exceptions silently.
 - **Prefer library solutions over ad-hoc utilities**: before writing a helper function, check whether the functionality is already covered by a library already in the stack. For example, use `pydantic.TypeAdapter` for runtime type validation instead of writing a custom key-checking function, or use `itertools` / `functools` stdlib primitives instead of reimplementing them. Ad-hoc utilities that duplicate library behaviour add maintenance burden and are a code smell in a teaching codebase.

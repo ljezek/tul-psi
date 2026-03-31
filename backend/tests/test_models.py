@@ -132,7 +132,7 @@ def test_course_evaluation_criteria_rejects_extra_keys() -> None:
             project_type=ProjectType.TEAM,
             min_score=50,
             evaluation_criteria=[
-                {"code": "x", "description": "X", "max_score": 10, "extra": "nope"}
+                {"code": "x", "description": "X", "max_score": 10, "unknown_field": "nope"}
             ],
         )
 
@@ -160,7 +160,9 @@ def test_course_links_rejects_extra_keys() -> None:
             term=CourseTerm.WINTER,
             project_type=ProjectType.TEAM,
             min_score=50,
-            links=[{"label": "eLearning", "url": "https://elearning.tul.cz/", "extra": "nope"}],
+            links=[
+                {"label": "eLearning", "url": "https://elearning.tul.cz/", "unknown_field": "nope"}
+            ],
         )
 
 
