@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel
@@ -108,8 +109,8 @@ def test_course_jsonb_fields_accept_structured_data() -> None:
 
 
 def test_course_evaluation_criteria_rejects_missing_keys() -> None:
-    """evaluation_criteria items missing required keys must raise a ValueError."""
-    with pytest.raises(ValueError, match="key mismatch"):
+    """evaluation_criteria items missing required keys must raise a validation error."""
+    with pytest.raises(ValidationError):
         Course(
             code="BAD",
             name="Bad Course",
@@ -122,8 +123,8 @@ def test_course_evaluation_criteria_rejects_missing_keys() -> None:
 
 
 def test_course_evaluation_criteria_rejects_extra_keys() -> None:
-    """evaluation_criteria items with unexpected extra keys must raise a ValueError."""
-    with pytest.raises(ValueError, match="key mismatch"):
+    """evaluation_criteria items with unexpected extra keys must raise a validation error."""
+    with pytest.raises(ValidationError):
         Course(
             code="BAD3",
             name="Bad Course 3",
@@ -137,8 +138,8 @@ def test_course_evaluation_criteria_rejects_extra_keys() -> None:
 
 
 def test_course_links_rejects_missing_keys() -> None:
-    """links items missing required keys must raise a ValueError."""
-    with pytest.raises(ValueError, match="key mismatch"):
+    """links items missing required keys must raise a validation error."""
+    with pytest.raises(ValidationError):
         Course(
             code="BAD2",
             name="Bad Course 2",
@@ -151,8 +152,8 @@ def test_course_links_rejects_missing_keys() -> None:
 
 
 def test_course_links_rejects_extra_keys() -> None:
-    """links items with unexpected extra keys must raise a ValueError."""
-    with pytest.raises(ValueError, match="key mismatch"):
+    """links items with unexpected extra keys must raise a validation error."""
+    with pytest.raises(ValidationError):
         Course(
             code="BAD4",
             name="Bad Course 4",

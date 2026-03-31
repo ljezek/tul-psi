@@ -4,6 +4,8 @@ import enum
 from datetime import UTC, datetime
 from typing import ClassVar, TypedDict
 
+from pydantic import TypeAdapter
+from pydantic.config import ConfigDict
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -26,6 +28,8 @@ class ProjectType(str, enum.Enum):
 class EvaluationCriterion(TypedDict):
     """Shape of a single evaluation criterion stored in Course.evaluation_criteria."""
 
+    __pydantic_config__ = ConfigDict(extra="forbid")  # type: ignore[assignment]
+
     code: str  # Short immutable identifier; used as key in PROJECT_EVALUATION.scores.
     description: str  # Human-readable label shown in the UI.
     max_score: int  # Maximum points a student can receive for this criterion.
@@ -34,8 +38,15 @@ class EvaluationCriterion(TypedDict):
 class CourseLink(TypedDict):
     """Shape of a single link stored in Course.links."""
 
+    __pydantic_config__ = ConfigDict(extra="forbid")  # type: ignore[assignment]
+
     label: str  # Human-readable link text shown in the UI.
     url: str  # Absolute URL.
+
+
+# Module-level adapters built once; reused on every Course instantiation.
+_criteria_adapter: TypeAdapter[list[EvaluationCriterion]] = TypeAdapter(list[EvaluationCriterion])
+_links_adapter: TypeAdapter[list[CourseLink]] = TypeAdapter(list[CourseLink])
 
 
 class Course(SQLModel, table=True):
@@ -68,26 +79,6 @@ class Course(SQLModel, table=True):
     def __init__(self, **data: object) -> None:
         # SQLModel 0.0.x bypasses Pydantic validators for table=True models, so
         # we validate the JSONB fields explicitly before delegating to SQLModel.
-        _validate_jsonb_items(EvaluationCriterion, data.get("evaluation_criteria") or [])
-        _validate_jsonb_items(CourseLink, data.get("links") or [])
+        _criteria_adapter.validate_python(data.get("evaluation_criteria") or [])
+        _links_adapter.validate_python(data.get("links") or [])
         super().__init__(**data)
-
-
-def _validate_jsonb_items(td_class: type[object], value: object) -> None:
-    """Raise ValueError if any item in value does not have exactly the keys of td_class."""
-    expected_keys = set(td_class.__annotations__)
-    if not isinstance(value, list):
-        raise ValueError(f"{td_class.__name__} value must be a list.")
-    for item in value:
-        if not isinstance(item, dict):
-            raise ValueError(f"Each {td_class.__name__} item must be a mapping.")
-        actual_keys = set(item.keys())
-        if actual_keys != expected_keys:
-            missing = expected_keys - actual_keys
-            extra = actual_keys - expected_keys
-            parts: list[str] = []
-            if missing:
-                parts.append(f"missing: {missing}")
-            if extra:
-                parts.append(f"unexpected: {extra}")
-            raise ValueError(f"{td_class.__name__} key mismatch — {', '.join(parts)}.")
