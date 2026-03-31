@@ -22,9 +22,10 @@ class OtpToken(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    # Salted bcrypt hash of the raw OTP — the raw value must never be stored.
-    # Indexed because every OTP verification queries by token_hash.
-    token_hash: str = Field(index=True, max_length=255)
+    # Salted bcrypt hash of the raw OTP; the raw value must never be stored.
+    # This field is not indexed because bcrypt hashes are non-deterministic and
+    # verification is performed in application code rather than via DB lookup.
+    token_hash: str = Field(max_length=255)
     # Number of failed verification attempts; used to enforce retry limits.
     attempts: int = Field(default=0)
     # Defaults to 15 minutes from creation time, matching the design-spec OTP TTL.

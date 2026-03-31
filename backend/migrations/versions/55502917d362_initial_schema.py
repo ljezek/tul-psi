@@ -71,7 +71,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_otp_token_token_hash"), "otp_token", ["token_hash"], unique=False)
 
     # ------------------------------------------------------ course_lecturer --
     op.create_table(
