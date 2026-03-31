@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import ClassVar
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -15,6 +16,10 @@ class ProjectMember(SQLModel, table=True):
     """
 
     __tablename__: ClassVar[str] = "project_member"
+    # A user can only be a member of a given project once.
+    __table_args__: ClassVar[tuple] = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_member_project_user"),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     project_id: int = Field(foreign_key="project.id")

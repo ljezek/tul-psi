@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel
 
 from models import Course, CourseTerm, Project, ProjectMember, ProjectType, User, UserRole
@@ -38,11 +39,6 @@ def test_user_created_at_defaults_to_now() -> None:
     user = User(email="dave@example.com", name="Dave", role=UserRole.STUDENT)
     after = datetime.now(UTC)
     assert before <= user.created_at <= after
-
-
-def test_user_table_name() -> None:
-    """The underlying SQL table must be named 'user' to match the design doc."""
-    assert User.__tablename__ == "user"
 
 
 def test_user_is_registered_in_metadata() -> None:
@@ -110,6 +106,34 @@ def test_course_jsonb_fields_accept_structured_data() -> None:
     assert course.links == links
 
 
+def test_course_evaluation_criteria_rejects_missing_keys() -> None:
+    """evaluation_criteria items missing required keys must raise a ValueError."""
+    with pytest.raises(ValueError, match="missing required keys"):
+        Course(
+            code="BAD",
+            name="Bad Course",
+            term=CourseTerm.WINTER,
+            project_type=ProjectType.TEAM,
+            min_score=50,
+            # missing 'description' and 'max_score'
+            evaluation_criteria=[{"code": "x"}],
+        )
+
+
+def test_course_links_rejects_missing_keys() -> None:
+    """links items missing required keys must raise a ValueError."""
+    with pytest.raises(ValueError, match="missing required keys"):
+        Course(
+            code="BAD2",
+            name="Bad Course 2",
+            term=CourseTerm.WINTER,
+            project_type=ProjectType.TEAM,
+            min_score=50,
+            # missing 'url'
+            links=[{"label": "only label"}],
+        )
+
+
 def test_course_created_at_defaults_to_now() -> None:
     """created_at must be set to the current UTC time on instantiation."""
     before = datetime.now(UTC)
@@ -122,11 +146,6 @@ def test_course_created_at_defaults_to_now() -> None:
     )
     after = datetime.now(UTC)
     assert before <= course.created_at <= after
-
-
-def test_course_table_name() -> None:
-    """The underlying SQL table must be named 'course' to match the design doc."""
-    assert Course.__tablename__ == "course"
 
 
 def test_course_is_registered_in_metadata() -> None:
@@ -184,11 +203,6 @@ def test_project_technologies_accept_string_list() -> None:
     assert project.technologies == ["Python", "FastAPI", "React"]
 
 
-def test_project_table_name() -> None:
-    """The underlying SQL table must be named 'project' to match the design doc."""
-    assert Project.__tablename__ == "project"
-
-
 def test_project_is_registered_in_metadata() -> None:
     """Project table must be present in SQLModel.metadata after import."""
     assert "project" in SQLModel.metadata.tables
@@ -233,11 +247,17 @@ def test_project_member_invited_at_defaults_to_now(sample_member: ProjectMember)
     assert before <= member.invited_at <= after
 
 
-def test_project_member_table_name() -> None:
-    """The underlying SQL table must be named 'project_member' to match the design doc."""
-    assert ProjectMember.__tablename__ == "project_member"
-
-
 def test_project_member_is_registered_in_metadata() -> None:
     """project_member table must be present in SQLModel.metadata after import."""
     assert "project_member" in SQLModel.metadata.tables
+
+
+def test_project_member_unique_constraint_on_project_user() -> None:
+    """project_member must enforce uniqueness of (project_id, user_id) at the schema level."""
+    table = SQLModel.metadata.tables["project_member"]
+    unique_col_sets = {
+        frozenset(c.name for c in constraint.columns)
+        for constraint in table.constraints
+        if isinstance(constraint, UniqueConstraint)
+    }
+    assert frozenset({"project_id", "user_id"}) in unique_col_sets
