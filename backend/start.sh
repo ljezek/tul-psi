@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Start script for the Student Projects Catalogue backend.
 #
-# 1. Applies any pending Alembic database migrations using the admin
-#    connection URL (DATABASE_ADMIN_URL).  This keeps the schema in sync
+# 1. Applies any pending Alembic database migrations using the migration
+#    connection URL (DATABASE_MIGRATION_URL).  This keeps the schema in sync
 #    every time the backend starts without requiring a separate migration step.
 #
 # 2. Replaces this shell process with the Uvicorn ASGI server (exec) so that
@@ -14,8 +14,8 @@
 #   ./start.sh --host 0.0.0.0        # override any uvicorn option
 #
 # Environment variables (see .env.example):
-#   DATABASE_ADMIN_URL   admin DB URL used by Alembic (DDL+DML)
-#   DATABASE_URL         application DB URL used by FastAPI (DML only)
+#   DATABASE_MIGRATION_URL   admin DB URL used by Alembic (DDL+DML)
+#   DATABASE_URL             application DB URL used by FastAPI (DML only)
 #
 # All positional arguments are forwarded verbatim to uvicorn.
 

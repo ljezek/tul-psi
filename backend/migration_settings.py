@@ -10,25 +10,16 @@ class MigrationSettings(BaseSettings):
 
     Kept separate from the main application ``Settings`` so that migration
     credentials (the privileged admin URL) do not leak into the app process.
+    Set DATABASE_MIGRATION_URL to the admin connection URL (full DDL+DML access).
     """
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    # Admin connection URL — full DDL+DML access.
-    # Set DATABASE_ADMIN_URL in the environment or .env file.
-    # Falls back to DATABASE_URL when DATABASE_ADMIN_URL is not set (e.g. in
-    # environments that use a single DB user).
-    database_admin_url: str | None = None
-    database_url: str
-
-    @property
-    def migration_url(self) -> str:
-        """Return the DB URL to use for Alembic schema migrations.
-
-        Prefers DATABASE_ADMIN_URL (admin role with DDL+DML access) when set.
-        Falls back to DATABASE_URL for environments that do not separate roles.
-        """
-        return self.database_admin_url or self.database_url
+    # Migration connection URL — full DDL+DML access.
+    # Set DATABASE_MIGRATION_URL in the environment or .env file.
+    # Typically points to the admin role; can be set to the same value as
+    # DATABASE_URL in environments that use a single DB user.
+    database_migration_url: str
 
 
 @lru_cache

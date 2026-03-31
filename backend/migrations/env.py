@@ -16,9 +16,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Override sqlalchemy.url from migration-specific settings.
-# MigrationSettings prefers DATABASE_ADMIN_URL (full DDL+DML) when set,
-# falling back to DATABASE_URL for environments that use a single DB user.
-config.set_main_option("sqlalchemy.url", get_migration_settings().migration_url)
+# DATABASE_MIGRATION_URL must point to a role with full DDL+DML access.
+config.set_main_option("sqlalchemy.url", get_migration_settings().database_migration_url)
 
 # Wire SQLModel metadata for autogenerate support.
 # Import all SQLModel table classes here once they exist so that Alembic can

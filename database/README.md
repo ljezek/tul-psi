@@ -43,7 +43,7 @@ The app role is created by [`init-db.sh`](./init-db.sh), which runs once on the 
 | `POSTGRES_PORT` | `5432` | Host port mapped to PostgreSQL |
 | `POSTGRES_APP_USER` | `tul_psi_app` | Application role name (DML only) |
 | `POSTGRES_APP_PASSWORD` | `tul_psi_app` | Application role password |
-| `DATABASE_ADMIN_URL` | see `.env.example` | SQLAlchemy URL for Alembic / CI/CD (admin role) |
+| `DATABASE_MIGRATION_URL` | see `.env.example` | SQLAlchemy URL for Alembic / CI/CD (admin role) |
 | `DATABASE_URL` | see `.env.example` | SQLAlchemy URL for the FastAPI app (app role) |
 
 > ⚠️ **Never commit `.env` or reuse these credentials outside local development.** Use your cloud provider's secrets management for staging and production environments.
