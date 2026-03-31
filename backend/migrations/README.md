@@ -4,6 +4,8 @@ Schema migrations for the Student Projects Catalogue database, managed with [Ale
 
 ## Usage
 
+All commands must be run from the `backend/` directory.
+
 ```bash
 # Generate a new migration from model changes
 alembic revision --autogenerate -m "<description>"
