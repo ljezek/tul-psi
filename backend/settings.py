@@ -10,8 +10,9 @@ class Settings(BaseSettings):
 
     app_name: str = "student-projects-catalogue-backend"
     app_env: str = "local"
-    # Full SQLAlchemy connection URL.  Set DATABASE_URL in the environment or
-    # .env file.  See .env.example for the local-development value.
+
+    # Application connection URL (DML only — no DDL / schema changes).
+    # Used by the FastAPI application at runtime.
     database_url: str
 
 

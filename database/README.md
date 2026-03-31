@@ -21,15 +21,30 @@ docker compose ps
 
 The PostgreSQL server is now available at `localhost:5432` with the credentials defined in `.env`.
 
+## Database roles
+
+Two separate roles are created to follow the principle of least privilege:
+
+| Role | Variable | Permissions | Used by |
+|---|---|---|---|
+| Admin | `POSTGRES_ADMIN_USER` (`tul_psi_admin`) | Full DDL + DML — can create/alter/drop tables and sequences | Alembic migrations, CI/CD |
+| App | `POSTGRES_APP_USER` (`tul_psi_app`) | DML only — SELECT, INSERT, UPDATE, DELETE on tables; sequence usage | FastAPI application at runtime |
+
+The admin role is created automatically by the PostgreSQL container.  
+The app role is created by [`init-db.sh`](./init-db.sh), which runs once on the first container start.
+
 ## Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
 | `POSTGRES_DB` | `student_projects` | Database name |
-| `POSTGRES_USER` | `tul_psi` | Database user |
-| `POSTGRES_PASSWORD` | `tul_psi` | Database password |
+| `POSTGRES_ADMIN_USER` | `tul_psi_admin` | Admin role name (full DDL+DML) |
+| `POSTGRES_ADMIN_PASSWORD` | `tul_psi_admin` | Admin role password |
 | `POSTGRES_PORT` | `5432` | Host port mapped to PostgreSQL |
-| `DATABASE_URL` | see `.env.example` | SQLAlchemy connection string — will be consumed by the FastAPI backend once database integration is added |
+| `POSTGRES_APP_USER` | `tul_psi_app` | Application role name (DML only) |
+| `POSTGRES_APP_PASSWORD` | `tul_psi_app` | Application role password |
+| `DATABASE_MIGRATION_URL` | see `.env.example` | SQLAlchemy URL for Alembic / CI/CD (admin role) |
+| `DATABASE_URL` | see `.env.example` | SQLAlchemy URL for the FastAPI app (app role) |
 
 > ⚠️ **Never commit `.env` or reuse these credentials outside local development.** Use your cloud provider's secrets management for staging and production environments.
 
@@ -45,8 +60,8 @@ docker compose down -v
 # Follow database logs
 docker compose logs -f db
 
-# Open a psql shell inside the running container
-docker compose exec db psql -U tul_psi -d student_projects
+# Open a psql shell inside the running container (admin role)
+docker compose exec db psql -U tul_psi_admin -d student_projects
 ```
 
 ## Notes
