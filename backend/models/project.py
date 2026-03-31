@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import ClassVar
 
 from sqlalchemy import Column
+from sqlalchemy import DateTime as SADateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -35,4 +36,7 @@ class Project(SQLModel, table=True):
     course_id: int = Field(foreign_key="course.id")
     # Academic year the project was submitted, e.g. 2025.
     academic_year: int
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(SADateTime(timezone=True), nullable=False),
+    )

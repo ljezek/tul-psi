@@ -71,9 +71,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_otp_token_token_hash"), "otp_token", ["token_hash"], unique=False
-    )
+    op.create_index(op.f("ix_otp_token_token_hash"), "otp_token", ["token_hash"], unique=False)
 
     # ------------------------------------------------------ course_lecturer --
     op.create_table(
@@ -116,27 +114,19 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["project_id"], ["project.id"]),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "project_id", "user_id", name="uq_project_member_project_user"
-        ),
+        sa.UniqueConstraint("project_id", "user_id", name="uq_project_member_project_user"),
     )
 
     # --------------------------------------------------- project_evaluation --
     op.create_table(
         "project_evaluation",
-        sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("project_id", sa.Integer(), nullable=False),
         sa.Column("lecturer_id", sa.Integer(), nullable=False),
         sa.Column("scores", JSONB(), nullable=False),
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["lecturer_id"], ["user.id"]),
         sa.ForeignKeyConstraint(["project_id"], ["project.id"]),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "project_id",
-            "lecturer_id",
-            name="uq_project_evaluation_project_lecturer",
-        ),
+        sa.PrimaryKeyConstraint("project_id", "lecturer_id"),
     )
 
     # ---------------------------------------------------- course_evaluation --
@@ -145,7 +135,12 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("project_id", sa.Integer(), nullable=False),
         sa.Column("student_id", sa.Integer(), nullable=False),
-        sa.Column("rating", sa.Integer(), nullable=False),
+        sa.Column(
+            "rating",
+            sa.Integer(),
+            sa.CheckConstraint("rating >= 1 AND rating <= 5", name="ck_course_evaluation_rating"),
+            nullable=False,
+        ),
         sa.Column("strengths", sa.String(), nullable=True),
         sa.Column("improvements", sa.String(), nullable=True),
         sa.Column("published", sa.Boolean(), nullable=False),

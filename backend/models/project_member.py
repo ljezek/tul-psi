@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import ClassVar
 
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy import DateTime as SADateTime
 from sqlmodel import Field, SQLModel
 
 
@@ -26,6 +27,12 @@ class ProjectMember(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
     # Null means the member was seeded directly (e.g. the initial project owner).
     invited_by: int | None = Field(default=None, foreign_key="user.id")
-    invited_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    invited_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(SADateTime(timezone=True), nullable=False),
+    )
     # Null until the invitation is accepted.
-    joined_at: datetime | None = Field(default=None)
+    joined_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(SADateTime(timezone=True), nullable=True),
+    )

@@ -18,9 +18,9 @@ class CourseLecturer(SQLModel, table=True):
 
     __tablename__: ClassVar[str] = "course_lecturer"
 
-    # Composite primary key expressed via SQLModel's idiomatic primary_key=True
-    # on each column so that the ORM identity key is known for session.get() /
-    # session.merge() calls.  No surrogate id is needed for a pure join table.
+    # The composite primary key is expressed via SQLModel's idiomatic primary_key=True on
+    # each column so that the ORM identity key is known for session.get() and session.merge() calls.
+    # No surrogate id is needed for a pure join table.
     course_id: int = Field(primary_key=True, foreign_key="course.id")
     user_id: int = Field(primary_key=True, foreign_key="user.id")
     assigned_at: datetime = Field(

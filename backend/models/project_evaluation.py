@@ -5,7 +5,7 @@ from typing import ClassVar, TypedDict
 
 from pydantic import TypeAdapter
 from pydantic.config import ConfigDict
-from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy import Column
 from sqlalchemy import DateTime as SADateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -42,18 +42,11 @@ class ProjectEvaluation(SQLModel, table=True):
     """
 
     __tablename__: ClassVar[str] = "project_evaluation"
-    # Each lecturer may evaluate a given project only once.
-    __table_args__: ClassVar[tuple] = (
-        UniqueConstraint(
-            "project_id",
-            "lecturer_id",
-            name="uq_project_evaluation_project_lecturer",
-        ),
-    )
 
-    id: int | None = Field(default=None, primary_key=True)
-    project_id: int = Field(foreign_key="project.id")
-    lecturer_id: int = Field(foreign_key="user.id")
+    # Composite primary key expressed via SQLModel's idiomatic primary_key=True on each column.
+    # No surrogate id is needed; the natural key uniquely identifies the row.
+    project_id: int = Field(primary_key=True, foreign_key="project.id")
+    lecturer_id: int = Field(primary_key=True, foreign_key="user.id")
     # JSONB array of EvaluationScore elements — one entry per criterion.
     scores: list[EvaluationScore] = Field(
         default_factory=list,

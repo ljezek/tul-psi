@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+# TODO: Restructure this file into per-model test modules in a future PR.
+# e.g. test_project_evaluation.py, test_course_evaluation.py, etc.
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
@@ -13,7 +15,6 @@ from models import (
     CourseEvaluation,
     CourseLecturer,
     CourseTerm,
-    EvaluationScore,
     OtpToken,
     PeerFeedback,
     Project,
@@ -329,17 +330,10 @@ def test_project_evaluation_create_minimal(
     assert sample_project_evaluation.lecturer_id == 2
 
 
-def test_project_evaluation_id_defaults_to_none(
+def test_project_evaluation_default_fields(
     sample_project_evaluation: ProjectEvaluation,
 ) -> None:
-    """id must be None before the record is persisted to the database."""
-    assert sample_project_evaluation.id is None
-
-
-def test_project_evaluation_scores_defaults_to_empty_list(
-    sample_project_evaluation: ProjectEvaluation,
-) -> None:
-    """scores JSONB array must default to [] when not supplied."""
+    """scores must default to an empty list when not supplied."""
     assert sample_project_evaluation.scores == []
 
 
@@ -399,33 +393,6 @@ def test_project_evaluation_is_registered_in_metadata() -> None:
     assert "project_evaluation" in SQLModel.metadata.tables
 
 
-def test_project_evaluation_rejects_duplicate_submission() -> None:
-    """Inserting the same (project_id, lecturer_id) pair twice must raise an IntegrityError."""
-    from sqlalchemy import JSON, Column, Integer, MetaData, UniqueConstraint
-    from sqlalchemy import Table as SATable
-
-    # SQLite does not support JSONB, so we cannot use
-    # SQLModel.metadata.tables["project_evaluation"].create(engine) here (unlike
-    # all other duplicate tests).  We build a schema-equivalent table with plain
-    # JSON instead to keep the in-memory constraint test database-agnostic.
-    meta = MetaData()
-    tbl = SATable(
-        "project_evaluation_dup_test",
-        meta,
-        Column("id", Integer, primary_key=True, autoincrement=True),
-        Column("project_id", Integer, nullable=False),
-        Column("lecturer_id", Integer, nullable=False),
-        Column("scores", JSON, nullable=False),
-        UniqueConstraint("project_id", "lecturer_id"),
-    )
-    engine = create_engine("sqlite:///:memory:")
-    meta.create_all(engine)
-    with engine.begin() as conn:
-        conn.execute(tbl.insert().values(project_id=1, lecturer_id=2, scores=[]))
-        with pytest.raises(IntegrityError):
-            conn.execute(tbl.insert().values(project_id=1, lecturer_id=2, scores=[]))
-
-
 # ---------------------------------------------------------------------------
 # CourseEvaluation model
 # ---------------------------------------------------------------------------
@@ -445,24 +412,15 @@ def test_course_evaluation_create_minimal(
     assert sample_course_evaluation.rating == 4
 
 
-def test_course_evaluation_id_defaults_to_none(
+def test_course_evaluation_default_fields(
     sample_course_evaluation: CourseEvaluation,
 ) -> None:
-    """id must be None before the record is persisted to the database."""
+    """published, strengths, and improvements must default correctly.
+
+    id must be None before the record is persisted to the database.
+    """
     assert sample_course_evaluation.id is None
-
-
-def test_course_evaluation_published_defaults_to_false(
-    sample_course_evaluation: CourseEvaluation,
-) -> None:
-    """published must default to False — a new evaluation starts as a draft."""
     assert sample_course_evaluation.published is False
-
-
-def test_course_evaluation_optional_fields_default_to_none(
-    sample_course_evaluation: CourseEvaluation,
-) -> None:
-    """strengths and improvements must default to None to support partial draft saves."""
     assert sample_course_evaluation.strengths is None
     assert sample_course_evaluation.improvements is None
 
@@ -524,23 +482,11 @@ def test_peer_feedback_create_minimal(sample_peer_feedback: PeerFeedback) -> Non
     assert sample_peer_feedback.receiving_student_id == 4
 
 
-def test_peer_feedback_id_defaults_to_none(sample_peer_feedback: PeerFeedback) -> None:
-    """id must be None before the record is persisted to the database."""
+def test_peer_feedback_default_fields(sample_peer_feedback: PeerFeedback) -> None:
+    """id, strengths, improvements, and bonus_points must default correctly on a new instance."""
     assert sample_peer_feedback.id is None
-
-
-def test_peer_feedback_optional_fields_default_to_none(
-    sample_peer_feedback: PeerFeedback,
-) -> None:
-    """strengths and improvements must default to None to support partial draft saves."""
     assert sample_peer_feedback.strengths is None
     assert sample_peer_feedback.improvements is None
-
-
-def test_peer_feedback_bonus_points_defaults_to_zero(
-    sample_peer_feedback: PeerFeedback,
-) -> None:
-    """bonus_points must default to 0 when the course has no peer-bonus scheme."""
     assert sample_peer_feedback.bonus_points == 0
 
 
@@ -556,42 +502,34 @@ def test_peer_feedback_is_registered_in_metadata() -> None:
 
 @pytest.fixture
 def sample_otp_token() -> OtpToken:
-    return OtpToken(
-        user_id=1,
-        token_hash="abc123hash",
-        expires_at=datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC),
-    )
+    return OtpToken(user_id=1, token_hash="abc123hash")  # noqa: S106
 
 
 def test_otp_token_create_minimal(sample_otp_token: OtpToken) -> None:
-    """OtpToken can be instantiated with user_id, token_hash, and expires_at."""
+    """OtpToken can be instantiated with only user_id and token_hash."""
     assert sample_otp_token.user_id == 1
-    assert sample_otp_token.token_hash == "abc123hash"
+    assert sample_otp_token.token_hash == "abc123hash"  # noqa: S105
 
 
-def test_otp_token_id_defaults_to_none(sample_otp_token: OtpToken) -> None:
-    """id must be None before the record is persisted to the database."""
+def test_otp_token_default_fields(sample_otp_token: OtpToken) -> None:
+    """id, attempts, and used must default correctly on a new token."""
     assert sample_otp_token.id is None
-
-
-def test_otp_token_attempts_defaults_to_zero(sample_otp_token: OtpToken) -> None:
-    """attempts must default to 0 — no failed verifications on a fresh token."""
     assert sample_otp_token.attempts == 0
-
-
-def test_otp_token_used_defaults_to_false(sample_otp_token: OtpToken) -> None:
-    """used must default to False — a fresh token has not been consumed yet."""
     assert sample_otp_token.used is False
+
+
+def test_otp_token_expires_at_defaults_to_15_minutes() -> None:
+    """expires_at must default to approximately 15 minutes from the creation time."""
+    before = datetime.now(UTC)
+    token = OtpToken(user_id=1, token_hash="somehash")  # noqa: S106
+    after = datetime.now(UTC)
+    assert before + timedelta(minutes=15) <= token.expires_at <= after + timedelta(minutes=15)
 
 
 def test_otp_token_created_at_defaults_to_now() -> None:
     """created_at must be set to the current UTC time on instantiation."""
     before = datetime.now(UTC)
-    token = OtpToken(
-        user_id=1,
-        token_hash="somehash",
-        expires_at=datetime(2026, 12, 31, tzinfo=UTC),
-    )
+    token = OtpToken(user_id=1, token_hash="somehash")  # noqa: S106
     after = datetime.now(UTC)
     assert before <= token.created_at <= after
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
 from sqlalchemy import Column
@@ -22,13 +22,15 @@ class OtpToken(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    # Hash of the raw OTP — the raw value must never be stored.
+    # Salted bcrypt hash of the raw OTP — the raw value must never be stored.
     # Indexed because every OTP verification queries by token_hash.
     token_hash: str = Field(index=True, max_length=255)
     # Number of failed verification attempts; used to enforce retry limits.
     attempts: int = Field(default=0)
+    # Defaults to 15 minutes from creation time, matching the design-spec OTP TTL.
     expires_at: datetime = Field(
-        sa_column=Column(SADateTime(timezone=True), nullable=False)
+        default_factory=lambda: datetime.now(UTC) + timedelta(minutes=15),
+        sa_column=Column(SADateTime(timezone=True), nullable=False),
     )
     # Once True the token is consumed and cannot be used again.
     used: bool = Field(default=False)
