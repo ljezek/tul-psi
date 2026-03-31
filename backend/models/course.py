@@ -24,19 +24,9 @@ class ProjectType(str, enum.Enum):
 
 
 class Course(SQLModel, table=True):
-    """A course offered in a given academic term.
+    """A course offered in a given academic term."""
 
-    ``evaluation_criteria`` and ``links`` are stored as JSONB so that their
-    shape can evolve without schema migrations.
-
-    Expected ``evaluation_criteria`` format::
-
-        [{"code": "code_quality", "description": "Code Quality", "max_score": 25}]
-
-    Expected ``links`` format::
-
-        [{"label": "eLearning", "url": "https://elearning.tul.cz/..."}]
-    """
+    __tablename__: ClassVar[str] = "course"
 
     id: int | None = Field(default=None, primary_key=True)
     code: str = Field(unique=True, index=True, max_length=50)
@@ -47,17 +37,16 @@ class Course(SQLModel, table=True):
     min_score: int
     # null means no peer-bonus-point scheme for this course
     peer_bonus_budget: int | None = Field(default=None)
-    # JSONB — see class docstring for the expected element shape
+    # JSONB array; each element: {"code": "...", "description": "...", "max_score": N}
+    # "code" is a short immutable identifier used as the key in PROJECT_EVALUATION.scores.
     evaluation_criteria: list[Any] = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False),
     )
+    # JSONB array; each element: {"label": "eLearning", "url": "https://..."}
     links: list[Any] = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False),
     )
     created_by: int | None = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-    # Explicit table name keeps it consistent with the entity diagram in DESIGN.md.
-    __tablename__: ClassVar[str] = "course"

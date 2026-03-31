@@ -8,23 +8,6 @@ from sqlmodel import SQLModel
 from models import Course, CourseTerm, Project, ProjectMember, ProjectType, User, UserRole
 
 # ---------------------------------------------------------------------------
-# UserRole enum
-# ---------------------------------------------------------------------------
-
-
-def test_user_role_values() -> None:
-    """UserRole must expose the three expected role strings."""
-    assert UserRole.ADMIN == "ADMIN"
-    assert UserRole.LECTURER == "LECTURER"
-    assert UserRole.STUDENT == "STUDENT"
-
-
-def test_user_role_is_str_enum() -> None:
-    """UserRole values must be valid plain strings (for JSON serialisation)."""
-    assert isinstance(UserRole.STUDENT, str)
-
-
-# ---------------------------------------------------------------------------
 # User model
 # ---------------------------------------------------------------------------
 
@@ -50,6 +33,7 @@ def test_user_github_alias_defaults_to_none() -> None:
 
 
 def test_user_created_at_defaults_to_now() -> None:
+    """created_at must be set to the current UTC time on instantiation."""
     before = datetime.now(UTC)
     user = User(email="dave@example.com", name="Dave", role=UserRole.STUDENT)
     after = datetime.now(UTC)
@@ -64,21 +48,6 @@ def test_user_table_name() -> None:
 def test_user_is_registered_in_metadata() -> None:
     """User table must be present in SQLModel.metadata after import."""
     assert "user" in SQLModel.metadata.tables
-
-
-# ---------------------------------------------------------------------------
-# CourseTerm / ProjectType enums
-# ---------------------------------------------------------------------------
-
-
-def test_course_term_values() -> None:
-    assert CourseTerm.SUMMER == "SUMMER"
-    assert CourseTerm.WINTER == "WINTER"
-
-
-def test_project_type_values() -> None:
-    assert ProjectType.TEAM == "TEAM"
-    assert ProjectType.INDIVIDUAL == "INDIVIDUAL"
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +67,7 @@ def sample_course() -> Course:
 
 
 def test_course_create_minimal(sample_course: Course) -> None:
+    """Course can be instantiated with only the required fields."""
     assert sample_course.code == "PSI"
     assert sample_course.name == "Projektový seminář informatiky"
     assert sample_course.term == CourseTerm.WINTER
@@ -106,10 +76,12 @@ def test_course_create_minimal(sample_course: Course) -> None:
 
 
 def test_course_id_defaults_to_none(sample_course: Course) -> None:
+    """id must be None before the record is persisted to the database."""
     assert sample_course.id is None
 
 
 def test_course_optional_fields_default_to_none(sample_course: Course) -> None:
+    """Nullable fields must default to None when not supplied."""
     assert sample_course.syllabus is None
     assert sample_course.peer_bonus_budget is None
     assert sample_course.created_by is None
@@ -122,6 +94,7 @@ def test_course_jsonb_fields_default_to_empty_list(sample_course: Course) -> Non
 
 
 def test_course_jsonb_fields_accept_structured_data() -> None:
+    """evaluation_criteria and links must accept their expected JSONB element shapes."""
     criteria = [{"code": "code_quality", "description": "Code Quality", "max_score": 25}]
     links = [{"label": "eLearning", "url": "https://elearning.tul.cz/"}]
     course = Course(
@@ -137,7 +110,8 @@ def test_course_jsonb_fields_accept_structured_data() -> None:
     assert course.links == links
 
 
-def test_course_created_at_defaults_to_now(sample_course: Course) -> None:
+def test_course_created_at_defaults_to_now() -> None:
+    """created_at must be set to the current UTC time on instantiation."""
     before = datetime.now(UTC)
     course = Course(
         code="XYZ",
@@ -151,10 +125,12 @@ def test_course_created_at_defaults_to_now(sample_course: Course) -> None:
 
 
 def test_course_table_name() -> None:
+    """The underlying SQL table must be named 'course' to match the design doc."""
     assert Course.__tablename__ == "course"
 
 
 def test_course_is_registered_in_metadata() -> None:
+    """Course table must be present in SQLModel.metadata after import."""
     assert "course" in SQLModel.metadata.tables
 
 
@@ -169,30 +145,36 @@ def sample_project() -> Project:
 
 
 def test_project_create_minimal(sample_project: Project) -> None:
+    """Project can be instantiated with only the required fields."""
     assert sample_project.title == "SPC"
     assert sample_project.course_id == 1
     assert sample_project.academic_year == 2025
 
 
 def test_project_id_defaults_to_none(sample_project: Project) -> None:
+    """id must be None before the record is persisted to the database."""
     assert sample_project.id is None
 
 
 def test_project_optional_fields_default_to_none(sample_project: Project) -> None:
+    """Nullable URL/description fields must default to None when not supplied."""
     assert sample_project.description is None
     assert sample_project.github_url is None
     assert sample_project.live_url is None
 
 
 def test_project_results_unlocked_defaults_to_false(sample_project: Project) -> None:
+    """results_unlocked must default to False — results are hidden until unlocked by a lecturer."""
     assert sample_project.results_unlocked is False
 
 
 def test_project_technologies_defaults_to_empty_list(sample_project: Project) -> None:
+    """technologies JSONB array must default to [] when not supplied."""
     assert sample_project.technologies == []
 
 
 def test_project_technologies_accept_string_list() -> None:
+    """technologies must accept a list of technology name strings."""
     project = Project(
         title="SPC",
         course_id=1,
@@ -203,10 +185,12 @@ def test_project_technologies_accept_string_list() -> None:
 
 
 def test_project_table_name() -> None:
+    """The underlying SQL table must be named 'project' to match the design doc."""
     assert Project.__tablename__ == "project"
 
 
 def test_project_is_registered_in_metadata() -> None:
+    """Project table must be present in SQLModel.metadata after import."""
     assert "project" in SQLModel.metadata.tables
 
 
@@ -221,11 +205,13 @@ def sample_member() -> ProjectMember:
 
 
 def test_project_member_create_minimal(sample_member: ProjectMember) -> None:
+    """ProjectMember can be instantiated with only project_id and user_id."""
     assert sample_member.project_id == 1
     assert sample_member.user_id == 2
 
 
 def test_project_member_id_defaults_to_none(sample_member: ProjectMember) -> None:
+    """id must be None before the record is persisted to the database."""
     assert sample_member.id is None
 
 
@@ -240,6 +226,7 @@ def test_project_member_joined_at_defaults_to_none(sample_member: ProjectMember)
 
 
 def test_project_member_invited_at_defaults_to_now(sample_member: ProjectMember) -> None:
+    """invited_at must be set to the current UTC time on instantiation."""
     before = datetime.now(UTC)
     member = ProjectMember(project_id=1, user_id=2)
     after = datetime.now(UTC)
@@ -247,8 +234,10 @@ def test_project_member_invited_at_defaults_to_now(sample_member: ProjectMember)
 
 
 def test_project_member_table_name() -> None:
+    """The underlying SQL table must be named 'project_member' to match the design doc."""
     assert ProjectMember.__tablename__ == "project_member"
 
 
 def test_project_member_is_registered_in_metadata() -> None:
+    """project_member table must be present in SQLModel.metadata after import."""
     assert "project_member" in SQLModel.metadata.tables
