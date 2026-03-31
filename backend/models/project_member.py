@@ -24,8 +24,8 @@ class ProjectMember(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     project_id: int = Field(foreign_key="project.id")
     user_id: int = Field(foreign_key="user.id")
-    # null means the member was seeded directly (e.g. the initial project owner)
+    # Null means the member was seeded directly (e.g. the initial project owner).
     invited_by: int | None = Field(default=None, foreign_key="user.id")
     invited_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    # null until the invitation is accepted
+    # Null until the invitation is accepted.
     joined_at: datetime | None = Field(default=None)

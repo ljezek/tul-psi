@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import UniqueConstraint
-from sqlmodel import SQLModel
+from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, SQLModel
 
 from models import Course, CourseTerm, Project, ProjectMember, ProjectType, User, UserRole
 
@@ -108,7 +109,7 @@ def test_course_jsonb_fields_accept_structured_data() -> None:
 
 def test_course_evaluation_criteria_rejects_missing_keys() -> None:
     """evaluation_criteria items missing required keys must raise a ValueError."""
-    with pytest.raises(ValueError, match="missing required keys"):
+    with pytest.raises(ValueError, match="key mismatch"):
         Course(
             code="BAD",
             name="Bad Course",
@@ -120,9 +121,24 @@ def test_course_evaluation_criteria_rejects_missing_keys() -> None:
         )
 
 
+def test_course_evaluation_criteria_rejects_extra_keys() -> None:
+    """evaluation_criteria items with unexpected extra keys must raise a ValueError."""
+    with pytest.raises(ValueError, match="key mismatch"):
+        Course(
+            code="BAD3",
+            name="Bad Course 3",
+            term=CourseTerm.WINTER,
+            project_type=ProjectType.TEAM,
+            min_score=50,
+            evaluation_criteria=[
+                {"code": "x", "description": "X", "max_score": 10, "extra": "nope"}
+            ],
+        )
+
+
 def test_course_links_rejects_missing_keys() -> None:
     """links items missing required keys must raise a ValueError."""
-    with pytest.raises(ValueError, match="missing required keys"):
+    with pytest.raises(ValueError, match="key mismatch"):
         Course(
             code="BAD2",
             name="Bad Course 2",
@@ -131,6 +147,19 @@ def test_course_links_rejects_missing_keys() -> None:
             min_score=50,
             # missing 'url'
             links=[{"label": "only label"}],
+        )
+
+
+def test_course_links_rejects_extra_keys() -> None:
+    """links items with unexpected extra keys must raise a ValueError."""
+    with pytest.raises(ValueError, match="key mismatch"):
+        Course(
+            code="BAD4",
+            name="Bad Course 4",
+            term=CourseTerm.WINTER,
+            project_type=ProjectType.TEAM,
+            min_score=50,
+            links=[{"label": "eLearning", "url": "https://elearning.tul.cz/", "extra": "nope"}],
         )
 
 
@@ -252,12 +281,14 @@ def test_project_member_is_registered_in_metadata() -> None:
     assert "project_member" in SQLModel.metadata.tables
 
 
-def test_project_member_unique_constraint_on_project_user() -> None:
-    """project_member must enforce uniqueness of (project_id, user_id) at the schema level."""
-    table = SQLModel.metadata.tables["project_member"]
-    unique_col_sets = {
-        frozenset(c.name for c in constraint.columns)
-        for constraint in table.constraints
-        if isinstance(constraint, UniqueConstraint)
-    }
-    assert frozenset({"project_id", "user_id"}) in unique_col_sets
+def test_project_member_rejects_duplicate_membership() -> None:
+    """Inserting the same (project_id, user_id) pair twice must raise an IntegrityError."""
+    engine = create_engine("sqlite:///:memory:")
+    # Create only the project_member table; FK enforcement is off by default in SQLite.
+    SQLModel.metadata.tables["project_member"].create(engine)
+    with Session(engine) as session:
+        session.add(ProjectMember(project_id=1, user_id=1))
+        session.commit()
+        session.add(ProjectMember(project_id=1, user_id=1))
+        with pytest.raises(IntegrityError):
+            session.commit()

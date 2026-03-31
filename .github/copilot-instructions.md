@@ -151,5 +151,7 @@ docker compose up -d
 - **PR-based workflow**: all changes via pull requests; CI must pass (lint + tests) before merge to `main`.
 - **Observability first on the backend**: every new endpoint, service method, and DB call must emit traces and metrics following the pattern in `examples/monitoring/`.
 - **Educational clarity**: this is a teaching codebase. Prefer **explicit over clever**. If a pattern is non-obvious, add a brief inline comment explaining the *why*, not the *what*.
+- **Comment style**: all inline code comments must be complete, properly capitalized sentences ending with a period (e.g. `# Null means no budget is set.`).
 - **OpenTelemetry spans** should use `snake_case` names in format `layer.operation` (e.g., `service.get_projects`, `db.query_projects`).
 - **Error handling**: propagate domain errors as typed exceptions, handle at the API layer and map to appropriate HTTP status codes. Never swallow exceptions silently.
+- **Testing focus**: avoid trivial or redundant unit tests (e.g. testing that an enum value equals itself, or that a table name string matches). Focus on testing crucial logic, meaningful defaults, edge cases, and failure modes.

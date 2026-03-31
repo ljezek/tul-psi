@@ -26,16 +26,16 @@ class ProjectType(str, enum.Enum):
 class EvaluationCriterion(TypedDict):
     """Shape of a single evaluation criterion stored in Course.evaluation_criteria."""
 
-    code: str  # short immutable identifier; used as key in PROJECT_EVALUATION.scores
-    description: str  # human-readable label shown in the UI
-    max_score: int  # maximum points a student can receive for this criterion
+    code: str  # Short immutable identifier; used as key in PROJECT_EVALUATION.scores.
+    description: str  # Human-readable label shown in the UI.
+    max_score: int  # Maximum points a student can receive for this criterion.
 
 
 class CourseLink(TypedDict):
     """Shape of a single link stored in Course.links."""
 
-    label: str  # human-readable link text shown in the UI
-    url: str  # absolute URL
+    label: str  # Human-readable link text shown in the UI.
+    url: str  # Absolute URL.
 
 
 class Course(SQLModel, table=True):
@@ -50,14 +50,14 @@ class Course(SQLModel, table=True):
     term: CourseTerm
     project_type: ProjectType
     min_score: int
-    # null means no peer-bonus-point scheme for this course
+    # Null means no peer-bonus-point scheme for this course.
     peer_bonus_budget: int | None = Field(default=None)
-    # JSONB array of EvaluationCriterion elements
+    # JSONB array of EvaluationCriterion elements.
     evaluation_criteria: list[EvaluationCriterion] = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False),
     )
-    # JSONB array of CourseLink elements
+    # JSONB array of CourseLink elements.
     links: list[CourseLink] = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False),
@@ -68,32 +68,26 @@ class Course(SQLModel, table=True):
     def __init__(self, **data: object) -> None:
         # SQLModel 0.0.x bypasses Pydantic validators for table=True models, so
         # we validate the JSONB fields explicitly before delegating to SQLModel.
-        _validate_evaluation_criteria(data.get("evaluation_criteria") or [])
-        _validate_links(data.get("links") or [])
+        _validate_jsonb_items(EvaluationCriterion, data.get("evaluation_criteria") or [])
+        _validate_jsonb_items(CourseLink, data.get("links") or [])
         super().__init__(**data)
 
 
-def _validate_evaluation_criteria(value: object) -> None:
-    """Raise ValueError if any criterion is missing required keys or has wrong types."""
+def _validate_jsonb_items(td_class: type[object], value: object) -> None:
+    """Raise ValueError if any item in value does not have exactly the keys of td_class."""
+    expected_keys = set(td_class.__annotations__)
     if not isinstance(value, list):
-        raise ValueError("evaluation_criteria must be a list")
+        raise ValueError(f"{td_class.__name__} value must be a list.")
     for item in value:
         if not isinstance(item, dict):
-            raise ValueError("each criterion must be a mapping")
-        missing = {"code", "description", "max_score"} - item.keys()
-        if missing:
-            raise ValueError(f"criterion is missing required keys: {missing}")
-        if not isinstance(item["max_score"], int):
-            raise ValueError("max_score must be an integer")
-
-
-def _validate_links(value: object) -> None:
-    """Raise ValueError if any link is missing required keys."""
-    if not isinstance(value, list):
-        raise ValueError("links must be a list")
-    for item in value:
-        if not isinstance(item, dict):
-            raise ValueError("each link must be a mapping")
-        missing = {"label", "url"} - item.keys()
-        if missing:
-            raise ValueError(f"link is missing required keys: {missing}")
+            raise ValueError(f"Each {td_class.__name__} item must be a mapping.")
+        actual_keys = set(item.keys())
+        if actual_keys != expected_keys:
+            missing = expected_keys - actual_keys
+            extra = actual_keys - expected_keys
+            parts: list[str] = []
+            if missing:
+                parts.append(f"missing: {missing}")
+            if extra:
+                parts.append(f"unexpected: {extra}")
+            raise ValueError(f"{td_class.__name__} key mismatch — {', '.join(parts)}.")
