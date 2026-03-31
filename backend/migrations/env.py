@@ -20,8 +20,10 @@ if config.config_file_name is not None:
 config.set_main_option("sqlalchemy.url", get_settings().database_url)
 
 # Wire SQLModel metadata for autogenerate support.
-# Import all SQLModel table classes here once they exist so that Alembic can
-# detect schema changes automatically (e.g. `alembic revision --autogenerate`).
+# Importing the table classes registers them with SQLModel.metadata so that
+# `alembic revision --autogenerate` can detect schema changes automatically.
+import models  # noqa: F401, E402
+
 target_metadata = SQLModel.metadata
 
 
