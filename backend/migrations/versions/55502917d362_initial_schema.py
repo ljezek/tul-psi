@@ -157,7 +157,6 @@ def upgrade() -> None:
     # ------------------------------------------------------ peer_feedback --
     op.create_table(
         "peer_feedback",
-        sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("course_evaluation_id", sa.Integer(), nullable=False),
         sa.Column("receiving_student_id", sa.Integer(), nullable=False),
         sa.Column("strengths", sa.String(), nullable=True),
@@ -165,7 +164,7 @@ def upgrade() -> None:
         sa.Column("bonus_points", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["course_evaluation_id"], ["course_evaluation.id"]),
         sa.ForeignKeyConstraint(["receiving_student_id"], ["user.id"]),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("course_evaluation_id", "receiving_student_id"),
     )
 
 
@@ -177,7 +176,6 @@ def downgrade() -> None:
     op.drop_table("project_member")
     op.drop_table("project")
     op.drop_table("course_lecturer")
-    op.drop_index(op.f("ix_otp_token_token_hash"), table_name="otp_token")
     op.drop_table("otp_token")
     op.drop_index(op.f("ix_course_code"), table_name="course")
     op.drop_table("course")

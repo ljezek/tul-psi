@@ -17,9 +17,10 @@ class PeerFeedback(SQLModel, table=True):
 
     __tablename__: ClassVar[str] = "peer_feedback"
 
-    id: int | None = Field(default=None, primary_key=True)
-    course_evaluation_id: int = Field(foreign_key="course_evaluation.id")
-    receiving_student_id: int = Field(foreign_key="user.id")
+    # Composite primary key — one feedback row per (evaluation, receiving student) pair.
+    # No surrogate id is needed; the natural key uniquely identifies the row.
+    course_evaluation_id: int = Field(primary_key=True, foreign_key="course_evaluation.id")
+    receiving_student_id: int = Field(primary_key=True, foreign_key="user.id")
     # Null means the student has not yet written the free-text sections (draft).
     strengths: str | None = Field(default=None)
     improvements: str | None = Field(default=None)
