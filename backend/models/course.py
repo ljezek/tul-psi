@@ -7,6 +7,7 @@ from typing import ClassVar, TypedDict
 from pydantic import TypeAdapter
 from pydantic.config import ConfigDict
 from sqlalchemy import Column
+from sqlalchemy import DateTime as SADateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -74,7 +75,10 @@ class Course(SQLModel, table=True):
         sa_column=Column(JSONB, nullable=False),
     )
     created_by: int | None = Field(default=None, foreign_key="user.id")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(SADateTime(timezone=True), nullable=False),
+    )
 
     def __init__(self, **data: object) -> None:
         # SQLModel 0.0.x bypasses Pydantic validators for table=True models, so
