@@ -4,12 +4,12 @@
 # PostgreSQL executes every *.sh file found in /docker-entrypoint-initdb.d/
 # exactly once, on the very first container start (when the data directory is
 # empty).  This script therefore runs automatically after the admin role
-# (POSTGRES_USER) and the database (POSTGRES_DB) have been created by the
-# official entrypoint.
+# (POSTGRES_ADMIN_USER) and the database (POSTGRES_DB) have been created by
+# the official entrypoint.
 #
 # Role summary
 # ─────────────────────────────────────────────────────────────────────────────
-#   POSTGRES_USER   (tul_psi_admin by default)
+#   POSTGRES_ADMIN_USER   (tul_psi_admin by default)
 #       Full privileges including DDL.  Used by Alembic / CI/CD pipelines.
 #
 #   POSTGRES_APP_USER   (tul_psi_app by default)
@@ -18,8 +18,8 @@
 #       runtime so that a compromised app process cannot alter the schema.
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# Required environment variables (set via docker-compose env_file):
-#   POSTGRES_USER           admin role name
+# Required environment variables (set via docker-compose env_file / environment):
+#   POSTGRES_ADMIN_USER     admin role name
 #   POSTGRES_DB             database name
 #   POSTGRES_APP_USER       application role name
 #   POSTGRES_APP_PASSWORD   application role password
@@ -34,7 +34,7 @@ set -euo pipefail
 ESCAPED_APP_PASSWORD="${POSTGRES_APP_PASSWORD//\'/\'\'}"
 
 psql -v ON_ERROR_STOP=1 \
-     --username "$POSTGRES_USER" \
+     --username "$POSTGRES_ADMIN_USER" \
      --dbname   "$POSTGRES_DB" \
      <<SQL
 -- Application role: DML only — no DDL / schema changes.
@@ -63,7 +63,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 
 -- Ensure DML is automatically granted on tables created by the admin role in
 -- the future (e.g. after every Alembic migration).
-ALTER DEFAULT PRIVILEGES FOR ROLE "${POSTGRES_USER}" IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR ROLE "${POSTGRES_ADMIN_USER}" IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "${POSTGRES_APP_USER}";
 
 -- Grant sequence access so that SERIAL / auto-increment primary keys work.
@@ -71,6 +71,6 @@ GRANT USAGE, SELECT
     ON ALL SEQUENCES IN SCHEMA public
     TO "${POSTGRES_APP_USER}";
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "${POSTGRES_USER}" IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR ROLE "${POSTGRES_ADMIN_USER}" IN SCHEMA public
     GRANT USAGE, SELECT ON SEQUENCES TO "${POSTGRES_APP_USER}";
 SQL

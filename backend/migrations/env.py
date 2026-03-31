@@ -6,7 +6,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
-from settings import get_settings
+from migration_settings import get_migration_settings
 
 # Alembic Config object — provides access to values within the .ini file.
 config = context.config
@@ -15,10 +15,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url from application settings so the same environment
-# variables used by FastAPI also drive Alembic.  migration_url prefers
-# DATABASE_ADMIN_URL (full DDL+DML) when set, falling back to DATABASE_URL.
-config.set_main_option("sqlalchemy.url", get_settings().migration_url)
+# Override sqlalchemy.url from migration-specific settings.
+# MigrationSettings prefers DATABASE_ADMIN_URL (full DDL+DML) when set,
+# falling back to DATABASE_URL for environments that use a single DB user.
+config.set_main_option("sqlalchemy.url", get_migration_settings().migration_url)
 
 # Wire SQLModel metadata for autogenerate support.
 # Import all SQLModel table classes here once they exist so that Alembic can
