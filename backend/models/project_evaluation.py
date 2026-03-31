@@ -6,6 +6,7 @@ from typing import ClassVar, TypedDict
 from pydantic import TypeAdapter
 from pydantic.config import ConfigDict
 from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy import DateTime as SADateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -58,7 +59,10 @@ class ProjectEvaluation(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSONB, nullable=False),
     )
-    submitted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    submitted_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(SADateTime(timezone=True), nullable=False),
+    )
 
     def __init__(self, **data: object) -> None:
         # SQLModel 0.0.x bypasses Pydantic validators for table=True models, so

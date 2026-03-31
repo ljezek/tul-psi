@@ -404,8 +404,10 @@ def test_project_evaluation_rejects_duplicate_submission() -> None:
     from sqlalchemy import JSON, Column, Integer, MetaData, UniqueConstraint
     from sqlalchemy import Table as SATable
 
-    # SQLite does not support JSONB, so we build a schema-equivalent table with
-    # plain JSON to keep the in-memory constraint test database-agnostic.
+    # SQLite does not support JSONB, so we cannot use
+    # SQLModel.metadata.tables["project_evaluation"].create(engine) here (unlike
+    # all other duplicate tests).  We build a schema-equivalent table with plain
+    # JSON instead to keep the in-memory constraint test database-agnostic.
     meta = MetaData()
     tbl = SATable(
         "project_evaluation_dup_test",

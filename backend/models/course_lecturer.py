@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import ClassVar
 
-from sqlalchemy import PrimaryKeyConstraint
+from sqlalchemy import Column
+from sqlalchemy import DateTime as SADateTime
 from sqlmodel import Field, SQLModel
 
 
@@ -16,11 +17,13 @@ class CourseLecturer(SQLModel, table=True):
     """
 
     __tablename__: ClassVar[str] = "course_lecturer"
-    # Composite primary key; no surrogate id is needed for a pure join table.
-    __table_args__: ClassVar[tuple] = (
-        PrimaryKeyConstraint("course_id", "user_id", name="pk_course_lecturer"),
-    )
 
-    course_id: int = Field(foreign_key="course.id")
-    user_id: int = Field(foreign_key="user.id")
-    assigned_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # Composite primary key expressed via SQLModel's idiomatic primary_key=True
+    # on each column so that the ORM identity key is known for session.get() /
+    # session.merge() calls.  No surrogate id is needed for a pure join table.
+    course_id: int = Field(primary_key=True, foreign_key="course.id")
+    user_id: int = Field(primary_key=True, foreign_key="user.id")
+    assigned_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(SADateTime(timezone=True), nullable=False),
+    )

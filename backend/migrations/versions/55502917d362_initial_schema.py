@@ -71,6 +71,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index(
+        op.f("ix_otp_token_token_hash"), "otp_token", ["token_hash"], unique=False
+    )
 
     # ------------------------------------------------------ course_lecturer --
     op.create_table(
@@ -80,7 +83,7 @@ def upgrade() -> None:
         sa.Column("assigned_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["course_id"], ["course.id"]),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
-        sa.PrimaryKeyConstraint("course_id", "user_id", name="pk_course_lecturer"),
+        sa.PrimaryKeyConstraint("course_id", "user_id"),
     )
 
     # ---------------------------------------------------------------- project --
@@ -180,6 +183,7 @@ def downgrade() -> None:
     op.drop_table("project_member")
     op.drop_table("project")
     op.drop_table("course_lecturer")
+    op.drop_index(op.f("ix_otp_token_token_hash"), table_name="otp_token")
     op.drop_table("otp_token")
     op.drop_index(op.f("ix_course_code"), table_name="course")
     op.drop_table("course")

@@ -4,7 +4,8 @@ from datetime import UTC, datetime
 from typing import Annotated, ClassVar
 
 from pydantic import Field as PydanticField, TypeAdapter
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy import DateTime as SADateTime
 from sqlmodel import Field, SQLModel
 
 
@@ -45,7 +46,10 @@ class CourseEvaluation(SQLModel, table=True):
     improvements: str | None = Field(default=None)
     # Once published the evaluation is locked and cannot be edited further.
     published: bool = Field(default=False)
-    submitted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    submitted_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(SADateTime(timezone=True), nullable=False),
+    )
 
     def __init__(self, **data: object) -> None:
         # SQLModel 0.0.x bypasses Pydantic validators for table=True models, so
