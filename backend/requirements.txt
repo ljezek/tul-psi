@@ -8,7 +8,8 @@ alembic==1.18.4
 # It works on all platforms and architectures (including Windows ARM64) without
 # requiring a locally installed libpq / PostgreSQL client library.
 pg8000==1.31.2
-bcrypt==4.3.0
+bcrypt==5.0.0
+python-json-logger==3.3.0
 # Install the package itself so importlib.metadata.version() resolves its version at runtime.
 -e .
 

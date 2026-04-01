@@ -66,15 +66,18 @@ def request_otp(email: str, session: Session) -> None:
 
     otp = _generate_otp()
     token = OtpToken(user_id=user.id, token_hash=_hash_otp(otp))
-    db_auth.save_otp_token(session, token)
+    db_auth.add_otp_token(session, token)
+    # Commit here — this is the full unit of work: invalidate old tokens and
+    # insert the new one must succeed or fail together.
+    session.commit()
 
     logger.info("OTP token generated.", extra={"email": email})
-    if get_settings().show_otp:
+    if get_settings().show_otp_dev_only:
         # Dev-only fallback: print OTP to stderr when SMTP is not yet configured.
         # Do not enable show_otp in production — it exposes the secret to anyone
         # with log/stderr access and defeats the purpose of the OTP.
         logger.warning(
-            "show_otp is enabled; plaintext OTP will be printed to stderr.",
+            "show_otp_dev_only is enabled; plaintext OTP will be printed to stderr.",
             extra={"email": email},
         )
         print(f"[DEV] OTP for {email}: {otp}", file=sys.stderr)  # noqa: T201

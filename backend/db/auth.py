@@ -27,12 +27,10 @@ def invalidate_active_otp_tokens(session: Session, user_id: int) -> None:
     )
 
 
-def save_otp_token(session: Session, token: OtpToken) -> None:
-    """Persist *token* and commit the transaction.
+def add_otp_token(session: Session, token: OtpToken) -> None:
+    """Stage *token* for insertion into the database.
 
-    Commits all pending changes in the session (including any prior
-    ``invalidate_active_otp_tokens`` call) so that invalidation and the new
-    token are written atomically.
+    Does not commit — the caller is responsible for calling ``session.commit()``
+    after all related changes have been staged so they are written atomically.
     """
     session.add(token)
-    session.commit()

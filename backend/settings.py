@@ -15,9 +15,12 @@ class Settings(BaseSettings):
     # Used by the FastAPI application at runtime.
     database_url: str
 
+    # Minimum log level forwarded to the JSON log handler (e.g. "INFO", "DEBUG").
+    log_level: str = "INFO"
+
     # When True, the plaintext OTP is printed to stderr after generation.
     # Enable only in non-production environments as a stand-in for SMTP delivery.
-    show_otp: bool = False
+    show_otp_dev_only: bool = False
 
 
 @lru_cache
