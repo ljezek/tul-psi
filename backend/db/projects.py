@@ -13,8 +13,8 @@ from models.user import User
 def _escape_like(value: str) -> str:
     """Escape LIKE special characters in ``value`` so they are matched literally.
 
-    Without escaping, a user-supplied ``%`` or ``_`` would be treated as a
-    wildcard, potentially returning more results than intended.
+    Without escaping, a user-supplied ``%`` or ``_`` would be treated as a wildcard,
+    potentially returning more results than intended.
     """
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
@@ -31,9 +31,9 @@ def get_projects(
 ) -> list[tuple[Project, Course]]:
     """Query projects and their associated courses, applying optional filters.
 
-    Joins ``project`` with ``course`` and applies each supplied filter.
-    The lecturer filter performs a further join with ``course_lecturer`` and
-    ``user`` so that only projects taught by a matching lecturer are returned.
+    Joins ``project`` with ``course`` and applies each supplied filter. The lecturer filter
+    performs a further join with ``course_lecturer`` and ``user`` so that only projects taught
+    by a matching lecturer are returned.
     """
     stmt = select(Project, Course).join(Course, Project.course_id == Course.id)
 
@@ -97,4 +97,27 @@ def get_project_members(
     result: dict[int, list[User]] = {}
     for project_id, user in session.execute(stmt).all():
         result.setdefault(project_id, []).append(user)
+    return result
+
+
+def get_course_lecturers(
+    session: Session,
+    course_ids: list[int],
+) -> dict[int, list[User]]:
+    """Return a mapping from course id to its list of lecturer users.
+
+    Only courses whose ids appear in ``course_ids`` are queried.
+    """
+    if not course_ids:
+        return {}
+
+    stmt = (
+        select(CourseLecturer.course_id, User)
+        .join(User, CourseLecturer.user_id == User.id)
+        .where(CourseLecturer.course_id.in_(course_ids))
+    )
+
+    result: dict[int, list[User]] = {}
+    for course_id, user in session.execute(stmt).all():
+        result.setdefault(course_id, []).append(user)
     return result

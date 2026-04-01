@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from db.projects import get_project_members, get_projects
+from db.projects import get_course_lecturers, get_project_members, get_projects
 from models.course import CourseTerm
-from schemas.projects import CoursePublic, MemberPublic, ProjectPublic
+from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
 
 
 class ProjectsService:
     """Business logic for the projects discovery endpoint.
 
-    This service assembles the full ``ProjectPublic`` response by combining
-    the main project+course query with a separate members lookup, keeping
-    the two DB round-trips clearly separated.
+    This service assembles the full ``ProjectPublic`` response by combining the main
+    project+course query with separate member and lecturer lookups, keeping each DB
+    round-trip clearly separated.
     """
 
     def __init__(self, session: Session) -> None:
@@ -30,8 +30,8 @@ class ProjectsService:
     ) -> list[ProjectPublic]:
         """Return all projects matching the supplied filter criteria.
 
-        Each returned ``ProjectPublic`` includes a nested course summary and
-        the full list of current project members.
+        Each returned ``ProjectPublic`` includes a nested course summary (with lecturers)
+        and the full list of current project members.
         """
         rows = get_projects(
             self._session,
@@ -43,10 +43,11 @@ class ProjectsService:
             technology=technology,
         )
 
-        # Persisted rows always have a non-None id; assert to surface any
-        # unexpected inconsistency early rather than propagating None silently.
+        # Persisted rows always have a non-None id; collect ids to drive bulk lookups.
         project_ids = [p.id for p, _ in rows if p.id is not None]
+        course_ids = list({c.id for _, c in rows if c.id is not None})
         members_by_project = get_project_members(self._session, project_ids)
+        lecturers_by_course = get_course_lecturers(self._session, course_ids)
 
         result: list[ProjectPublic] = []
         for p, c in rows:
@@ -66,10 +67,19 @@ class ProjectsService:
                     technologies=p.technologies,
                     academic_year=p.academic_year,
                     course=CoursePublic(
-                        id=c.id,
                         code=c.code,
                         name=c.name,
+                        syllabus=c.syllabus,
                         term=c.term,
+                        project_type=c.project_type,
+                        min_score=c.min_score,
+                        peer_bonus_budget=c.peer_bonus_budget,
+                        evaluation_criteria=c.evaluation_criteria,
+                        links=c.links,
+                        lecturers=[
+                            LecturerPublic(name=u.name, github_alias=u.github_alias)
+                            for u in lecturers_by_course.get(c.id, [])
+                        ],
                     ),
                     members=[
                         MemberPublic(

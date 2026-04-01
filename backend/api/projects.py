@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from db.session import get_session
 from models.course import CourseTerm
 from schemas.projects import ProjectPublic
 from services.projects import ProjectsService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -44,14 +48,27 @@ async def list_projects(
     - **year**: filter by academic year (e.g. ``2025``).
     - **term**: filter by course term — ``WINTER`` or ``SUMMER``.
     - **lecturer**: partial match on the lecturer's name or e-mail address.
-    - **technology**: exact match on a technology name in the project's
-      technologies list (e.g. ``FastAPI``).
+    - **technology**: exact match on a technology name in the project's technologies list.
     """
-    return service.get_projects(
-        q=q,
-        course=course,
-        year=year,
-        term=term,
-        lecturer=lecturer,
-        technology=technology,
-    )
+    try:
+        return service.get_projects(
+            q=q,
+            course=course,
+            year=year,
+            term=term,
+            lecturer=lecturer,
+            technology=technology,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to retrieve projects",
+            extra={
+                "q": q,
+                "course": course,
+                "year": year,
+                "term": term,
+                "lecturer": lecturer,
+                "technology": technology,
+            },
+        )
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
