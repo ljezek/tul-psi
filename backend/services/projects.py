@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.projects import get_course_lecturers, get_project_members, get_projects
+from db.projects import get_course_lecturers, get_project, get_project_members, get_projects
 from models.course import CourseTerm
 from models.user import User
 from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
@@ -106,3 +106,57 @@ class ProjectsService:
                 )
             )
         return result
+
+    async def get_project(self, project_id: int) -> ProjectPublic | None:
+        """Return the project with the given ``project_id``, or ``None`` if not found.
+
+        Assembles the full ``ProjectPublic`` response including the nested course
+        summary (with lecturers) and the project's member list.
+        """
+        row = await get_project(self._session, project_id)
+        if row is None:
+            return None
+
+        p, c = row
+        # Persisted rows always have a non-None id; raise early to surface any
+        # unexpected inconsistency rather than propagating None silently.
+        if p.id is None:
+            raise ValueError(f"Project returned from DB has no id: {p!r}")
+        if c.id is None:
+            raise ValueError(f"Course returned from DB has no id: {c!r}")
+
+        members_by_project = await get_project_members(self._session, [p.id])
+        lecturers_by_course = await get_course_lecturers(self._session, [c.id])
+
+        return ProjectPublic(
+            id=p.id,
+            title=p.title,
+            description=p.description,
+            github_url=p.github_url,
+            live_url=p.live_url,
+            technologies=p.technologies,
+            academic_year=p.academic_year,
+            course=CoursePublic(
+                code=c.code,
+                name=c.name,
+                syllabus=c.syllabus,
+                term=c.term,
+                project_type=c.project_type,
+                min_score=c.min_score,
+                peer_bonus_budget=c.peer_bonus_budget,
+                evaluation_criteria=c.evaluation_criteria,
+                links=c.links,
+                lecturers=[
+                    LecturerPublic(name=u.name, github_alias=u.github_alias)
+                    for u in lecturers_by_course.get(c.id, [])
+                ],
+            ),
+            members=[
+                MemberPublic(
+                    id=_require_id(m),
+                    github_alias=m.github_alias,
+                    name=m.name,
+                )
+                for m in members_by_project.get(p.id, [])
+            ],
+        )

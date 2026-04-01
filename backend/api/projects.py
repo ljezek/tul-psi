@@ -72,3 +72,28 @@ async def list_projects(
             },
         )
         raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
+@router.get(
+    "/{project_id}",
+    response_model=ProjectPublic,
+    summary="Get project detail",
+    description="Returns the full detail of a single project identified by its integer id.",
+)
+async def get_project(
+    project_id: int,
+    service: ProjectsService = Depends(get_projects_service),
+) -> ProjectPublic:
+    """Return the project identified by ``project_id``.
+
+    Raises HTTP 404 when no project with the given id exists.
+    """
+    try:
+        project = await service.get_project(project_id)
+    except Exception:
+        logger.exception("Failed to retrieve project", extra={"project_id": project_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return project
