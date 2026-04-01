@@ -73,13 +73,18 @@ python seed.py --reset
 
 ### 6. Run the development server
 
-Use `start.sh` to apply any pending database migrations and then start the server:
+Use `start.sh` or `start.ps1` to apply any pending database migrations and then start the server:
 
 > Run from **`backend/`**:
 
 ```bash
 ./start.sh --reload
 ```
+
+```powershell
+./start.ps1 --reload
+```
+
 
 The `--reload` flag enables auto-reload (recommended during development).  
 The script is equivalent to running these two commands manually:
