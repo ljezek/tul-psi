@@ -4,7 +4,21 @@ from sqlmodel import Session
 
 from db.projects import get_course_lecturers, get_project_members, get_projects
 from models.course import CourseTerm
+from models.user import User
 from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
+
+
+def _require_id(user: User) -> int:
+    """Return ``user.id``, raising ``ValueError`` if it is ``None``.
+
+    ``User.id`` is typed as ``int | None`` because SQLModel allows unsaved instances,
+    but any row returned from the database always has a non-None primary key.
+    This helper surfaces the inconsistency early with a clear message rather than
+    letting it propagate as a silent ``None``.
+    """
+    if user.id is None:
+        raise ValueError(f"User returned from DB has no id: {user!r}")
+    return user.id
 
 
 class ProjectsService:
@@ -83,7 +97,7 @@ class ProjectsService:
                     ),
                     members=[
                         MemberPublic(
-                            id=m.id,  # type: ignore[arg-type]  # m.id is always set for DB rows
+                            id=_require_id(m),
                             github_alias=m.github_alias,
                             name=m.name,
                         )

@@ -9,7 +9,6 @@ class LecturerPublic(BaseModel):
     """Public representation of a lecturer assigned to a course.
 
     E-mail is intentionally omitted — it is not visible to unauthenticated users.
-    # TODO: introduce a LecturerPrivate subclass when authenticated routes need the email field.
     """
 
     name: str

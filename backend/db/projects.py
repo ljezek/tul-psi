@@ -57,16 +57,21 @@ def get_projects(
 
     if lecturer:
         escaped_lecturer = _escape_like(lecturer)
-        stmt = (
-            stmt.join(CourseLecturer, Course.id == CourseLecturer.course_id)
+        # Use an EXISTS subquery instead of a join to avoid duplicate (Project, Course) rows
+        # when a course has multiple lecturers that all match the search term.
+        lecturer_subq = (
+            select(1)
+            .select_from(CourseLecturer)
             .join(User, CourseLecturer.user_id == User.id)
             .where(
+                CourseLecturer.course_id == Course.id,
                 or_(
                     User.name.ilike(f"%{escaped_lecturer}%", escape="\\"),
                     User.email.ilike(f"%{escaped_lecturer}%", escape="\\"),
-                )
+                ),
             )
         )
+        stmt = stmt.where(lecturer_subq.exists())
 
     if technology:
         # Filter projects whose JSONB technologies array contains the given string.
