@@ -2,12 +2,15 @@ fastapi==0.116.1
 sqlmodel==0.0.37
 uvicorn[standard]==0.35.0
 pydantic-settings==2.10.1
+email-validator==2.2.0
 alembic==1.18.4
 # greenlet is required by SQLAlchemy's async engine to bridge sync/async contexts.
 greenlet==3.0.3
 # asyncpg is a high-performance async PostgreSQL driver built on Python asyncio.
 # It provides native async/await support, enabling fully non-blocking DB access.
 asyncpg==0.30.0
+bcrypt==5.0.0
+python-json-logger==3.3.0
 # Install the package itself so importlib.metadata.version() resolves its version at runtime.
 -e .
 
