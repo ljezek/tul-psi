@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     # Used by the FastAPI application at runtime.
     database_url: str
 
+    # When True, the plaintext OTP is printed to stderr after generation.
+    # Enable only in non-production environments as a stand-in for SMTP delivery.
+    show_otp: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

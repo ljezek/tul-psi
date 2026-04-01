@@ -18,28 +18,25 @@ from models import OtpToken
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def mock_session() -> MagicMock:
-    """Return a mock SQLModel session with no user found by default."""
-    mock = MagicMock(spec=Session)
-    mock.exec.return_value.first.return_value = None
-    return mock
+@pytest.fixture(autouse=True)
+def _override_session() -> Generator[None, None, None]:
+    """Override get_session with a no-op mock to avoid requiring a real database.
+
+    Individual tests that need to inspect DB interactions should patch the
+    ``db.auth`` module functions directly instead of configuring the session.
+    """
+    app.dependency_overrides[get_session] = lambda: MagicMock(spec=Session)
+    yield
+    app.dependency_overrides.pop(get_session, None)
 
 
 @pytest.fixture(autouse=True)
-def _override_session(mock_session: MagicMock) -> Generator[None, None, None]:
-    """Override the get_session dependency for every test in this module.
-
-    Individual tests that need to control the DB result can accept the
-    ``mock_session`` fixture as a parameter and set attributes on it.
-    """
-
-    def override() -> Generator[MagicMock, None, None]:
-        yield mock_session
-
-    app.dependency_overrides[get_session] = override
-    yield
-    app.dependency_overrides.pop(get_session, None)
+def _mock_settings() -> Generator[None, None, None]:
+    """Stub application settings so tests do not require a real database URL."""
+    mock_settings = MagicMock()
+    mock_settings.show_otp = False
+    with patch("services.auth_service.get_settings", return_value=mock_settings):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -81,27 +78,28 @@ async def test_otp_request_rejects_tul_cz_subdomain(client: AsyncClient) -> None
 
 async def test_otp_request_returns_200_for_unknown_email(client: AsyncClient) -> None:
     """Returns HTTP 200 even when no matching user exists (prevents user enumeration)."""
-    # mock_session already returns None from .first() by default.
-    response = await client.post(
-        "/api/v1/auth/otp/request",
-        json={"email": "unknown@tul.cz"},
-    )
+    with patch("db.auth.get_user_by_email", return_value=None):
+        response = await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "unknown@tul.cz"},
+        )
     assert response.status_code == 200
     assert "OTP" in response.json()["message"]
 
 
-async def test_otp_request_returns_200_for_registered_email(
-    client: AsyncClient, mock_session: MagicMock
-) -> None:
+async def test_otp_request_returns_200_for_registered_email(client: AsyncClient) -> None:
     """Returns HTTP 200 when a matching user is found and the OTP is stored."""
     mock_user = MagicMock()
     mock_user.id = 1
-    mock_session.exec.return_value.first.return_value = mock_user
-
-    response = await client.post(
-        "/api/v1/auth/otp/request",
-        json={"email": "jan.novak@tul.cz"},
-    )
+    with (
+        patch("db.auth.get_user_by_email", return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens"),
+        patch("db.auth.save_otp_token"),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "jan.novak@tul.cz"},
+        )
     assert response.status_code == 200
 
 
@@ -110,16 +108,17 @@ async def test_otp_request_returns_200_for_registered_email(
 # ---------------------------------------------------------------------------
 
 
-async def test_otp_request_stores_token_for_registered_user(
-    client: AsyncClient, mock_session: MagicMock
-) -> None:
+async def test_otp_request_stores_token_for_registered_user(client: AsyncClient) -> None:
     """The stored OtpToken has the correct user_id, timestamps, and a valid bcrypt hash."""
     mock_user = MagicMock()
     mock_user.id = 42
-    mock_session.exec.return_value.first.return_value = mock_user
 
-    known_otp = "483921"
-    with patch("services.auth_service._generate_otp", return_value=known_otp):
+    with (
+        patch("db.auth.get_user_by_email", return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens"),
+        patch("db.auth.save_otp_token") as mock_save,
+        patch("services.auth_service._generate_otp", return_value="483921"),
+    ):
         before = datetime.now(UTC)
         await client.post(
             "/api/v1/auth/otp/request",
@@ -127,11 +126,9 @@ async def test_otp_request_stores_token_for_registered_user(
         )
         after = datetime.now(UTC)
 
-    # Find the OtpToken instance that was passed to session.add().
-    added = [c[0][0] for c in mock_session.add.call_args_list]
-    tokens = [obj for obj in added if isinstance(obj, OtpToken)]
-    assert len(tokens) == 1, "Exactly one new OtpToken should have been persisted."
-    token = tokens[0]
+    mock_save.assert_called_once()
+    # save_otp_token(session, token) — token is the second positional argument.
+    token: OtpToken = mock_save.call_args[0][1]
 
     assert token.user_id == 42
     assert before <= token.created_at <= after + timedelta(seconds=1)
@@ -140,47 +137,42 @@ async def test_otp_request_stores_token_for_registered_user(
         <= (token.expires_at - token.created_at)
         <= timedelta(minutes=15, seconds=1)
     )
-    assert bcrypt.checkpw(known_otp.encode(), token.token_hash.encode())
+    assert bcrypt.checkpw(b"483921", token.token_hash.encode())
 
 
-async def test_otp_request_invalidates_old_tokens_for_user(
-    client: AsyncClient, mock_session: MagicMock
-) -> None:
-    """A new OTP request must issue a bulk UPDATE to invalidate previous active tokens."""
-    from sqlalchemy.sql.dml import Update as SAUpdate
-
+async def test_otp_request_invalidates_old_tokens_for_user(client: AsyncClient) -> None:
+    """A new OTP request must call invalidate_active_otp_tokens for the same user."""
     mock_user = MagicMock()
     mock_user.id = 42
-    mock_session.exec.return_value.first.return_value = mock_user
 
-    await client.post(
-        "/api/v1/auth/otp/request",
-        json={"email": "jan.novak@tul.cz"},
-    )
+    with (
+        patch("db.auth.get_user_by_email", return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens") as mock_invalidate,
+        patch("db.auth.save_otp_token"),
+    ):
+        await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "jan.novak@tul.cz"},
+        )
 
-    exec_stmts = [call.args[0] for call in mock_session.exec.call_args_list if call.args]
-    updates = [s for s in exec_stmts if isinstance(s, SAUpdate)]
-    assert len(updates) == 1, "Expected exactly one bulk UPDATE for token invalidation."
-
-    stmt = updates[0]
-    assert stmt.table.name == "otp_token"
-    # Verify the UPDATE targets user_id == 42 via the compiled WHERE clause parameters.
-    params = stmt.compile().params
-    assert params.get("user_id_1") == 42, "UPDATE must filter by user_id=42."
+    mock_invalidate.assert_called_once()
+    # invalidate_active_otp_tokens(session, user_id) — user_id is the second positional arg.
+    user_id_arg = mock_invalidate.call_args[0][1]
+    assert user_id_arg == 42, "Token invalidation must target user_id=42."
 
 
-async def test_otp_request_does_not_store_token_for_unknown_user(
-    client: AsyncClient, mock_session: MagicMock
-) -> None:
+async def test_otp_request_does_not_store_token_for_unknown_user(client: AsyncClient) -> None:
     """No DB write occurs when the email address is not registered."""
-    # mock_session already returns None from .first() by default.
-    await client.post(
-        "/api/v1/auth/otp/request",
-        json={"email": "nobody@tul.cz"},
-    )
+    with (
+        patch("db.auth.get_user_by_email", return_value=None),
+        patch("db.auth.save_otp_token") as mock_save,
+    ):
+        await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "nobody@tul.cz"},
+        )
 
-    mock_session.add.assert_not_called()
-    mock_session.commit.assert_not_called()
+    mock_save.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -221,9 +213,10 @@ def test_generate_otp_is_six_digits() -> None:
 
 async def test_otp_request_response_schema(client: AsyncClient) -> None:
     """The 200 response body must contain only a 'message' key."""
-    response = await client.post(
-        "/api/v1/auth/otp/request",
-        json={"email": "anyone@tul.cz"},
-    )
+    with patch("db.auth.get_user_by_email", return_value=None):
+        response = await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "anyone@tul.cz"},
+        )
     assert response.status_code == 200
     assert set(response.json().keys()) == {"message"}

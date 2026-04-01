@@ -3,12 +3,14 @@ from __future__ import annotations
 import logging
 import random
 import string
+import sys
 
 import bcrypt
-from sqlalchemy import not_, update
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from models import OtpToken, User
+from db import auth as db_auth
+from models import OtpToken
+from settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +40,11 @@ def request_otp(email: str, session: Session) -> None:
     the new token is inserted to prevent token accumulation and limit the attack
     surface if an earlier code was intercepted.
 
-    The plaintext OTP is written to the application log instead of being sent
-    via SMTP.
-
-    # TODO: Replace the log statement below with a real SMTP email delivery
+    # TODO: Replace the ``show_otp`` fallback below with real SMTP email delivery
     # once an email sending service (e.g., SendGrid, Azure Communication
     # Services) is integrated.
     """
-    user = session.exec(select(User).where(User.email == email)).first()
+    user = db_auth.get_user_by_email(session, email)
 
     if user is None:
         # Silent success — do not reveal that the address is not registered.
@@ -63,22 +62,19 @@ def request_otp(email: str, session: Session) -> None:
         )
         return
 
-    # Invalidate all active tokens for this user with a single bulk UPDATE.
-    # This runs in the same transaction as the new token insert below; if any
-    # subsequent step fails, the whole unit of work is rolled back together.
-    session.exec(
-        update(OtpToken)
-        .values(used=True)
-        .where(
-            OtpToken.user_id == user.id,
-            not_(OtpToken.used),
-        )
-    )
+    db_auth.invalidate_active_otp_tokens(session, user.id)
 
     otp = _generate_otp()
     token = OtpToken(user_id=user.id, token_hash=_hash_otp(otp))
-    session.add(token)
-    session.commit()
+    db_auth.save_otp_token(session, token)
 
-    # TODO: Send the OTP via SMTP instead of logging it.
-    logger.info("OTP generated: %s", otp, extra={"email": email})
+    logger.info("OTP token generated.", extra={"email": email})
+    if get_settings().show_otp:
+        # Dev-only fallback: print OTP to stderr when SMTP is not yet configured.
+        # Do not enable show_otp in production — it exposes the secret to anyone
+        # with log/stderr access and defeats the purpose of the OTP.
+        logger.warning(
+            "show_otp is enabled; plaintext OTP will be printed to stderr.",
+            extra={"email": email},
+        )
+        print(f"[DEV] OTP for {email}: {otp}", file=sys.stderr)  # noqa: T201
