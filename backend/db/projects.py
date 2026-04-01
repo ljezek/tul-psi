@@ -82,6 +82,25 @@ async def get_projects(
     return [(row[0], row[1]) for row in rows]
 
 
+async def get_project(
+    session: AsyncSession,
+    project_id: int,
+) -> tuple[Project, Course] | None:
+    """Return the project with the given ``project_id`` and its associated course.
+
+    Returns ``None`` when no project with the given id exists.
+    """
+    stmt = (
+        select(Project, Course)
+        .join(Course, Project.course_id == Course.id)
+        .where(Project.id == project_id)
+    )
+    row = (await session.execute(stmt)).first()
+    if row is None:
+        return None
+    return (row[0], row[1])
+
+
 async def get_project_members(
     session: AsyncSession,
     project_ids: list[int],
