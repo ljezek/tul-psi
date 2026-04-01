@@ -1,0 +1,16 @@
+name: Backend Gate
+on:
+  pull_request:
+    paths-ignore:
+      - 'backend/**'
+    branches: [ main ]
+
+# This workflow runs when no backend files changed.
+# It satisfies the required "test-and-lint-backend" branch-protection check
+# so that frontend-only (or other) pull requests are not blocked.
+jobs:
+  test-and-lint-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: No backend changes — skipping backend checks
+        run: echo "No backend files were modified. Backend gate skipped."

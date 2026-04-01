@@ -3,7 +3,10 @@ sqlmodel==0.0.37
 uvicorn[standard]==0.35.0
 pydantic-settings==2.10.1
 alembic==1.18.4
-psycopg2-binary==2.9.11
+# pg8000 is a pure-Python PostgreSQL driver with no native dependencies.
+# It works on all platforms and architectures (including Windows ARM64) without
+# requiring a locally installed libpq / PostgreSQL client library.
+pg8000==1.31.2
 # Install the package itself so importlib.metadata.version() resolves its version at runtime.
 -e .
 
