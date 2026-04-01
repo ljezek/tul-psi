@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
 from services import auth_service
+from settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -109,8 +110,10 @@ async def verify_otp(
     """Handle OTP verification and JWT issuance for the user identified by *body.email*.
 
     On success, a signed JWT is stored in an HttpOnly cookie named ``session``.
-    The cookie is also marked ``Secure`` and ``SameSite=Strict`` as required
-    by the security policy documented in DESIGN.md.
+    The ``Secure`` flag is enabled in all non-local environments so that the
+    cookie is only transmitted over HTTPS, as required by DESIGN.md.  It is
+    intentionally disabled for the ``local`` environment to allow plain-HTTP
+    development without additional TLS setup.
     """
     try:
         jwt_token = await auth_service.verify_otp(body.email, body.otp, session)
@@ -125,11 +128,14 @@ async def verify_otp(
             detail="Invalid or expired code",
         ) from None
 
+    settings = get_settings()
+    # Secure cookies require HTTPS; disable only for the local development environment.
+    secure_cookie = settings.app_env != "local"
     response.set_cookie(
         key="session",
         value=jwt_token,
         httponly=True,
-        secure=True,
+        secure=secure_cookie,
         samesite="strict",
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )

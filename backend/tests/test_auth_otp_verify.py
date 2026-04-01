@@ -35,7 +35,13 @@ def _mock_settings() -> Generator[None, None, None]:
     mock_settings.show_otp_dev_only = False
     mock_settings.jwt_secret = "test-secret"  # noqa: S105
     mock_settings.jwt_algorithm = "HS256"
-    with patch("services.auth_service.get_settings", return_value=mock_settings):
+    # Use "local" so the route does not set the Secure flag on the cookie — the
+    # test HTTP client uses plain HTTP, and a Secure cookie would be dropped.
+    mock_settings.app_env = "local"
+    with (
+        patch("services.auth_service.get_settings", return_value=mock_settings),
+        patch("api.auth.get_settings", return_value=mock_settings),
+    ):
         yield
 
 
