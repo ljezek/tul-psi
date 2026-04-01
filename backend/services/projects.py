@@ -23,16 +23,12 @@ from models.project import Project
 from models.project_evaluation import ProjectEvaluation
 from models.user import User, UserRole
 from schemas.projects import (
-    CourseDetail,
     CourseEvaluationDetail,
     CoursePublic,
     EvaluationScoreDetail,
-    LecturerDetail,
     LecturerPublic,
-    MemberDetail,
     MemberPublic,
     PeerFeedbackDetail,
-    ProjectDetail,
     ProjectEvaluationDetail,
     ProjectPublic,
 )
@@ -57,7 +53,7 @@ def _build_project_public(
     members: list[User],
     lecturers: list[User],
 ) -> ProjectPublic:
-    """Assemble a ``ProjectPublic`` from a project row, its course, members, and lecturers.
+    """Assemble an unauthenticated ``ProjectPublic`` — e-mails and evaluations are omitted.
 
     Raises ``ValueError`` if the project or course row has a ``None`` primary key, which
     should never happen for rows fetched from the database.
@@ -134,14 +130,14 @@ def _to_course_evaluation_detail(ev: CourseEvaluation) -> CourseEvaluationDetail
     )
 
 
-def _to_peer_feedback_detail(fb: PeerFeedback) -> PeerFeedbackDetail:
+def _to_peer_feedback_detail(feedback: PeerFeedback) -> PeerFeedbackDetail:
     """Convert a ``PeerFeedback`` row to its public representation."""
     return PeerFeedbackDetail(
-        course_evaluation_id=fb.course_evaluation_id,
-        receiving_student_id=fb.receiving_student_id,
-        strengths=fb.strengths,
-        improvements=fb.improvements,
-        bonus_points=fb.bonus_points,
+        course_evaluation_id=feedback.course_evaluation_id,
+        receiving_student_id=feedback.receiving_student_id,
+        strengths=feedback.strengths,
+        improvements=feedback.improvements,
+        bonus_points=feedback.bonus_points,
     )
 
 
@@ -154,8 +150,8 @@ def _build_project_detail(
     course_evaluations: list[CourseEvaluationDetail] | None,
     received_peer_feedback: list[PeerFeedbackDetail] | None,
     authored_peer_feedback: list[PeerFeedbackDetail] | None,
-) -> ProjectDetail:
-    """Assemble a ``ProjectDetail`` for an authenticated user.
+) -> ProjectPublic:
+    """Assemble an authenticated ``ProjectPublic`` — e-mails and evaluations are included.
 
     Raises ``ValueError`` if the project or course row has a ``None`` primary key.
     """
@@ -163,7 +159,7 @@ def _build_project_detail(
         raise ValueError(f"Project returned from DB has no id: {p!r}")
     if c.id is None:
         raise ValueError(f"Course returned from DB has no id: {c!r}")
-    return ProjectDetail(
+    return ProjectPublic(
         id=p.id,
         title=p.title,
         description=p.description,
@@ -172,7 +168,7 @@ def _build_project_detail(
         technologies=p.technologies,
         academic_year=p.academic_year,
         results_unlocked=p.results_unlocked,
-        course=CourseDetail(
+        course=CoursePublic(
             code=c.code,
             name=c.name,
             syllabus=c.syllabus,
@@ -183,12 +179,12 @@ def _build_project_detail(
             evaluation_criteria=c.evaluation_criteria,
             links=c.links,
             lecturers=[
-                LecturerDetail(name=u.name, github_alias=u.github_alias, email=u.email)
+                LecturerPublic(name=u.name, github_alias=u.github_alias, email=u.email)
                 for u in lecturers
             ],
         ),
         members=[
-            MemberDetail(
+            MemberPublic(
                 id=_require_id(m),
                 github_alias=m.github_alias,
                 name=m.name,
@@ -277,8 +273,8 @@ class ProjectsService:
             lecturers_by_course.get(c.id, []) if c.id is not None else [],
         )
 
-    async def get_project_detail(self, project_id: int, user: User) -> ProjectDetail | None:
-        """Return an enriched ``ProjectDetail`` for an authenticated *user*.
+    async def get_project_detail(self, project_id: int, user: User) -> ProjectPublic | None:
+        """Return an enriched ``ProjectPublic`` for an authenticated *user*.
 
         Includes member and lecturer e-mails and the ``results_unlocked`` flag.
         When the project has ``results_unlocked=True``, evaluation and peer-feedback
@@ -300,31 +296,46 @@ class ProjectsService:
         members_by_project = await get_project_members(self._session, project_id_list)
         lecturers_by_course = await get_course_lecturers(self._session, course_id_list)
 
-        proj_evals: list[ProjectEvaluationDetail] | None = None
-        course_evals: list[CourseEvaluationDetail] | None = None
-        received_fb: list[PeerFeedbackDetail] | None = None
-        authored_fb: list[PeerFeedbackDetail] | None = None
+        project_evaluations: list[ProjectEvaluationDetail] | None = None
+        course_evaluations: list[CourseEvaluationDetail] | None = None
+        received_peer_feedback: list[PeerFeedbackDetail] | None = None
+        authored_peer_feedback: list[PeerFeedbackDetail] | None = None
 
         if p.results_unlocked:
-            raw_proj_evals = await get_project_evaluations(self._session, project_id)
-            proj_evals = [_to_project_evaluation_detail(ev) for ev in raw_proj_evals]
+            raw_project_evaluations = await get_project_evaluations(self._session, project_id)
+            project_evaluations = [
+                _to_project_evaluation_detail(ev) for ev in raw_project_evaluations
+            ]
 
             if user.role in (UserRole.ADMIN, UserRole.LECTURER):
-                raw_course_evals = await get_course_evaluations(self._session, project_id)
-                course_evals = [_to_course_evaluation_detail(ev) for ev in raw_course_evals]
+                if c.id is not None:
+                    raw_course_evaluations = await get_course_evaluations(
+                        self._session, c.id, academic_year=p.academic_year
+                    )
+                    course_evaluations = [
+                        _to_course_evaluation_detail(ev) for ev in raw_course_evaluations
+                    ]
             elif user.role == UserRole.STUDENT and user.id is not None:
-                raw_received = await get_peer_feedback_received(self._session, project_id, user.id)
-                received_fb = [_to_peer_feedback_detail(fb) for fb in raw_received]
-                raw_authored = await get_peer_feedback_authored(self._session, project_id, user.id)
-                authored_fb = [_to_peer_feedback_detail(fb) for fb in raw_authored]
+                raw_received_peer_feedback = await get_peer_feedback_received(
+                    self._session, project_id, user.id
+                )
+                received_peer_feedback = [
+                    _to_peer_feedback_detail(feedback) for feedback in raw_received_peer_feedback
+                ]
+                raw_authored_peer_feedback = await get_peer_feedback_authored(
+                    self._session, project_id, user.id
+                )
+                authored_peer_feedback = [
+                    _to_peer_feedback_detail(feedback) for feedback in raw_authored_peer_feedback
+                ]
 
         return _build_project_detail(
             p,
             c,
             members_by_project.get(p.id, []) if p.id is not None else [],
             lecturers_by_course.get(c.id, []) if c.id is not None else [],
-            proj_evals,
-            course_evals,
-            received_fb,
-            authored_fb,
+            project_evaluations,
+            course_evaluations,
+            received_peer_feedback,
+            authored_peer_feedback,
         )

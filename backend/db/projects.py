@@ -169,17 +169,26 @@ async def get_project_evaluations(
 
 async def get_course_evaluations(
     session: AsyncSession,
-    project_id: int,
+    course_id: int,
+    *,
+    academic_year: int | None = None,
 ) -> list[CourseEvaluation]:
-    """Return all student course evaluations for *project_id*.
+    """Return all student course evaluations for the course identified by *course_id*.
+
+    Joins through the ``project`` table to resolve the course association.
+    Optionally narrows results to a specific *academic_year* when provided, which
+    is useful for showing only the current cohort's evaluations on a course page.
 
     Results are ordered by ``submitted_at`` ascending.
     """
     stmt = (
         select(CourseEvaluation)
-        .where(CourseEvaluation.project_id == project_id)
+        .join(Project, CourseEvaluation.project_id == Project.id)
+        .where(Project.course_id == course_id)
         .order_by(CourseEvaluation.submitted_at)
     )
+    if academic_year is not None:
+        stmt = stmt.where(Project.academic_year == academic_year)
     return list((await session.execute(stmt)).scalars().all())
 
 

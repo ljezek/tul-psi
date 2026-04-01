@@ -8,27 +8,21 @@ from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectTy
 
 
 class LecturerPublic(BaseModel):
-    """Public representation of a lecturer assigned to a course.
+    """Representation of a lecturer assigned to a course.
 
-    E-mail is intentionally omitted — it is not visible to unauthenticated users.
+    ``email`` is ``None`` for unauthenticated users and populated for authenticated ones.
     """
 
     name: str
     github_alias: str | None
-
-
-class LecturerDetail(BaseModel):
-    """Lecturer representation for authenticated users — e-mail is included."""
-
-    name: str
-    github_alias: str | None
-    email: str
+    # Null for unauthenticated users — email is only visible to authenticated callers.
+    email: str | None = None
 
 
 class CoursePublic(BaseModel):
-    """Public representation of a course embedded in a project response.
+    """Representation of a course embedded in a project response.
 
-    All fields here are visible to unauthenticated users. ``code`` is the natural
+    All non-email fields are visible to unauthenticated users. ``code`` is the natural
     unique identifier for a course and replaces an integer ``id`` for lookups.
     """
 
@@ -45,37 +39,17 @@ class CoursePublic(BaseModel):
     lecturers: list[LecturerPublic]
 
 
-class CourseDetail(BaseModel):
-    """Course representation for authenticated users — lecturers include e-mails."""
-
-    code: str
-    name: str
-    syllabus: str | None
-    term: CourseTerm
-    project_type: ProjectType
-    min_score: int
-    # Null means no peer-bonus-point scheme for this course.
-    peer_bonus_budget: int | None
-    evaluation_criteria: list[EvaluationCriterion]
-    links: list[CourseLink]
-    lecturers: list[LecturerDetail]
-
-
 class MemberPublic(BaseModel):
-    """Public representation of a project team member."""
+    """Representation of a project team member.
+
+    ``email`` is ``None`` for unauthenticated users and populated for authenticated ones.
+    """
 
     id: int
     github_alias: str | None
     name: str
-
-
-class MemberDetail(BaseModel):
-    """Member representation for authenticated users — e-mail is included."""
-
-    id: int
-    github_alias: str | None
-    name: str
-    email: str
+    # Null for unauthenticated users — email is only visible to authenticated callers.
+    email: str | None = None
 
 
 class EvaluationScoreDetail(BaseModel):
@@ -122,7 +96,13 @@ class PeerFeedbackDetail(BaseModel):
 
 
 class ProjectPublic(BaseModel):
-    """Public representation of a project returned by the discovery endpoint."""
+    """Project representation returned to all callers.
+
+    For unauthenticated requests, private fields (``results_unlocked``,
+    ``course.lecturers[*].email``, ``members[*].email``, and all evaluation
+    collections) are ``None``.  Authenticated callers receive those fields
+    populated according to their role.
+    """
 
     id: int
     title: str
@@ -133,30 +113,8 @@ class ProjectPublic(BaseModel):
     academic_year: int
     course: CoursePublic
     members: list[MemberPublic]
-
-
-class ProjectDetail(BaseModel):
-    """Enriched project representation returned to authenticated users.
-
-    Includes member and lecturer e-mails, the ``results_unlocked`` flag, and —
-    when results are unlocked — evaluation and peer-feedback data gated by role:
-
-    * **Lecturer / Admin**: ``project_evaluations`` and ``course_evaluations``.
-    * **Student**: ``project_evaluations`` (read-only), ``received_peer_feedback``
-      (feedback addressed to this student), and ``authored_peer_feedback``
-      (feedback this student wrote for teammates).
-    """
-
-    id: int
-    title: str
-    description: str | None
-    github_url: str | None
-    live_url: str | None
-    technologies: list[str]
-    academic_year: int
-    results_unlocked: bool
-    course: CourseDetail
-    members: list[MemberDetail]
+    # Null for unauthenticated users.
+    results_unlocked: bool | None = None
     # Populated for all roles when results_unlocked is True.
     project_evaluations: list[ProjectEvaluationDetail] | None = None
     # Populated for lecturer/admin when results_unlocked is True.

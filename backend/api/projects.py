@@ -9,7 +9,7 @@ from api.deps import get_current_user
 from db.session import get_session
 from models.course import CourseTerm
 from models.user import User
-from schemas.projects import ProjectDetail, ProjectPublic
+from schemas.projects import ProjectPublic
 from services.projects import ProjectsService
 
 logger = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ async def list_projects(
 
 @router.get(
     "/{project_id}",
+    response_model=ProjectPublic,
     summary="Get project detail",
     description=(
         "Returns the full detail of a single project identified by its integer id. "
@@ -90,13 +91,12 @@ async def get_project(
     project_id: int,
     current_user: User | None = Depends(get_current_user),
     service: ProjectsService = Depends(get_projects_service),
-) -> ProjectPublic | ProjectDetail:
+) -> ProjectPublic:
     """Return the project identified by ``project_id``.
 
-    Unauthenticated callers receive a ``ProjectPublic`` response (no e-mails, no
-    evaluation data).  Authenticated callers receive a ``ProjectDetail`` response
-    enriched with member/lecturer e-mails and, when ``results_unlocked`` is
-    ``True``, role-gated evaluation and peer-feedback data.
+    Unauthenticated callers receive a ``ProjectPublic`` response with private fields
+    (e-mails, evaluations, ``results_unlocked``) set to ``None``.  Authenticated
+    callers receive the same schema with those fields populated according to their role.
 
     Raises HTTP 404 when no project with the given id exists.
     """
