@@ -6,7 +6,7 @@ alembic==1.18.4
 # pg8000 is a pure-Python PostgreSQL driver with no native dependencies.
 # It works on all platforms and architectures (including Windows ARM64) without
 # requiring a locally installed libpq / PostgreSQL client library.
-pg8000>=1.31
+pg8000==1.31.2
 # Install the package itself so importlib.metadata.version() resolves its version at runtime.
 -e .
 
