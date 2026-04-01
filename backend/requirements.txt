@@ -10,6 +10,7 @@ greenlet==3.0.3
 # It provides native async/await support, enabling fully non-blocking DB access.
 asyncpg==0.30.0
 bcrypt==5.0.0
+PyJWT==2.12.1
 python-json-logger==3.3.0
 # Install the package itself so importlib.metadata.version() resolves its version at runtime.
 -e .
