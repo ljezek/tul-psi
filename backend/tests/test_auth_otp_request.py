@@ -94,7 +94,7 @@ async def test_otp_request_returns_200_for_registered_email(client: AsyncClient)
     with (
         patch("db.auth.get_user_by_email", return_value=mock_user),
         patch("db.auth.invalidate_active_otp_tokens"),
-        patch("db.auth.save_otp_token"),
+        patch("db.auth.add_otp_token"),
     ):
         response = await client.post(
             "/api/v1/auth/otp/request",
@@ -116,7 +116,7 @@ async def test_otp_request_stores_token_for_registered_user(client: AsyncClient)
     with (
         patch("db.auth.get_user_by_email", return_value=mock_user),
         patch("db.auth.invalidate_active_otp_tokens"),
-        patch("db.auth.save_otp_token") as mock_save,
+        patch("db.auth.add_otp_token") as mock_save,
         patch("services.auth_service._generate_otp", return_value="483921"),
     ):
         before = datetime.now(UTC)
@@ -127,7 +127,7 @@ async def test_otp_request_stores_token_for_registered_user(client: AsyncClient)
         after = datetime.now(UTC)
 
     mock_save.assert_called_once()
-    # save_otp_token(session, token) — token is the second positional argument.
+    # add_otp_token(session, token) — token is the second positional argument.
     token: OtpToken = mock_save.call_args[0][1]
 
     assert token.user_id == 42
@@ -148,7 +148,7 @@ async def test_otp_request_invalidates_old_tokens_for_user(client: AsyncClient) 
     with (
         patch("db.auth.get_user_by_email", return_value=mock_user),
         patch("db.auth.invalidate_active_otp_tokens") as mock_invalidate,
-        patch("db.auth.save_otp_token"),
+        patch("db.auth.add_otp_token"),
     ):
         await client.post(
             "/api/v1/auth/otp/request",
@@ -165,7 +165,7 @@ async def test_otp_request_does_not_store_token_for_unknown_user(client: AsyncCl
     """No DB write occurs when the email address is not registered."""
     with (
         patch("db.auth.get_user_by_email", return_value=None),
-        patch("db.auth.save_otp_token") as mock_save,
+        patch("db.auth.add_otp_token") as mock_save,
     ):
         await client.post(
             "/api/v1/auth/otp/request",
