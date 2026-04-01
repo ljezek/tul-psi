@@ -5,7 +5,7 @@ import random
 import string
 
 import bcrypt
-from sqlalchemy import not_
+from sqlalchemy import not_, update
 from sqlmodel import Session, select
 
 from models import OtpToken, User
@@ -49,21 +49,26 @@ def request_otp(email: str, session: Session) -> None:
 
     if user is None:
         # Silent success — do not reveal that the address is not registered.
-        logger.info("OTP requested for unregistered address; no token created. email=%s", email)
+        logger.warning(
+            "OTP requested for unregistered address; no token created.",
+            extra={"email": email},
+        )
         return
 
     if user.id is None:
         # Guard against a partially-constructed object that was never persisted.
-        logger.warning("User record has no primary key; OTP generation skipped. email=%s", email)
+        logger.warning(
+            "User record has no primary key; OTP generation skipped.",
+            extra={"email": email},
+        )
         return
 
-    # Invalidate all active tokens for this user before issuing a new one.
-    existing_tokens = session.exec(
-        select(OtpToken).where(OtpToken.user_id == user.id, not_(OtpToken.used))
-    ).all()
-    for old_token in existing_tokens:
-        old_token.used = True
-        session.add(old_token)
+    # Invalidate all active tokens for this user with a single bulk UPDATE.
+    # This runs in the same transaction as the new token insert below; if any
+    # subsequent step fails, the whole unit of work is rolled back together.
+    session.exec(
+        update(OtpToken).values(used=True).where(OtpToken.user_id == user.id, not_(OtpToken.used))
+    )
 
     otp = _generate_otp()
     token = OtpToken(user_id=user.id, token_hash=_hash_otp(otp))
@@ -71,4 +76,4 @@ def request_otp(email: str, session: Session) -> None:
     session.commit()
 
     # TODO: Send the OTP via SMTP instead of logging it.
-    logger.info("OTP for %s: %s", email, otp)
+    logger.info("OTP generated: %s", otp, extra={"email": email})

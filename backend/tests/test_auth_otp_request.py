@@ -143,6 +143,32 @@ async def test_otp_request_stores_token_for_registered_user(
     assert bcrypt.checkpw(known_otp.encode(), token.token_hash.encode())
 
 
+async def test_otp_request_invalidates_old_tokens_for_user(
+    client: AsyncClient, mock_session: MagicMock
+) -> None:
+    """A new OTP request must issue a bulk UPDATE to invalidate previous active tokens."""
+    from sqlalchemy.sql.dml import Update as SAUpdate
+
+    mock_user = MagicMock()
+    mock_user.id = 42
+    mock_session.exec.return_value.first.return_value = mock_user
+
+    await client.post(
+        "/api/v1/auth/otp/request",
+        json={"email": "jan.novak@tul.cz"},
+    )
+
+    exec_stmts = [call.args[0] for call in mock_session.exec.call_args_list if call.args]
+    updates = [s for s in exec_stmts if isinstance(s, SAUpdate)]
+    assert len(updates) == 1, "Expected exactly one bulk UPDATE for token invalidation."
+
+    stmt = updates[0]
+    assert stmt.table.name == "otp_token"
+    # Verify the UPDATE targets user_id == 42 via the compiled WHERE clause parameters.
+    params = stmt.compile().params
+    assert params.get("user_id_1") == 42, "UPDATE must filter by user_id=42."
+
+
 async def test_otp_request_does_not_store_token_for_unknown_user(
     client: AsyncClient, mock_session: MagicMock
 ) -> None:
