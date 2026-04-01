@@ -52,6 +52,7 @@ def _make_service(projects: list[ProjectPublic] | None = None) -> ProjectsServic
     """Return a mock ``ProjectsService`` configured to return ``projects``."""
     service = MagicMock(spec=ProjectsService)
     service.get_projects = AsyncMock(return_value=projects or [])
+    service.get_project = AsyncMock(return_value=None)
     return service
 
 
@@ -279,3 +280,200 @@ def test_escape_like_escapes_wildcards() -> None:
     assert _escape_like("100%") == "100\\%"
     assert _escape_like("user_name") == "user\\_name"
     assert _escape_like("back\\slash") == "back\\\\slash"
+
+
+async def test_db_get_project_returns_none_when_not_found() -> None:
+    """``get_project`` must return ``None`` when the session yields no matching row."""
+    from db.projects import get_project as db_get_project
+
+    mock_result = MagicMock()
+    mock_result.first.return_value = None
+    session = AsyncMock()
+    session.execute.return_value = mock_result
+
+    result = await db_get_project(session, 999)
+
+    assert result is None
+
+
+async def test_db_get_project_returns_project_course_tuple_when_found() -> None:
+    """``get_project`` must return a ``(Project, Course)`` tuple when a matching row exists."""
+    from db.projects import get_project as db_get_project
+    from models.course import Course
+    from models.project import Project
+
+    project = MagicMock(spec=Project)
+    course = MagicMock(spec=Course)
+
+    mock_row = MagicMock()
+    mock_row.__getitem__ = lambda self, i: (project, course)[i]
+    mock_result = MagicMock()
+    mock_result.first.return_value = mock_row
+    session = AsyncMock()
+    session.execute.return_value = mock_result
+
+    result = await db_get_project(session, 1)
+
+    assert result is not None
+    assert result == (project, course)
+
+
+# ---------------------------------------------------------------------------
+# GET /projects/{project_id} — endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_get_project_returns_200(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id} must return HTTP 200 when the project exists."""
+    mock_service = _make_service()
+    mock_service.get_project = AsyncMock(return_value=_PROJECT)
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+    response = await client.get("/api/v1/projects/1")
+    assert response.status_code == 200
+
+
+async def test_get_project_returns_project_schema(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id} response must match the full ``ProjectPublic`` shape."""
+    mock_service = _make_service()
+    mock_service.get_project = AsyncMock(return_value=_PROJECT)
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+    response = await client.get("/api/v1/projects/1")
+    assert response.json() == _PROJECT.model_dump(mode="json")
+
+
+async def test_get_project_returns_404_when_not_found(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id} must return HTTP 404 when the project does not exist."""
+    mock_service = _make_service()
+    mock_service.get_project = AsyncMock(return_value=None)
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+    response = await client.get("/api/v1/projects/999")
+    assert response.status_code == 404
+
+
+async def test_get_project_returns_500_on_service_error(client: AsyncClient) -> None:
+    """A service-layer exception on GET /api/v1/projects/{id} must result in HTTP 500."""
+    mock_service = _make_service()
+    mock_service.get_project = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+    response = await client.get("/api/v1/projects/1")
+    assert response.status_code == 500
+
+
+async def test_get_project_forwards_id_to_service(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id} must pass the path parameter id to the service."""
+    mock_service = _make_service()
+    mock_service.get_project = AsyncMock(return_value=_PROJECT)
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+    await client.get("/api/v1/projects/42")
+    mock_service.get_project.assert_called_once_with(42)
+
+
+# ---------------------------------------------------------------------------
+# ProjectsService.get_project unit tests
+# ---------------------------------------------------------------------------
+
+
+async def test_service_get_project_returns_none_when_not_found() -> None:
+    """``ProjectsService.get_project`` must return ``None`` when the DB row is absent."""
+    session = MagicMock()
+    with patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None):
+        result = await ProjectsService(session).get_project(99)
+    assert result is None
+
+
+async def test_service_get_project_assembles_full_response() -> None:
+    """``ProjectsService.get_project`` must assemble a full ``ProjectPublic`` from DB rows."""
+    from models.course import Course
+    from models.course import ProjectType as PT
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "Projektový seminář informatiky"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = PT.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    project = MagicMock(spec=Project)
+    project.id = 1
+    project.title = "My Project"
+    project.description = None
+    project.github_url = None
+    project.live_url = None
+    project.technologies = []
+    project.academic_year = 2025
+
+    member = MagicMock(spec=User)
+    member.id = 5
+    member.name = "Alice"
+    member.github_alias = "alice"
+
+    lecturer = MagicMock(spec=User)
+    lecturer.name = "Prof. Smith"
+    lecturer.github_alias = "psmith"
+
+    session = MagicMock()
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [member]},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [lecturer]},
+        ),
+    ):
+        result = await ProjectsService(session).get_project(1)
+
+    assert result is not None
+    assert result.title == "My Project"
+    assert result.members[0].name == "Alice"
+    assert result.course.lecturers[0].name == "Prof. Smith"
+
+
+async def test_service_get_project_raises_when_project_id_is_none() -> None:
+    """``ProjectsService.get_project`` must raise ``ValueError`` for a project row with no id."""
+    from models.course import Course
+    from models.course import ProjectType as PT
+    from models.project import Project
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "Projektový seminář informatiky"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = PT.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    project = MagicMock(spec=Project)
+    project.id = None  # Simulate a corrupt/unsaved row.
+
+    session = MagicMock()
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        pytest.raises(ValueError, match="no id"),
+    ):
+        await ProjectsService(session).get_project(1)
