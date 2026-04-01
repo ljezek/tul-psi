@@ -95,5 +95,5 @@ async def get_project(
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
     if project is None:
-        raise HTTPException(status_code=404, detail="Project not found.")
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found.")
     return project

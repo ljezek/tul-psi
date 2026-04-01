@@ -409,7 +409,7 @@ async def test_service_get_project_assembles_full_response() -> None:
 
 
 async def test_service_get_project_raises_when_project_id_is_none() -> None:
-    """``ProjectsService.get_project`` must raise ``ValueError`` when the returned project has no id."""
+    """``ProjectsService.get_project`` must raise ``ValueError`` for a project row with no id."""
     from models.course import Course
     from models.course import ProjectType as PT
     from models.project import Project
@@ -436,6 +436,8 @@ async def test_service_get_project_raises_when_project_id_is_none() -> None:
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
+        patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
         pytest.raises(ValueError, match="no id"),
     ):
         await ProjectsService(session).get_project(1)
