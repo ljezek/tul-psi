@@ -5,9 +5,11 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import get_current_user
 from db.session import get_session
 from models.course import CourseTerm
-from schemas.projects import ProjectPublic
+from models.user import User
+from schemas.projects import ProjectDetail, ProjectPublic
 from services.projects import ProjectsService
 
 logger = logging.getLogger(__name__)
@@ -76,20 +78,33 @@ async def list_projects(
 
 @router.get(
     "/{project_id}",
-    response_model=ProjectPublic,
     summary="Get project detail",
-    description="Returns the full detail of a single project identified by its integer id.",
+    description=(
+        "Returns the full detail of a single project identified by its integer id. "
+        "Authenticated requests (valid ``session`` cookie) receive an enriched response "
+        "that includes member and lecturer e-mails, the ``results_unlocked`` flag, and — "
+        "when results are unlocked — role-appropriate evaluation data."
+    ),
 )
 async def get_project(
     project_id: int,
+    current_user: User | None = Depends(get_current_user),
     service: ProjectsService = Depends(get_projects_service),
-) -> ProjectPublic:
+) -> ProjectPublic | ProjectDetail:
     """Return the project identified by ``project_id``.
+
+    Unauthenticated callers receive a ``ProjectPublic`` response (no e-mails, no
+    evaluation data).  Authenticated callers receive a ``ProjectDetail`` response
+    enriched with member/lecturer e-mails and, when ``results_unlocked`` is
+    ``True``, role-gated evaluation and peer-feedback data.
 
     Raises HTTP 404 when no project with the given id exists.
     """
     try:
-        project = await service.get_project(project_id)
+        if current_user is not None:
+            project = await service.get_project_detail(project_id, current_user)
+        else:
+            project = await service.get_project(project_id)
     except Exception:
         logger.exception("Failed to retrieve project", extra={"project_id": project_id})
         raise HTTPException(status_code=500, detail="Internal server error.") from None
