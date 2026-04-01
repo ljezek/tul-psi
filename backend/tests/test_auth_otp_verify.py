@@ -1,0 +1,276 @@
+from __future__ import annotations
+
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import bcrypt
+import jwt
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.session import get_session
+from main import app
+from models import OtpToken, User
+from models.user import UserRole
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _override_session() -> Generator[None, None, None]:
+    """Override get_session with a no-op mock to avoid requiring a real database."""
+    app.dependency_overrides[get_session] = lambda: MagicMock(spec=AsyncSession)
+    yield
+    app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.fixture(autouse=True)
+def _mock_settings() -> Generator[None, None, None]:
+    """Stub application settings so tests do not require a real database URL."""
+    mock_settings = MagicMock()
+    mock_settings.show_otp_dev_only = False
+    mock_settings.jwt_secret = "test-secret"
+    mock_settings.jwt_algorithm = "HS256"
+    with patch("services.auth_service.get_settings", return_value=mock_settings):
+        yield
+
+
+def _make_user(user_id: int = 1, role: UserRole = UserRole.STUDENT) -> MagicMock:
+    """Return a mock User with the given id and role."""
+    user = MagicMock(spec=User)
+    user.id = user_id
+    user.role = role
+    return user
+
+
+def _make_token(user_id: int = 1, otp: str = "123456", attempts: int = 0) -> MagicMock:
+    """Return a mock OtpToken with a bcrypt hash of *otp*."""
+    token = MagicMock(spec=OtpToken)
+    token.id = 99
+    token.user_id = user_id
+    token.token_hash = bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
+    token.attempts = attempts
+    token.used = False
+    token.expires_at = datetime.now(UTC) + timedelta(minutes=10)
+    return token
+
+
+# ---------------------------------------------------------------------------
+# Domain validation
+# ---------------------------------------------------------------------------
+
+
+async def test_otp_verify_rejects_non_tul_email(client: AsyncClient) -> None:
+    """POST /api/v1/auth/otp/verify must return 422 for non-@tul.cz addresses."""
+    response = await client.post(
+        "/api/v1/auth/otp/verify",
+        json={"email": "student@gmail.com", "otp": "123456"},
+    )
+    assert response.status_code == 422
+
+
+async def test_otp_verify_rejects_malformed_email(client: AsyncClient) -> None:
+    """POST /api/v1/auth/otp/verify must return 422 for addresses that are not valid e-mails."""
+    response = await client.post(
+        "/api/v1/auth/otp/verify",
+        json={"email": "not-an-email", "otp": "123456"},
+    )
+    assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# 401 — invalid / expired code
+# ---------------------------------------------------------------------------
+
+
+async def test_otp_verify_returns_401_for_unknown_email(client: AsyncClient) -> None:
+    """Returns 401 when no user exists for the supplied e-mail."""
+    with patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "nobody@tul.cz", "otp": "000000"},
+        )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired code"
+
+
+async def test_otp_verify_returns_401_when_no_active_token(client: AsyncClient) -> None:
+    """Returns 401 when the user exists but has no active (unused, unexpired) token."""
+    mock_user = _make_user()
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=None),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "000000"},
+        )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired code"
+
+
+async def test_otp_verify_returns_401_for_wrong_otp(client: AsyncClient) -> None:
+    """Returns 401 when the supplied OTP does not match the stored hash."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="999999")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch(
+            "db.auth.increment_otp_attempts", new_callable=AsyncMock, return_value=1
+        ) as mock_increment,
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "000000"},
+        )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired code"
+    mock_increment.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# 429 — too many attempts
+# ---------------------------------------------------------------------------
+
+
+async def test_otp_verify_returns_429_when_attempt_limit_reached(client: AsyncClient) -> None:
+    """Returns 429 when a wrong OTP brings the attempt count to the maximum."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="999999")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        # Simulate the 5th failed attempt being recorded.
+        patch("db.auth.increment_otp_attempts", new_callable=AsyncMock, return_value=5),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock) as mock_mark_used,
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "000000"},
+        )
+    assert response.status_code == 429
+    assert response.json()["detail"] == "Too many attempts — request a new code"
+    # Token must be invalidated so it cannot be resubmitted.
+    mock_mark_used.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# 200 — success
+# ---------------------------------------------------------------------------
+
+
+async def test_otp_verify_returns_200_on_valid_otp(client: AsyncClient) -> None:
+    """Returns HTTP 200 when the OTP matches the stored hash."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="483921")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "483921"},
+        )
+    assert response.status_code == 200
+
+
+async def test_otp_verify_sets_httponly_session_cookie(client: AsyncClient) -> None:
+    """A valid OTP response must include a ``session`` HttpOnly cookie."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="483921")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "483921"},
+        )
+    assert response.status_code == 200
+    assert "session" in response.cookies
+
+
+async def test_otp_verify_cookie_contains_valid_jwt(client: AsyncClient) -> None:
+    """The ``session`` cookie must contain a JWT with user_id and role claims."""
+    mock_user = _make_user(user_id=42, role=UserRole.STUDENT)
+    mock_token = _make_token(otp="483921")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "483921"},
+        )
+    assert response.status_code == 200
+    token_value = response.cookies["session"]
+    payload = jwt.decode(token_value, "test-secret", algorithms=["HS256"])
+    assert payload["user_id"] == 42
+    assert payload["role"] == UserRole.STUDENT.value
+
+
+async def test_otp_verify_jwt_expires_in_8_hours(client: AsyncClient) -> None:
+    """The JWT must expire approximately 8 hours after issuance."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="483921")
+    before = datetime.now(UTC)
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "483921"},
+        )
+    after = datetime.now(UTC)
+    token_value = response.cookies["session"]
+    payload = jwt.decode(token_value, "test-secret", algorithms=["HS256"])
+    exp = datetime.fromtimestamp(payload["exp"], tz=UTC)
+    assert (
+        timedelta(hours=7, minutes=59) <= (exp - before) <= timedelta(hours=8, seconds=5)
+    ), f"JWT expiry {exp} is not approximately 8 hours after {after}."
+
+
+async def test_otp_verify_marks_token_used_on_success(client: AsyncClient) -> None:
+    """A successful verification must mark the OTP token as used."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="483921")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock) as mock_mark_used,
+    ):
+        await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "483921"},
+        )
+    mock_mark_used.assert_called_once()
+    token_id_arg = mock_mark_used.call_args[0][1]
+    assert token_id_arg == mock_token.id
+
+
+async def test_otp_verify_response_body_is_empty_dict(client: AsyncClient) -> None:
+    """The 200 response body must be an empty JSON object as per the design spec."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="483921")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "483921"},
+        )
+    assert response.status_code == 200
+    assert response.json() == {}

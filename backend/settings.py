@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     # Enable only in non-production environments as a stand-in for SMTP delivery.
     show_otp_dev_only: bool = False
 
+    # Secret key used to sign JWT session cookies.
+    # Must be a long, random string; override in production via environment variable.
+    jwt_secret: str = "changeme-override-in-production"  # noqa: S105
+    # HMAC-SHA256 is the recommended symmetric signing algorithm for JWTs.
+    jwt_algorithm: str = "HS256"
+
 
 @lru_cache
 def get_settings() -> Settings:
