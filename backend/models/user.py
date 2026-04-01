@@ -4,7 +4,7 @@ import enum
 from datetime import UTC, datetime
 from typing import ClassVar
 
-from sqlalchemy import Column
+from sqlalchemy import Column, Enum
 from sqlalchemy import DateTime as SADateTime
 from sqlmodel import Field, SQLModel
 
@@ -34,7 +34,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True, max_length=255)
     github_alias: str | None = Field(default=None, max_length=100)
     name: str = Field(max_length=255)
-    role: UserRole
+    role: UserRole = Field(sa_column=Column(Enum(UserRole), nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(SADateTime(timezone=True), nullable=False),

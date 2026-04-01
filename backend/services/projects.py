@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.projects import get_course_lecturers, get_project_members, get_projects
 from models.course import CourseTerm
@@ -29,10 +29,10 @@ class ProjectsService:
     round-trip clearly separated.
     """
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    def get_projects(
+    async def get_projects(
         self,
         *,
         q: str | None = None,
@@ -47,7 +47,7 @@ class ProjectsService:
         Each returned ``ProjectPublic`` includes a nested course summary (with lecturers)
         and the full list of current project members.
         """
-        rows = get_projects(
+        rows = await get_projects(
             self._session,
             q=q,
             course=course,
@@ -60,8 +60,8 @@ class ProjectsService:
         # Persisted rows always have a non-None id; collect ids to drive bulk lookups.
         project_ids = [p.id for p, _ in rows if p.id is not None]
         course_ids = list({c.id for _, c in rows if c.id is not None})
-        members_by_project = get_project_members(self._session, project_ids)
-        lecturers_by_course = get_course_lecturers(self._session, course_ids)
+        members_by_project = await get_project_members(self._session, project_ids)
+        lecturers_by_course = await get_course_lecturers(self._session, course_ids)
 
         result: list[ProjectPublic] = []
         for p, c in rows:

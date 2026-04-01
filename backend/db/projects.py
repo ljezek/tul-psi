@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import func, or_, select
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.course import Course, CourseTerm
 from models.course_lecturer import CourseLecturer
@@ -19,8 +19,8 @@ def _escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def get_projects(
-    session: Session,
+async def get_projects(
+    session: AsyncSession,
     *,
     q: str | None = None,
     course: str | None = None,
@@ -78,12 +78,12 @@ def get_projects(
         # ``@>`` is PostgreSQL's "contains" operator for JSONB.
         stmt = stmt.where(Project.technologies.op("@>")(func.jsonb_build_array(technology)))
 
-    rows = session.execute(stmt).all()
+    rows = (await session.execute(stmt)).all()
     return [(row[0], row[1]) for row in rows]
 
 
-def get_project_members(
-    session: Session,
+async def get_project_members(
+    session: AsyncSession,
     project_ids: list[int],
 ) -> dict[int, list[User]]:
     """Return a mapping from project id to its list of member users.
@@ -100,13 +100,13 @@ def get_project_members(
     )
 
     result: dict[int, list[User]] = {}
-    for project_id, user in session.execute(stmt).all():
+    for project_id, user in (await session.execute(stmt)).all():
         result.setdefault(project_id, []).append(user)
     return result
 
 
-def get_course_lecturers(
-    session: Session,
+async def get_course_lecturers(
+    session: AsyncSession,
     course_ids: list[int],
 ) -> dict[int, list[User]]:
     """Return a mapping from course id to its list of lecturer users.
@@ -123,6 +123,6 @@ def get_course_lecturers(
     )
 
     result: dict[int, list[User]] = {}
-    for course_id, user in session.execute(stmt).all():
+    for course_id, user in (await session.execute(stmt)).all():
         result.setdefault(course_id, []).append(user)
     return result

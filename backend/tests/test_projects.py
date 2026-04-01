@@ -3,7 +3,7 @@ from __future__ import annotations
 # TODO: Mirror source tree layout in tests/ (e.g. tests/api/, tests/services/, tests/db/)
 #       to avoid a single flat test folder becoming unwieldy as coverage grows.
 from collections.abc import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -51,7 +51,7 @@ _PROJECT = ProjectPublic(
 def _make_service(projects: list[ProjectPublic] | None = None) -> ProjectsService:
     """Return a mock ``ProjectsService`` configured to return ``projects``."""
     service = MagicMock(spec=ProjectsService)
-    service.get_projects.return_value = projects or []
+    service.get_projects = AsyncMock(return_value=projects or [])
     return service
 
 
@@ -160,15 +160,21 @@ async def test_list_projects_returns_500_on_service_error(client: AsyncClient) -
 # ---------------------------------------------------------------------------
 
 
-def test_service_returns_empty_list_when_no_rows() -> None:
+async def test_service_returns_empty_list_when_no_rows() -> None:
     """``ProjectsService.get_projects`` must return an empty list when the DB has no rows."""
     session = MagicMock()
     with (
-        patch("services.projects.get_projects", return_value=[]) as mock_get_projects,
-        patch("services.projects.get_project_members", return_value={}) as mock_get_members,
-        patch("services.projects.get_course_lecturers", return_value={}) as mock_get_lecturers,
+        patch(
+            "services.projects.get_projects", new_callable=AsyncMock, return_value=[]
+        ) as mock_get_projects,
+        patch(
+            "services.projects.get_project_members", new_callable=AsyncMock, return_value={}
+        ) as mock_get_members,
+        patch(
+            "services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}
+        ) as mock_get_lecturers,
     ):
-        result = ProjectsService(session).get_projects()
+        result = await ProjectsService(session).get_projects()
 
     assert result == []
     mock_get_projects.assert_called_once()
@@ -176,7 +182,7 @@ def test_service_returns_empty_list_when_no_rows() -> None:
     mock_get_lecturers.assert_called_once_with(session, [])
 
 
-def test_service_assembles_project_with_members_and_lecturers() -> None:
+async def test_service_assembles_project_with_members_and_lecturers() -> None:
     """``ProjectsService.get_projects`` must correctly assemble nested members and lecturers."""
     from models.course import Course
     from models.course import ProjectType as PT
@@ -216,11 +222,23 @@ def test_service_assembles_project_with_members_and_lecturers() -> None:
 
     session = MagicMock()
     with (
-        patch("services.projects.get_projects", return_value=[(project, course)]),
-        patch("services.projects.get_project_members", return_value={1: [member]}),
-        patch("services.projects.get_course_lecturers", return_value={10: [lecturer]}),
+        patch(
+            "services.projects.get_projects",
+            new_callable=AsyncMock,
+            return_value=[(project, course)],
+        ),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [member]},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [lecturer]},
+        ),
     ):
-        results = ProjectsService(session).get_projects()
+        results = await ProjectsService(session).get_projects()
 
     assert len(results) == 1
     result = results[0]
@@ -234,22 +252,22 @@ def test_service_assembles_project_with_members_and_lecturers() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_get_project_members_returns_empty_dict_for_empty_ids() -> None:
+async def test_get_project_members_returns_empty_dict_for_empty_ids() -> None:
     """``get_project_members`` must short-circuit and return ``{}`` for an empty id list."""
     from db.projects import get_project_members
 
-    session = MagicMock()
-    result = get_project_members(session, [])
+    session = AsyncMock()
+    result = await get_project_members(session, [])
     assert result == {}
     session.execute.assert_not_called()
 
 
-def test_get_course_lecturers_returns_empty_dict_for_empty_ids() -> None:
+async def test_get_course_lecturers_returns_empty_dict_for_empty_ids() -> None:
     """``get_course_lecturers`` must short-circuit and return ``{}`` for an empty id list."""
     from db.projects import get_course_lecturers
 
-    session = MagicMock()
-    result = get_course_lecturers(session, [])
+    session = AsyncMock()
+    result = await get_course_lecturers(session, [])
     assert result == {}
     session.execute.assert_not_called()
 

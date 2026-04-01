@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
 from models.course import CourseTerm
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-def get_projects_service(session: Session = Depends(get_session)) -> ProjectsService:
+def get_projects_service(session: AsyncSession = Depends(get_session)) -> ProjectsService:
     """Provide a ``ProjectsService`` instance wired to the current DB session."""
     return ProjectsService(session)
 
@@ -51,7 +51,7 @@ async def list_projects(
     - **technology**: exact match on a technology name in the project's technologies list.
     """
     try:
-        return service.get_projects(
+        return await service.get_projects(
             q=q,
             course=course,
             year=year,
