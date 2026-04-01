@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, EmailStr, field_validator
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
 from services import auth_service
@@ -50,9 +50,9 @@ class OtpRequestResponse(BaseModel):
         "regardless of whether the address is registered to prevent user enumeration."
     ),
 )
-def request_otp(
+async def request_otp(
     body: OtpRequestBody,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> OtpRequestResponse:
     """Handle a request for a one-time password.
 
@@ -60,6 +60,6 @@ def request_otp(
     Delegates to :func:`auth_service.request_otp` which generates the OTP, hashes it,
     persists it, and logs the plaintext value in lieu of SMTP.
     """
-    auth_service.request_otp(body.email, session)
+    await auth_service.request_otp(body.email, session)
 
     return OtpRequestResponse(message="If this email is registered, an OTP has been sent.")
