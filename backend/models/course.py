@@ -6,7 +6,7 @@ from typing import ClassVar, TypedDict
 
 from pydantic import TypeAdapter
 from pydantic.config import ConfigDict
-from sqlalchemy import Column
+from sqlalchemy import Column, Enum
 from sqlalchemy import DateTime as SADateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -59,8 +59,8 @@ class Course(SQLModel, table=True):
     code: str = Field(unique=True, index=True, max_length=50)
     name: str = Field(max_length=255)
     syllabus: str | None = Field(default=None)
-    term: CourseTerm
-    project_type: ProjectType
+    term: CourseTerm = Field(sa_column=Column(Enum(CourseTerm), nullable=False))
+    project_type: ProjectType = Field(sa_column=Column(Enum(ProjectType), nullable=False))
     min_score: int
     # Null means no peer-bonus-point scheme for this course.
     peer_bonus_budget: int | None = Field(default=None)
