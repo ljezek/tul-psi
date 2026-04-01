@@ -282,6 +282,42 @@ def test_escape_like_escapes_wildcards() -> None:
     assert _escape_like("back\\slash") == "back\\\\slash"
 
 
+async def test_db_get_project_returns_none_when_not_found() -> None:
+    """``get_project`` must return ``None`` when the session yields no matching row."""
+    from db.projects import get_project as db_get_project
+
+    mock_result = MagicMock()
+    mock_result.first.return_value = None
+    session = AsyncMock()
+    session.execute.return_value = mock_result
+
+    result = await db_get_project(session, 999)
+
+    assert result is None
+
+
+async def test_db_get_project_returns_project_course_tuple_when_found() -> None:
+    """``get_project`` must return a ``(Project, Course)`` tuple when a matching row exists."""
+    from db.projects import get_project as db_get_project
+    from models.course import Course
+    from models.project import Project
+
+    project = MagicMock(spec=Project)
+    course = MagicMock(spec=Course)
+
+    mock_row = MagicMock()
+    mock_row.__getitem__ = lambda self, i: (project, course)[i]
+    mock_result = MagicMock()
+    mock_result.first.return_value = mock_row
+    session = AsyncMock()
+    session.execute.return_value = mock_result
+
+    result = await db_get_project(session, 1)
+
+    assert result is not None
+    assert result == (project, course)
+
+
 # ---------------------------------------------------------------------------
 # GET /projects/{project_id} — endpoint tests
 # ---------------------------------------------------------------------------
@@ -340,7 +376,7 @@ async def test_get_project_forwards_id_to_service(client: AsyncClient) -> None:
 async def test_service_get_project_returns_none_when_not_found() -> None:
     """``ProjectsService.get_project`` must return ``None`` when the DB row is absent."""
     session = MagicMock()
-    with patch("services.projects.get_project", new_callable=AsyncMock, return_value=None):
+    with patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None):
         result = await ProjectsService(session).get_project(99)
     assert result is None
 
@@ -385,7 +421,7 @@ async def test_service_get_project_assembles_full_response() -> None:
     session = MagicMock()
     with (
         patch(
-            "services.projects.get_project",
+            "services.projects.db_get_project",
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
@@ -432,7 +468,7 @@ async def test_service_get_project_raises_when_project_id_is_none() -> None:
     session = MagicMock()
     with (
         patch(
-            "services.projects.get_project",
+            "services.projects.db_get_project",
             new_callable=AsyncMock,
             return_value=(project, course),
         ),

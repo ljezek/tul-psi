@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.projects import get_course_lecturers, get_project, get_project_members, get_projects
+from db.projects import (
+    get_course_lecturers,
+    get_project_members,
+    get_projects,
+)
+from db.projects import (
+    get_project as db_get_project,
+)
 from models.course import Course, CourseTerm
 from models.project import Project
 from models.user import User
@@ -126,7 +133,7 @@ class ProjectsService:
         Assembles the full ``ProjectPublic`` response including the nested course
         summary (with lecturers) and the project's member list.
         """
-        row = await get_project(self._session, project_id)
+        row = await db_get_project(self._session, project_id)
         if row is None:
             return None
 
