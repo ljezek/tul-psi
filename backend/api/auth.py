@@ -15,8 +15,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 _TUL_DOMAIN = "tul.cz"
 
-# JWT session cookie lifetime — must match the token expiry in auth_service.
-_COOKIE_MAX_AGE_SECONDS = 8 * 3600
+# JWT session cookie lifetime — derived from auth_service to avoid configuration drift.
+_COOKIE_MAX_AGE_SECONDS = int(auth_service._JWT_TTL_HOURS * 3600)
 
 
 def _validate_tul_email(v: str) -> str:
