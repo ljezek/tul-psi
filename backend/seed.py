@@ -10,10 +10,11 @@ Usage
 from __future__ import annotations
 
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 
-from sqlmodel import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from settings import get_settings
 
@@ -51,8 +52,33 @@ def _iter_statements(sql: str) -> list[str]:
     return stmts
 
 
-def main() -> None:
+async def _run(*, reset: bool) -> None:
     """Execute seed.sql against the configured database."""
+    settings = get_settings()
+    engine = create_async_engine(settings.database_url, echo=False)
+
+    try:
+        async with engine.connect() as conn:
+            if reset:
+                print("Resetting database …")
+                for stmt in _RESET_STATEMENTS:
+                    await conn.exec_driver_sql(stmt)
+                await conn.commit()
+                print("Reset complete.")
+
+            print(f"Running {_SQL_FILE.name} …")
+            sql = _SQL_FILE.read_text(encoding="utf-8")
+            for stmt in _iter_statements(sql):
+                await conn.exec_driver_sql(stmt)
+            await conn.commit()
+    finally:
+        await engine.dispose()
+
+    print("Done.")
+
+
+def main() -> None:
+    """Parse arguments and run the seeding coroutine."""
     parser = argparse.ArgumentParser(description="Seed the development database.")
     parser.add_argument(
         "--reset",
@@ -60,25 +86,7 @@ def main() -> None:
         help="Delete all existing rows before seeding (full re-seed).",
     )
     args = parser.parse_args()
-
-    settings = get_settings()
-    engine = create_engine(settings.database_url, echo=False)
-
-    with engine.connect() as conn:
-        if args.reset:
-            print("Resetting database …")
-            for stmt in _RESET_STATEMENTS:
-                conn.exec_driver_sql(stmt)
-            conn.commit()
-            print("Reset complete.")
-
-        print(f"Running {_SQL_FILE.name} …")
-        sql = _SQL_FILE.read_text(encoding="utf-8")
-        for stmt in _iter_statements(sql):
-            conn.exec_driver_sql(stmt)
-        conn.commit()
-
-    print("Done.")
+    asyncio.run(_run(reset=args.reset))
 
 
 if __name__ == "__main__":
