@@ -106,8 +106,8 @@ async def request_otp(email: str, session: AsyncSession) -> None:
         print(f"[DEV] OTP for {email}: {otp}", file=sys.stderr)  # noqa: T201
 
 
-class InvalidOtpError(Exception):
-    """Raised when the supplied OTP does not match any valid token."""
+class IncorrectOtpError(Exception):
+    """Raised when the supplied OTP value does not match the stored token hash."""
 
 
 class TooManyAttemptsError(Exception):
@@ -115,10 +115,10 @@ class TooManyAttemptsError(Exception):
 
 
 async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
-    """Verify *otp* for *email* and return a signed JWT on success.
+    """Verify *otp* for the user identified by *email* and return a signed JWT on success.
 
     Raises:
-        InvalidOtpError: When the email has no active token or the OTP is wrong.
+        IncorrectOtpError: When the email has no active token or the OTP value is wrong.
         TooManyAttemptsError: When the token's failed-attempt limit is reached.
 
     The caller is responsible for mapping these exceptions to the appropriate
@@ -134,7 +134,7 @@ async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
             "OTP verification attempted for unregistered address.",
             extra={"email": email},
         )
-        raise InvalidOtpError
+        raise IncorrectOtpError
 
     token = await db_auth.get_active_otp_token(session, user.id)
     if token is None:
@@ -142,7 +142,7 @@ async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
             "No active OTP token found for user during verification.",
             extra={"email": email},
         )
-        raise InvalidOtpError
+        raise IncorrectOtpError
 
     if not bcrypt.checkpw(otp.encode(), token.token_hash.encode()):
         new_attempts = await db_auth.increment_otp_attempts(session, token.id)
@@ -160,7 +160,7 @@ async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
             "OTP verification failed: hash mismatch.",
             extra={"email": email, "attempts": new_attempts},
         )
-        raise InvalidOtpError
+        raise IncorrectOtpError
 
     # Hash matched — mark the token consumed and issue a JWT.
     await db_auth.mark_otp_token_used(session, token.id)

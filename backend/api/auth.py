@@ -19,6 +19,20 @@ _TUL_DOMAIN = "tul.cz"
 _COOKIE_MAX_AGE_SECONDS = 8 * 3600
 
 
+def _validate_tul_email(v: str) -> str:
+    """Normalise and validate that *v* is a @tul.cz e-mail address.
+
+    Strips whitespace and lowercases the address so that subsequent
+    case-sensitive DB lookups behave consistently.  Raises ``ValueError``
+    (which Pydantic converts to a 422 response) for any other domain.
+    """
+    v = v.strip().lower()
+    domain = v.split("@", 1)[-1]
+    if domain != _TUL_DOMAIN:
+        raise ValueError(f"Only @{_TUL_DOMAIN} email addresses are accepted.")
+    return v
+
+
 class OtpRequestBody(BaseModel):
     """Request body for the OTP request endpoint."""
 
@@ -28,13 +42,7 @@ class OtpRequestBody(BaseModel):
     @classmethod
     def email_must_be_tul_domain(cls, v: str) -> str:
         """Reject any address whose domain is not @tul.cz."""
-        # Normalize the entire email address to lowercase so that subsequent lookups
-        # using case-sensitive comparisons behave consistently.
-        v = v.strip().lower()
-        domain = v.split("@", 1)[-1]
-        if domain != _TUL_DOMAIN:
-            raise ValueError(f"Only @{_TUL_DOMAIN} email addresses are accepted.")
-        return v
+        return _validate_tul_email(v)
 
 
 class OtpRequestResponse(BaseModel):
@@ -47,17 +55,15 @@ class OtpVerifyBody(BaseModel):
     """Request body for the OTP verify endpoint."""
 
     email: EmailStr
+    # The OTP is kept as a string to preserve any leading zeros (e.g. "001234")
+    # and to allow future expansion to non-numeric characters without a schema change.
     otp: str
 
     @field_validator("email")
     @classmethod
     def email_must_be_tul_domain(cls, v: str) -> str:
         """Reject any address whose domain is not @tul.cz."""
-        v = v.strip().lower()
-        domain = v.split("@", 1)[-1]
-        if domain != _TUL_DOMAIN:
-            raise ValueError(f"Only @{_TUL_DOMAIN} email addresses are accepted.")
-        return v
+        return _validate_tul_email(v)
 
 
 @router.post(
@@ -90,9 +96,9 @@ async def request_otp(
     status_code=status.HTTP_200_OK,
     summary="Verify a one-time password",
     description=(
-        "Validates the OTP, marks it as used, and sets an HttpOnly ``session`` cookie "
-        "containing a signed JWT.  Returns HTTP 401 for an invalid or expired code, and "
-        "HTTP 429 when the per-token failed-attempt limit is exceeded."
+        "Validates the OTP for the user identified by ``email``, marks it as used, and sets "
+        "an HttpOnly ``session`` cookie containing a signed JWT.  Returns HTTP 401 for an "
+        "invalid or expired code, and HTTP 429 when the per-token failed-attempt limit is exceeded."
     ),
 )
 async def verify_otp(
@@ -100,7 +106,7 @@ async def verify_otp(
     response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
-    """Handle OTP verification and JWT issuance.
+    """Handle OTP verification and JWT issuance for the user identified by *body.email*.
 
     On success, a signed JWT is stored in an HttpOnly cookie named ``session``.
     The cookie is also marked ``Secure`` and ``SameSite=Strict`` as required
@@ -111,9 +117,9 @@ async def verify_otp(
     except auth_service.TooManyAttemptsError:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many attempts — request a new code",
+            detail="Too many attempts — request a new OTP code",
         ) from None
-    except auth_service.InvalidOtpError:
+    except auth_service.IncorrectOtpError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired code",
