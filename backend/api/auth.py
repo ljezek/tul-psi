@@ -25,7 +25,10 @@ class OtpRequestBody(BaseModel):
     @classmethod
     def email_must_be_tul_domain(cls, v: str) -> str:
         """Reject any address whose domain is not @tul.cz."""
-        domain = v.split("@", 1)[-1].lower()
+        # Normalize the entire email address to lowercase so that subsequent lookups
+        # using case-sensitive comparisons behave consistently.
+        v = v.strip().lower()
+        domain = v.split("@", 1)[-1]
         if domain != _TUL_DOMAIN:
             raise ValueError(f"Only @{_TUL_DOMAIN} email addresses are accepted.")
         return v
