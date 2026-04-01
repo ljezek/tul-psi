@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from .projects import CoursePublic, MemberPublic, ProjectPublic
+from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
 
-__all__ = ["CoursePublic", "MemberPublic", "ProjectPublic"]
+__all__ = ["CoursePublic", "LecturerPublic", "MemberPublic", "ProjectPublic"]
