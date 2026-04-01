@@ -1,27 +1,40 @@
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from functools import lru_cache
 
-from sqlalchemy import Engine
-from sqlmodel import Session, create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from settings import get_settings
 
 
-@lru_cache
-def _get_engine() -> Engine:
-    """Return a cached SQLAlchemy engine built from application settings.
+@lru_cache(maxsize=1)
+def _session_factory() -> async_sessionmaker[AsyncSession]:
+    """Create and cache the async session factory on first call.
 
-    The engine is created once per process and reused for all requests.
+    Deferring engine creation to first use — rather than at module import time —
+    means that importing this module does not require DATABASE_URL to be set.
+    This keeps unit tests (which mock get_session) free of real DB configuration.
     """
-    return create_engine(get_settings().database_url)
+    engine = create_async_engine(
+        get_settings().database_url,
+        # echo=False keeps SQL statements out of the production log stream;
+        # set to True temporarily when debugging query issues locally.
+        echo=False,
+    )
+    return async_sessionmaker(engine, expire_on_commit=False)
 
 
-def get_session() -> Generator[Session, None, None]:
-    """Yield a SQLModel session and close it after the request.
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Yield a database session for use as a FastAPI dependency.
 
-    Intended for use as a FastAPI ``Depends()`` dependency.
+    Usage in a route::
+
+        @router.get("/example")
+        async def example(session: AsyncSession = Depends(get_session)) -> ...:
+            ...
+
+    The session is automatically closed when the request completes (or raises).
     """
-    with Session(_get_engine()) as session:
+    async with _session_factory()() as session:
         yield session

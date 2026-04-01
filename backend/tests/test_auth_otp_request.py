@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import bcrypt
 import pytest
 from httpx import AsyncClient
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
 from main import app
@@ -25,7 +25,7 @@ def _override_session() -> Generator[None, None, None]:
     Individual tests that need to inspect DB interactions should patch the
     ``db.auth`` module functions directly instead of configuring the session.
     """
-    app.dependency_overrides[get_session] = lambda: MagicMock(spec=Session)
+    app.dependency_overrides[get_session] = lambda: MagicMock(spec=AsyncSession)
     yield
     app.dependency_overrides.pop(get_session, None)
 
@@ -80,7 +80,7 @@ async def test_otp_request_rejects_tul_cz_subdomain(client: AsyncClient) -> None
 
 async def test_otp_request_returns_200_for_unknown_email(client: AsyncClient) -> None:
     """Returns HTTP 200 even when no matching user exists (prevents user enumeration)."""
-    with patch("db.auth.get_user_by_email", return_value=None):
+    with patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None):
         response = await client.post(
             "/api/v1/auth/otp/request",
             json={"email": "unknown@tul.cz"},
@@ -94,8 +94,8 @@ async def test_otp_request_returns_200_for_registered_email(client: AsyncClient)
     mock_user = MagicMock()
     mock_user.id = 1
     with (
-        patch("db.auth.get_user_by_email", return_value=mock_user),
-        patch("db.auth.invalidate_active_otp_tokens"),
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens", new_callable=AsyncMock),
         patch("db.auth.add_otp_token"),
     ):
         response = await client.post(
@@ -116,8 +116,8 @@ async def test_otp_request_stores_token_for_registered_user(client: AsyncClient)
     mock_user.id = 42
 
     with (
-        patch("db.auth.get_user_by_email", return_value=mock_user),
-        patch("db.auth.invalidate_active_otp_tokens"),
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens", new_callable=AsyncMock),
         patch("db.auth.add_otp_token") as mock_save,
         patch("services.auth_service._generate_otp", return_value="483921"),
     ):
@@ -148,8 +148,8 @@ async def test_otp_request_invalidates_old_tokens_for_user(client: AsyncClient) 
     mock_user.id = 42
 
     with (
-        patch("db.auth.get_user_by_email", return_value=mock_user),
-        patch("db.auth.invalidate_active_otp_tokens") as mock_invalidate,
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens", new_callable=AsyncMock) as mock_invalidate,
         patch("db.auth.add_otp_token"),
     ):
         await client.post(
@@ -166,7 +166,7 @@ async def test_otp_request_invalidates_old_tokens_for_user(client: AsyncClient) 
 async def test_otp_request_does_not_store_token_for_unknown_user(client: AsyncClient) -> None:
     """No DB write occurs when the email address is not registered."""
     with (
-        patch("db.auth.get_user_by_email", return_value=None),
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None),
         patch("db.auth.add_otp_token") as mock_save,
     ):
         await client.post(
@@ -215,7 +215,7 @@ def test_generate_otp_is_six_digits() -> None:
 
 async def test_otp_request_response_schema(client: AsyncClient) -> None:
     """The 200 response body must contain only a 'message' key."""
-    with patch("db.auth.get_user_by_email", return_value=None):
+    with patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None):
         response = await client.post(
             "/api/v1/auth/otp/request",
             json={"email": "anyone@tul.cz"},
