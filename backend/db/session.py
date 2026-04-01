@@ -3,29 +3,25 @@ from __future__ import annotations
 from collections.abc import Generator
 from functools import lru_cache
 
-from fastapi import Depends
-from sqlalchemy import Engine, create_engine
-from sqlmodel import Session
+from sqlalchemy import Engine
+from sqlmodel import Session, create_engine
 
-from settings import Settings, get_settings
+from settings import get_settings
 
 
 @lru_cache
-def _get_engine(database_url: str) -> Engine:
-    """Return a cached SQLAlchemy engine for the given URL.
+def _get_engine() -> Engine:
+    """Return a cached SQLAlchemy engine built from application settings.
 
-    The engine is created once per unique URL so that the connection pool
-    is shared across requests rather than recreated on every call.
+    The engine is created once per process and reused for all requests.
     """
-    return create_engine(database_url)
+    return create_engine(get_settings().database_url)
 
 
-def get_session(settings: Settings = Depends(get_settings)) -> Generator[Session, None, None]:
-    """Yield a database session for use in a single request.
+def get_session() -> Generator[Session, None, None]:
+    """Yield a SQLModel session and close it after the request.
 
-    FastAPI will call this generator as a dependency, injecting a fresh
-    ``Session`` and ensuring it is closed when the request completes.
+    Intended for use as a FastAPI ``Depends()`` dependency.
     """
-    engine = _get_engine(settings.database_url)
-    with Session(engine) as session:
+    with Session(_get_engine()) as session:
         yield session
