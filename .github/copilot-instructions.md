@@ -71,6 +71,7 @@ The project uses ESLint 10 flat config (`@typescript-eslint` recommended). Key r
 - Follow the layered architecture: `api/` (routes) → `services/` (business logic) → `db/` (data access). No business logic in routes; no DB calls in services without the DB layer.
 - Structured JSON logging: every request log must include `method`, `path`, `status_code`, `duration_ms`. Inject `trace_id`/`span_id` from OpenTelemetry context.
 - Wrap all external I/O (DB queries, HTTP calls) in **OpenTelemetry spans** with meaningful names.
+- Follow PEP8 style; use `ruff` for linting, and formatting (configured in `pyproject.toml`), use 100-character line width.
 
 ---
 

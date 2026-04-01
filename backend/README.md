@@ -54,7 +54,24 @@ cp .env.example .env
 
 Edit `.env` to match your local database settings (see `database/.env.example`).
 
-### 5. Run the development server
+### 5. Seed the database
+
+> Run from **`backend/`** with the database running and `.env` configured:
+
+```bash
+python seed.py
+```
+
+This populates the database with development data (users, courses, projects, evaluations).
+The script is **idempotent** — re-running it will not duplicate rows.
+
+To wipe all data and re-seed from scratch, pass `--reset`:
+
+```bash
+python seed.py --reset
+```
+
+### 6. Run the development server
 
 Use `start.sh` to apply any pending database migrations and then start the server:
 
@@ -86,6 +103,8 @@ All commands below are run from **`backend/`**.
 | `./start.sh --reload` | Apply migrations then start dev server with auto-reload |
 | `uvicorn main:app --reload` | Start dev server without running migrations |
 | `alembic upgrade head` | Apply all pending migrations (requires `DATABASE_MIGRATION_URL`) |
+| `python seed.py` | Seed the database with development data (idempotent) |
+| `python seed.py --reset` | Wipe all data and re-seed from scratch |
 | `ruff check .` | Run linter |
 | `ruff format --check .` | Check code formatting |
 | `ruff format .` | Auto-format code |
