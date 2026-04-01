@@ -233,11 +233,9 @@ async def test_get_project_forwards_id_to_service(client: AsyncClient) -> None:
 
 async def test_get_project_authenticated_calls_get_project_detail(client: AsyncClient) -> None:
     """Authenticated requests to GET /api/v1/projects/{id} must call ``get_project_detail``."""
-    from schemas.projects import CourseDetail, LecturerDetail, MemberDetail, ProjectDetail
-
     user = _make_authenticated_user()
     mock_service = _make_service()
-    detail = ProjectDetail(
+    detail = ProjectPublic(
         id=1,
         title="Test Project",
         description=None,
@@ -246,7 +244,7 @@ async def test_get_project_authenticated_calls_get_project_detail(client: AsyncC
         technologies=[],
         academic_year=2025,
         results_unlocked=False,
-        course=CourseDetail(
+        course=CoursePublic(
             code="PSI",
             name="PSI Course",
             syllabus=None,
@@ -256,9 +254,9 @@ async def test_get_project_authenticated_calls_get_project_detail(client: AsyncC
             peer_bonus_budget=None,
             evaluation_criteria=[],
             links=[],
-            lecturers=[LecturerDetail(name="Lect", github_alias=None, email="lect@tul.cz")],
+            lecturers=[LecturerPublic(name="Lect", github_alias=None, email="lect@tul.cz")],
         ),
-        members=[MemberDetail(id=5, github_alias=None, name="Alice", email="alice@tul.cz")],
+        members=[MemberPublic(id=5, github_alias=None, name="Alice", email="alice@tul.cz")],
     )
     mock_service.get_project_detail = AsyncMock(return_value=detail)
     app.dependency_overrides[get_current_user] = lambda: user
@@ -273,11 +271,9 @@ async def test_get_project_authenticated_calls_get_project_detail(client: AsyncC
 
 async def test_get_project_authenticated_response_includes_emails(client: AsyncClient) -> None:
     """Authenticated response must include ``results_unlocked``, lecturer e-mail, member e-mail."""
-    from schemas.projects import CourseDetail, LecturerDetail, MemberDetail, ProjectDetail
-
     user = _make_authenticated_user(UserRole.STUDENT)
     mock_service = _make_service()
-    detail = ProjectDetail(
+    detail = ProjectPublic(
         id=1,
         title="Test Project",
         description=None,
@@ -286,7 +282,7 @@ async def test_get_project_authenticated_response_includes_emails(client: AsyncC
         technologies=[],
         academic_year=2025,
         results_unlocked=True,
-        course=CourseDetail(
+        course=CoursePublic(
             code="PSI",
             name="PSI Course",
             syllabus=None,
@@ -296,9 +292,9 @@ async def test_get_project_authenticated_response_includes_emails(client: AsyncC
             peer_bonus_budget=None,
             evaluation_criteria=[],
             links=[],
-            lecturers=[LecturerDetail(name="Lect", github_alias=None, email="lect@tul.cz")],
+            lecturers=[LecturerPublic(name="Lect", github_alias=None, email="lect@tul.cz")],
         ),
-        members=[MemberDetail(id=5, github_alias=None, name="Alice", email="alice@tul.cz")],
+        members=[MemberPublic(id=5, github_alias=None, name="Alice", email="alice@tul.cz")],
     )
     mock_service.get_project_detail = AsyncMock(return_value=detail)
     app.dependency_overrides[get_current_user] = lambda: user
