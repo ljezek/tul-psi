@@ -67,7 +67,12 @@ def request_otp(email: str, session: Session) -> None:
     # This runs in the same transaction as the new token insert below; if any
     # subsequent step fails, the whole unit of work is rolled back together.
     session.exec(
-        update(OtpToken).values(used=True).where(OtpToken.user_id == user.id, not_(OtpToken.used))
+        update(OtpToken)
+        .values(used=True)
+        .where(
+            OtpToken.user_id == user.id,
+            not_(OtpToken.used),
+        )
     )
 
     otp = _generate_otp()
