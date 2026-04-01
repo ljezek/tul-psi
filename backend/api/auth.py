@@ -47,7 +47,7 @@ class OtpRequestResponse(BaseModel):
         "regardless of whether the address is registered to prevent user enumeration."
     ),
 )
-async def request_otp(
+def request_otp(
     body: OtpRequestBody,
     session: Session = Depends(get_session),
 ) -> OtpRequestResponse:
