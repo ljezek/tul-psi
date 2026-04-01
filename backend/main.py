@@ -9,6 +9,7 @@ from pythonjsonlogger.jsonlogger import JsonFormatter
 
 from api.auth import router as auth_router
 from api.health import router as health_router
+from api.projects import router as projects_router
 
 
 def _configure_logging() -> None:
@@ -45,3 +46,4 @@ app = FastAPI(title="Student Projects Catalogue API")
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(projects_router, prefix="/api/v1")
