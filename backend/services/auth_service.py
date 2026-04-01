@@ -4,15 +4,23 @@ import logging
 import random
 import string
 import sys
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
+import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import auth as db_auth
-from models import OtpToken
+from models import OtpToken, User
 from settings import get_settings
 
 logger = logging.getLogger(__name__)
+
+# Maximum number of failed verification attempts before a token is invalidated.
+_MAX_OTP_ATTEMPTS = 5
+
+# JWT session duration — 8 hours matching the design specification.
+_JWT_TTL_HOURS = 8
 
 
 def _generate_otp() -> str:
@@ -28,6 +36,21 @@ def _hash_otp(otp: str) -> str:
     needed; ``bcrypt.checkpw`` extracts it automatically during verification.
     """
     return bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
+
+
+def _create_jwt(user: User) -> str:
+    """Return a signed JWT encoding *user*'s identity and role.
+
+    The token expires after ``_JWT_TTL_HOURS`` hours.  It is intended to be
+    stored in an HttpOnly cookie so that JavaScript cannot read it.
+    """
+    settings = get_settings()
+    payload = {
+        "user_id": user.id,
+        "role": user.role.value,
+        "exp": datetime.now(UTC) + timedelta(hours=_JWT_TTL_HOURS),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 async def request_otp(email: str, session: AsyncSession) -> None:
@@ -81,3 +104,67 @@ async def request_otp(email: str, session: AsyncSession) -> None:
             extra={"email": email},
         )
         print(f"[DEV] OTP for {email}: {otp}", file=sys.stderr)  # noqa: T201
+
+
+class IncorrectOtpError(Exception):
+    """Raised when the supplied OTP value does not match the stored token hash."""
+
+
+class TooManyAttemptsError(Exception):
+    """Raised when the per-token failed-attempt limit has been reached."""
+
+
+async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
+    """Verify *otp* for the user identified by *email* and return a signed JWT on success.
+
+    Raises:
+        IncorrectOtpError: When the email has no active token or the OTP value is wrong.
+        TooManyAttemptsError: When the token's failed-attempt limit is reached.
+
+    The caller is responsible for mapping these exceptions to the appropriate
+    HTTP responses (401 and 429 respectively).
+
+    On a failed attempt the ``attempts`` counter is incremented atomically.
+    When the counter reaches ``_MAX_OTP_ATTEMPTS`` the token is also marked as
+    used so that it cannot be resubmitted after the limit message is shown.
+    """
+    user = await db_auth.get_user_by_email(session, email)
+    if user is None:
+        logger.warning(
+            "OTP verification attempted for unregistered address.",
+            extra={"email": email},
+        )
+        raise IncorrectOtpError
+
+    token = await db_auth.get_active_otp_token(session, user.id)
+    if token is None:
+        logger.warning(
+            "No active OTP token found for user during verification.",
+            extra={"email": email},
+        )
+        raise IncorrectOtpError
+
+    if not bcrypt.checkpw(otp.encode(), token.token_hash.encode()):
+        new_attempts = await db_auth.increment_otp_attempts(session, token.id)
+        if new_attempts >= _MAX_OTP_ATTEMPTS:
+            # Invalidate the token so it cannot be reused after the limit is reached.
+            await db_auth.mark_otp_token_used(session, token.id)
+            await session.commit()
+            logger.warning(
+                "OTP verification failed: attempt limit reached; token invalidated.",
+                extra={"email": email},
+            )
+            raise TooManyAttemptsError
+        await session.commit()
+        logger.warning(
+            "OTP verification failed: hash mismatch.",
+            extra={"email": email, "attempts": new_attempts},
+        )
+        raise IncorrectOtpError
+
+    # Hash matched — mark the token consumed and issue a JWT.
+    await db_auth.mark_otp_token_used(session, token.id)
+    await session.commit()
+
+    logger.info("OTP verification succeeded; JWT issued.", extra={"email": email})
+    return _create_jwt(user)
