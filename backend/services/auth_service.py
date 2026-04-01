@@ -6,7 +6,7 @@ import string
 import sys
 
 import bcrypt
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import auth as db_auth
 from models import OtpToken
@@ -30,7 +30,7 @@ def _hash_otp(otp: str) -> str:
     return bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
 
 
-def request_otp(email: str, session: Session) -> None:
+async def request_otp(email: str, session: AsyncSession) -> None:
     """Generate an OTP for *email* and persist its hash in the database.
 
     The response is deliberately identical whether or not the email is
@@ -44,7 +44,7 @@ def request_otp(email: str, session: Session) -> None:
     # once an email sending service (e.g., SendGrid, Azure Communication
     # Services) is integrated.
     """
-    user = db_auth.get_user_by_email(session, email)
+    user = await db_auth.get_user_by_email(session, email)
 
     if user is None:
         # Silent success — do not reveal that the address is not registered.
@@ -62,14 +62,14 @@ def request_otp(email: str, session: Session) -> None:
         )
         return
 
-    db_auth.invalidate_active_otp_tokens(session, user.id)
+    await db_auth.invalidate_active_otp_tokens(session, user.id)
 
     otp = _generate_otp()
     token = OtpToken(user_id=user.id, token_hash=_hash_otp(otp))
     db_auth.add_otp_token(session, token)
     # Commit here — this is the full unit of work: invalidate old tokens and
     # insert the new one must succeed or fail together.
-    session.commit()
+    await session.commit()
 
     logger.info("OTP token generated.", extra={"email": email})
     if get_settings().show_otp_dev_only:

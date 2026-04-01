@@ -65,7 +65,6 @@ The project uses ESLint 10 flat config (`@typescript-eslint` recommended). Key r
 - Python 3.12+, full **type annotations** on all functions and models.
 - Use `from __future__ import annotations` for forward references.
 - All I/O functions must be `async def`; use `await` for all async calls.
-   * Temporary exemption: pg8000 is sync, thus all endpoints reaching database must be sync for now. The plan is to replace pg8000 with asyncpg driver.
 - Use **FastAPI `Depends()`** for dependency injection (settings, services, db sessions).
 - Models use **Pydantic v2** — use `model_config`, `model_validator`, `field_validator` (not v1 style).
 - Settings via `pydantic-settings` `BaseSettings`; never hardcode configuration.
