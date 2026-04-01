@@ -30,8 +30,8 @@ VALUES
     -- Admin
     (1,  'psi.admin@tul.cz',          'psi-admin',          'PSI Admin',           'ADMIN',    '2025-09-01 10:00:00+00'),
     -- Lecturers
-    (2,  'jan.novak@tul.cz',           'jannovak',           'Jan Novák',           'LECTURER', '2025-09-01 10:00:00+00'),
-    (3,  'petra.svoboda@tul.cz',       'petrasvo',           'Petra Svobodová',     'LECTURER', '2025-09-01 10:00:00+00'),
+    (2,  'lukas.jezek@tul.cz',         'ljezek',             'Lukáš Ježek',         'LECTURER', '2025-09-01 10:00:00+00'),
+    (3,  'roman.spanek@tul.cz',        'roman-spanek',       'Roman Špánek',        'LECTURER', '2025-09-01 10:00:00+00'),
     (4,  'tomas.kral@tul.cz',          'tomaskral',          'Tomáš Král',          'LECTURER', '2025-09-01 10:00:00+00'),
     -- Past students (PSI-2025 and KDP-2025)
     (5,  'alice.novakova@tul.cz',      'alicenov',           'Alice Nováková',      'STUDENT',  '2025-09-15 09:00:00+00'),
@@ -41,8 +41,8 @@ VALUES
     (9,  'eva.markova@tul.cz',         'evamark',            'Eva Marková',         'STUDENT',  '2025-09-15 09:00:00+00'),
     (10, 'filip.zak@tul.cz',           'filipzak',           'Filip Žák',           'STUDENT',  '2025-09-15 09:00:00+00'),
     -- Current students (PSI-2026, sourced from data/projects.json)
-    (11, 'lukas.jezek@tul.cz',         'ljezek',             'Lukáš Ježek',         'STUDENT',  '2026-02-01 09:00:00+00'),
-    (12, 'roman.spanek@tul.cz',        'roman-spanek',       'Roman Špánek',        'STUDENT',  '2026-02-01 09:00:00+00'),
+    (11, 'jan.novak@tul.cz',           'jannovak',           'Jan Novák',           'STUDENT',  '2026-02-01 09:00:00+00'),
+    (12, 'jana.svobodova@tul.cz',      'janasvo',            'Jana Svobodová',      'STUDENT',  '2026-02-01 09:00:00+00'),
     (13, 'jiri.seps@tul.cz',           'JiriSeps',           'Jiří Šeps',           'STUDENT',  '2026-02-01 09:00:00+00'),
     (14, 'matej.hauschwitz@tul.cz',    'matejhauschwitz',    'Matěj Hauschwitz',    'STUDENT',  '2026-02-01 09:00:00+00'),
     (15, 'vojtech.gero@tul.cz',        'VojtechGero',        'Vojtěch Gerö',        'STUDENT',  '2026-02-01 09:00:00+00'),
@@ -70,19 +70,13 @@ INSERT INTO course (id, code, name, syllabus, term, project_type, min_score,
                     created_by, created_at)
 OVERRIDING SYSTEM VALUE
 VALUES
-    (1, 'PSI-2025', 'Projektový seminář informatiky',
+    (1, 'PSI', 'Pokročilé Softwarové Inženýrství',
         'Studenti v týmech navrhnou a implementují netriviální softwarový projekt. Důraz je kladen na architekturu, testování a dokumentaci.',
         'WINTER', 'TEAM', 50, 10,
         '[{"code":"architecture","description":"Architektura a návrh systému","max_score":20},{"code":"code_quality","description":"Kvalita kódu a dodržení konvencí","max_score":20},{"code":"testing","description":"Testování a pokrytí kódu","max_score":20},{"code":"documentation","description":"Dokumentace a README","max_score":20},{"code":"presentation","description":"Prezentace a demo","max_score":20}]'::jsonb,
         '[{"label":"Moodle","url":"https://moodle.tul.cz/course/view.php?id=12344"},{"label":"GitHub Organisation","url":"https://github.com/PSI-RDB-2025"}]'::jsonb,
         1, '2025-09-01 12:00:00+00'),
-    (2, 'PSI-2026', 'Projektový seminář informatiky',
-        'Studenti v týmech navrhnou a implementují netriviální softwarový projekt. Hodnocení zahrnuje architekturu, kvalitu kódu, testování a prezentaci.',
-        'WINTER', 'TEAM', 60, 10,
-        '[{"code":"architecture","description":"Architektura a návrh systému","max_score":25},{"code":"code_quality","description":"Kvalita kódu a dodržení konvencí","max_score":25},{"code":"testing","description":"Testování a pokrytí kódu","max_score":25},{"code":"presentation","description":"Prezentace a demo","max_score":25}]'::jsonb,
-        '[{"label":"Moodle","url":"https://moodle.tul.cz/course/view.php?id=12345"},{"label":"GitHub Organisation","url":"https://github.com/PSI-RDB-2026"}]'::jsonb,
-        1, '2026-02-01 12:00:00+00'),
-    (3, 'KDP-2025', 'Klauzurní projekt',
+    (2, 'KDP', 'Klauzurní projekt',
         'Individuální softwarový nebo výzkumný projekt obhajovaný u státní závěrečné zkoušky.',
         'SUMMER', 'INDIVIDUAL', 60, NULL,
         '[{"code":"analysis","description":"Analýza a specifikace požadavků","max_score":30},{"code":"implementation","description":"Implementace a funkčnost","max_score":40},{"code":"report","description":"Technická zpráva","max_score":30}]'::jsonb,
@@ -99,11 +93,9 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO course_lecturer (course_id, user_id, assigned_at)
 VALUES
-    (1, 2, '2025-09-01 12:30:00+00'),
     (1, 3, '2025-09-01 12:30:00+00'),
-    (2, 2, '2026-02-01 12:30:00+00'),
-    (2, 4, '2026-02-01 12:30:00+00'),
-    (3, 3, '2025-02-01 12:30:00+00')
+    (1, 2, '2025-09-01 12:30:00+00'),
+    (2, 4, '2025-02-01 12:30:00+00')
 ON CONFLICT (course_id, user_id) DO NOTHING;
 
 -- ============================================================================
@@ -146,44 +138,44 @@ VALUES
          'https://github.com/ljezek/tul-psi',
          'https://psi.tul.cz',
          '["React","TypeScript","FastAPI","Python","PostgreSQL","Docker"]'::jsonb,
-         false, 2, 2026, '2026-02-15 10:00:00+00'),
+         false, 1, 2026, '2026-02-15 10:00:00+00'),
     (5,  'Bookstore',
          NULL,
          'https://github.com/matejhauschwitz/PSI',
          NULL,
          '[]'::jsonb,
-         false, 2, 2026, '2026-02-15 10:00:00+00'),
+         false, 1, 2026, '2026-02-15 10:00:00+00'),
     (6,  'LOL tracker',
          NULL,
          NULL,
          NULL,
          '[]'::jsonb,
-         false, 2, 2026, '2026-02-15 10:00:00+00'),
+         false, 1, 2026, '2026-02-15 10:00:00+00'),
     (7,  'PSI - Kanban Board',
          'Webová aplikace: PSI - Kanban Board.',
          'https://github.com/martinrenner/PSI',
          NULL,
          '["Python","React"]'::jsonb,
-         false, 2, 2026, '2026-02-15 10:00:00+00'),
+         false, 1, 2026, '2026-02-15 10:00:00+00'),
     (8,  'QuizApp',
          'Webová aplikace: QuizApp.',
          'https://github.com/PSI-RDB-2026/QuizApp',
          NULL,
          '["Python","React"]'::jsonb,
-         false, 2, 2026, '2026-02-15 10:00:00+00'),
+         false, 1, 2026, '2026-02-15 10:00:00+00'),
     -- KDP-2025 completed individual projects
     (9,  'Analýza výkonnosti distribuovaných systémů',
          'Srovnání latence a propustnosti různých message-broker architektur.',
          'https://github.com/alicenov/kdp-2025',
          NULL,
          '["Python","RabbitMQ","Kafka"]'::jsonb,
-         true, 3, 2025, '2025-02-15 10:00:00+00'),
+         true, 2, 2025, '2025-02-15 10:00:00+00'),
     (10, 'Detekce anomálií v IoT datech pomocí ML',
          'Klasifikace chybových stavů senzorů pomocí izolačního lesa.',
          'https://github.com/danhorak/kdp-2025',
          NULL,
          '["Python","scikit-learn","MQTT"]'::jsonb,
-         true, 3, 2025, '2025-02-15 10:00:00+00')
+         true, 2, 2025, '2025-02-15 10:00:00+00')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -325,15 +317,3 @@ VALUES
     -- CE 7 (Bob evaluates project 3): feedback for Filip (id 10)
     (7,  10, 'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.', 10)
 ON CONFLICT (course_evaluation_id, receiving_student_id) DO NOTHING;
-
--- ============================================================================
--- reset sequences
--- ============================================================================
--- Advance each sequence so that future auto-generated IDs do not collide with
--- the hardcoded seed IDs above.
-
-SELECT setval(pg_get_serial_sequence('"user"',          'id'), 25);
-SELECT setval(pg_get_serial_sequence('course',          'id'),  3);
-SELECT setval(pg_get_serial_sequence('project',         'id'), 10);
-SELECT setval(pg_get_serial_sequence('project_member',  'id'), 24);
-SELECT setval(pg_get_serial_sequence('course_evaluation','id'), 10);

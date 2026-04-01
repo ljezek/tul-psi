@@ -13,7 +13,6 @@ import argparse
 import sys
 from pathlib import Path
 
-from sqlalchemy import text
 from sqlmodel import create_engine
 
 from settings import get_settings
@@ -35,12 +34,20 @@ _RESET_STATEMENTS = [
 
 
 def _iter_statements(sql: str) -> list[str]:
-    """Return non-empty SQL statements split from *sql* on semicolons."""
+    """Return non-empty SQL statements split from *sql* on semicolons.
+
+    Comments are stripped before splitting so that semicolons inside
+    comment text do not produce spurious empty or broken statements.
+    """
+    # Strip full-line comments first so their semicolons are never seen.
+    stripped_lines = [
+        ln for ln in sql.splitlines() if not ln.strip().startswith("--")
+    ]
+    sql_no_comments = "\n".join(stripped_lines)
+
     stmts = []
-    for raw in sql.split(";"):
-        # Drop full-line comments, then keep the statement if anything remains.
-        lines = [ln for ln in raw.splitlines() if not ln.strip().startswith("--")]
-        stmt = "\n".join(lines).strip()
+    for raw in sql_no_comments.split(";"):
+        stmt = raw.strip()
         if stmt:
             stmts.append(stmt)
     return stmts
@@ -63,14 +70,14 @@ def main() -> None:
         if args.reset:
             print("Resetting database …")
             for stmt in _RESET_STATEMENTS:
-                conn.execute(text(stmt))
+                conn.exec_driver_sql(stmt)
             conn.commit()
             print("Reset complete.")
 
         print(f"Running {_SQL_FILE.name} …")
         sql = _SQL_FILE.read_text(encoding="utf-8")
         for stmt in _iter_statements(sql):
-            conn.execute(text(stmt))
+            conn.exec_driver_sql(stmt)
         conn.commit()
 
     print("Done.")
