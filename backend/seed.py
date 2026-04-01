@@ -40,9 +40,7 @@ def _iter_statements(sql: str) -> list[str]:
     comment text do not produce spurious empty or broken statements.
     """
     # Strip full-line comments first so their semicolons are never seen.
-    stripped_lines = [
-        ln for ln in sql.splitlines() if not ln.strip().startswith("--")
-    ]
+    stripped_lines = [ln for ln in sql.splitlines() if not ln.strip().startswith("--")]
     sql_no_comments = "\n".join(stripped_lines)
 
     stmts = []
