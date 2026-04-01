@@ -81,6 +81,4 @@ async def mark_otp_token_used(session: AsyncSession, token_id: int) -> None:
 
     Prevents the same token from being accepted a second time.
     """
-    await session.execute(
-        update(OtpToken).values(used=True).where(OtpToken.id == token_id)
-    )
+    await session.execute(update(OtpToken).values(used=True).where(OtpToken.id == token_id))
