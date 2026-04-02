@@ -308,8 +308,8 @@ async def get_project_evaluation(
     summary="Submit project evaluation",
     description=(
         "Creates or updates the calling lecturer's evaluation for the specified project. "
-        "Set ``submitted=false`` (default) to save a draft that can be updated later. "
-        "Set ``submitted=true`` to finalise the evaluation; once all lecturers have submitted "
+        "Set ``submitted=False`` (default) to save a draft that can be updated later. "
+        "Set ``submitted=True`` to finalise the evaluation; once all lecturers have submitted "
         "and all students have published their course evaluations, the project results are "
         "unlocked automatically. "
         "Editing is blocked (HTTP 409) once the project results have been unlocked. "

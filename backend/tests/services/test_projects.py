@@ -1397,8 +1397,6 @@ async def test_service_get_project_evaluation_raises_permission_for_unassigned_l
 
 async def test_service_get_project_evaluation_raises_lookup_when_no_evaluation() -> None:
     """``get_project_evaluation`` must raise ``LookupError`` when no evaluation row exists."""
-
-
     project, course = _make_project_and_course()
     session = MagicMock()
     user = _make_admin_user()

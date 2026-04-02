@@ -257,6 +257,8 @@ async def _check_and_auto_unlock_project(
     published_count = await count_published_course_evaluations(session, project_id)
 
     if submitted_count >= lecturer_count and published_count >= member_count:
+        # Use >= rather than == to remain correct if counts ever exceed the participant total
+        # (e.g. due to a data inconsistency); the intent is "all required evaluations are in".
         await db_unlock_project_results(session, project_id)
 
 
