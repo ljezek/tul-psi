@@ -47,6 +47,7 @@ erDiagram
         string github_alias
         string name
         string role "ADMIN | LECTURER | STUDENT"
+        bool is_active
         timestamp created_at
     }
     OTP_TOKEN {
@@ -269,18 +270,20 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 // 200 → { "status": "ok", "version": "1.0.0" }
 ```
 
-### Users (ADMIN only)
+### Users
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/users` | ADMIN | List all users |
 | `POST` | `/users` | ADMIN | Create a user |
+| `GET` | `/users/me` | ANY | Get current user's profile |
+| `PATCH` | `/users/me` | ANY | Update current user's name or GitHub alias |
 | `GET` | `/users/{id}` | ADMIN | Get user by ID |
 | `PATCH` | `/users/{id}` | ADMIN | Update name or role |
 
 ```json
 // User schema
-{ "id": 1, "email": "jan.novak@tul.cz", "github_alias": "jnovak", "name": "Jan Novák", "role": "STUDENT" }
+{ "id": 1, "email": "jan.novak@tul.cz", "github_alias": "jnovak", "name": "Jan Novák", "role": "STUDENT", "is_active": true }
 ```
 
 ### Courses
@@ -290,12 +293,10 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 | `GET` | `/courses` | – | List all courses |
 | `POST` | `/courses` | ADMIN | Create a course |
 | `GET` | `/courses/{id}` | – | Get course details |
-| `PATCH` | `/courses/{id}` | ADMIN | Update course |
-| `GET` | `/courses/{id}/lecturers` | ADMIN, LECTURER | List assigned lecturers |
-| `POST` | `/courses/{id}/lecturers` | ADMIN | Assign a lecturer |
-| `DELETE` | `/courses/{id}/lecturers/{user_id}` | ADMIN | Remove a lecturer |
-| `GET` | `/courses/{id}/projects` | – | List projects for this course; filter with `?year=2025` |
-| `POST` | `/courses/{id}/projects` | LECTURER | Seed a project (assigns course & year; sends invite email to owner) |
+| `PATCH` | `/courses/{id}` | ADMIN, LECTURER | Update course |
+| `POST` | `/courses/{id}/lecturers` | ADMIN, LECTURER | Assign a lecturer |
+| `DELETE` | `/courses/{id}/lecturers/{user_id}` | ADMIN, LECTURER | Remove a lecturer |
+| `POST` | `/courses/{id}/projects` | ADMIN, LECTURER | Seed a project (assigns course & year; sends invite email to owner) |
 | `GET` | `/courses/{id}/evaluation-overview` | LECTURER | Aggregated project scores and peer feedback; filter with `?year=2025` |
 
 ```json
