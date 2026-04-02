@@ -1229,4 +1229,3 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
     assert result.id == 20
     assert result.email == "new@tul.cz"
     session.commit.assert_called_once()
-

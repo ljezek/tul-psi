@@ -481,13 +481,3 @@ async def unlock_project_results(session: AsyncSession, project_id: int) -> Proj
     session.add(project)
     await session.flush()
     return project
-            )
-        )
-        .scalars()
-        .first()
-    )
-    if member is None:
-        raise RuntimeError(
-            f"Expected member row for user {user_id} in project {project_id} after UPSERT."
-        )
-    return member, created

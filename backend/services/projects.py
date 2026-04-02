@@ -50,7 +50,6 @@ from schemas.projects import (
 logger = logging.getLogger(__name__)
 
 
-
 def _can_manage_course_projects(
     user: User,
     course_lecturer_ids: set[int],
@@ -352,10 +351,6 @@ class ProjectsService:
             authenticated=True,
             project_evaluations=project_evaluations,
             course_evaluations=course_evaluations,
-            received_peer_feedback=received_peer_feedback,
-            authored_peer_feedback=authored_peer_feedback,
-        )
-
             received_peer_feedback=received_peer_feedback,
             authored_peer_feedback=authored_peer_feedback,
         )
