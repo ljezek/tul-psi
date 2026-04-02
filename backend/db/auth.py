@@ -15,6 +15,12 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     return result.scalars().first()
 
 
+async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
+    """Return the User row matching *user_id*, or None if no such user exists."""
+    result = await session.execute(select(User).where(User.id == user_id))
+    return result.scalars().first()
+
+
 async def invalidate_active_otp_tokens(session: AsyncSession, user_id: int) -> None:
     """Mark all non-used OTP tokens for *user_id* as used.
 

@@ -4,8 +4,11 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.course import Course, CourseTerm
+from models.course_evaluation import CourseEvaluation
 from models.course_lecturer import CourseLecturer
+from models.peer_feedback import PeerFeedback
 from models.project import Project
+from models.project_evaluation import ProjectEvaluation
 from models.project_member import ProjectMember
 from models.user import User
 
@@ -145,3 +148,86 @@ async def get_course_lecturers(
     for course_id, user in (await session.execute(stmt)).all():
         result.setdefault(course_id, []).append(user)
     return result
+
+
+async def get_project_evaluations(
+    session: AsyncSession,
+    project_id: int,
+) -> list[ProjectEvaluation]:
+    """Return all lecturer evaluations submitted for *project_id*.
+
+    Results are ordered by ``submitted_at`` ascending so that the earliest
+    submission appears first — useful for deterministic display order.
+    """
+    stmt = (
+        select(ProjectEvaluation)
+        .where(ProjectEvaluation.project_id == project_id)
+        .order_by(ProjectEvaluation.submitted_at)
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def get_course_evaluations(
+    session: AsyncSession,
+    course_id: int,
+    *,
+    academic_year: int | None = None,
+) -> list[CourseEvaluation]:
+    """Return all student course evaluations for the course identified by *course_id*.
+
+    Joins through the ``project`` table to resolve the course association.
+    Optionally narrows results to a specific *academic_year* when provided, which
+    is useful for showing only the current cohort's evaluations on a course page.
+
+    Results are ordered by ``submitted_at`` ascending.
+    """
+    stmt = (
+        select(CourseEvaluation)
+        .join(Project, CourseEvaluation.project_id == Project.id)
+        .where(Project.course_id == course_id)
+        .order_by(CourseEvaluation.submitted_at)
+    )
+    if academic_year is not None:
+        stmt = stmt.where(Project.academic_year == academic_year)
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def get_peer_feedback_received(
+    session: AsyncSession,
+    project_id: int,
+    receiving_student_id: int,
+) -> list[PeerFeedback]:
+    """Return peer feedback rows *addressed to* ``receiving_student_id`` for ``project_id``.
+
+    Joins through ``course_evaluation`` to scope the lookup to a single project.
+    """
+    stmt = (
+        select(PeerFeedback)
+        .join(CourseEvaluation, PeerFeedback.course_evaluation_id == CourseEvaluation.id)
+        .where(
+            CourseEvaluation.project_id == project_id,
+            PeerFeedback.receiving_student_id == receiving_student_id,
+        )
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def get_peer_feedback_authored(
+    session: AsyncSession,
+    project_id: int,
+    author_student_id: int,
+) -> list[PeerFeedback]:
+    """Return peer feedback rows *written by* ``author_student_id`` for ``project_id``.
+
+    Joins through ``course_evaluation`` so that only feedback originating from
+    the author's own course evaluation for this project is returned.
+    """
+    stmt = (
+        select(PeerFeedback)
+        .join(CourseEvaluation, PeerFeedback.course_evaluation_id == CourseEvaluation.id)
+        .where(
+            CourseEvaluation.project_id == project_id,
+            CourseEvaluation.student_id == author_student_id,
+        )
+    )
+    return list((await session.execute(stmt)).scalars().all())
