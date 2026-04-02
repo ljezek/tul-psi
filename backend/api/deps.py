@@ -69,6 +69,22 @@ async def get_current_user(
     return user
 
 
+async def require_current_user(
+    current_user: User | None = Depends(get_current_user),
+) -> User:
+    """Resolve the authenticated user, raising HTTP 401 for unauthenticated requests.
+
+    Wraps ``get_current_user`` for endpoints that always require authentication.
+    Callers receive a ``User`` instance (never ``None``) or an HTTP 401 response.
+    """
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication is required.",
+        )
+    return current_user
+
+
 async def get_optional_current_user(
     request: Request,
     session: AsyncSession = Depends(get_session),
