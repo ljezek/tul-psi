@@ -56,6 +56,9 @@ class ProjectEvaluation(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(SADateTime(timezone=True), nullable=False),
     )
+    # False means the evaluation is saved as a draft and has not yet been finalised.
+    # True means the lecturer has submitted the evaluation; triggers the auto-unlock check.
+    submitted: bool = Field(default=False)
 
     def __init__(self, **data: object) -> None:
         # SQLModel 0.0.x bypasses Pydantic validators for table=True models, so

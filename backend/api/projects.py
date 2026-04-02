@@ -9,9 +9,17 @@ from api.deps import get_current_user, require_current_user
 from db.session import get_session
 from models.course import CourseTerm
 from models.user import User
-from schemas.projects import AddMemberBody, MemberPublic, ProjectPublic, ProjectUpdate
+from schemas.projects import (
+    AddMemberBody,
+    MemberPublic,
+    ProjectEvaluationCreate,
+    ProjectEvaluationDetail,
+    ProjectPublic,
+    ProjectUpdate,
+)
 from services.projects import (
     AlreadyMemberError,
+    EvaluationConflictError,
     PermissionDeniedError,
     ProjectNotFoundError,
     ProjectsService,
@@ -249,6 +257,105 @@ async def unlock_project(
         ) from None
     except Exception:
         logger.exception("Failed to unlock project results", extra={"project_id": project_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
+@router.get(
+    "/{project_id}/project-evaluation",
+    response_model=ProjectEvaluationDetail,
+    summary="Get project evaluation",
+    description=(
+        "Returns the calling lecturer's submitted evaluation for the specified project. "
+        "Returns HTTP 404 when the lecturer has not yet submitted an evaluation. "
+        "Only accessible to admin users or lecturers assigned to the project's course."
+    ),
+)
+async def get_project_evaluation(
+    project_id: int,
+    current_user: User = Depends(require_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> ProjectEvaluationDetail:
+    """Return the evaluation submitted by the calling lecturer for ``project_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 404 when the project does not exist or the lecturer has not
+    yet submitted an evaluation.
+    """
+    try:
+        return await service.get_project_evaluation(project_id, current_user)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No evaluation found for project {project_id}.",
+        ) from None
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorised to access evaluation for this project.",
+        ) from None
+    except Exception:
+        logger.exception(
+            "Failed to retrieve project evaluation", extra={"project_id": project_id}
+        )
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
+@router.post(
+    "/{project_id}/project-evaluation",
+    response_model=ProjectEvaluationDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit project evaluation",
+    description=(
+        "Creates or updates the calling lecturer's evaluation for the specified project. "
+        "Set ``submitted=false`` (default) to save a draft that can be updated later. "
+        "Set ``submitted=true`` to finalise the evaluation; once all lecturers have submitted "
+        "and all students have published their course evaluations, the project results are "
+        "unlocked automatically. "
+        "Editing is blocked (HTTP 409) once the project results have been unlocked. "
+        "Only accessible to admin users or lecturers assigned to the project's course."
+    ),
+)
+async def submit_project_evaluation(
+    project_id: int,
+    body: ProjectEvaluationCreate,
+    current_user: User = Depends(require_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> ProjectEvaluationDetail:
+    """Create or update the calling lecturer's evaluation for ``project_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 404 when the project does not exist.
+    Raises HTTP 409 when the project results are already unlocked.
+    Raises HTTP 422 when a ``criterion_code`` in the scores is not valid for the course.
+    """
+    try:
+        return await service.submit_project_evaluation(project_id, body, current_user)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorised to submit evaluation for this project.",
+        ) from None
+    except EvaluationConflictError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Project results are already unlocked; evaluation cannot be edited.",
+        ) from None
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from None
+    except Exception:
+        logger.exception(
+            "Failed to submit project evaluation", extra={"project_id": project_id}
+        )
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 

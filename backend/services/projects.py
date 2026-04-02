@@ -9,10 +9,13 @@ from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
 from db.projects import (
     add_project_member,
+    count_published_course_evaluations,
+    count_submitted_project_evaluations,
     get_course_evaluations,
     get_course_lecturers,
     get_peer_feedback_authored,
     get_peer_feedback_received,
+    get_project_evaluation_by_lecturer,
     get_project_evaluations,
     get_project_members,
     get_projects,
@@ -22,6 +25,9 @@ from db.projects import (
 )
 from db.projects import (
     create_project as db_create_project,
+)
+from db.projects import (
+    create_project_evaluation as db_create_project_evaluation,
 )
 from db.projects import (
     delete_project as db_delete_project,
@@ -47,6 +53,7 @@ from schemas.projects import (
     MemberPublic,
     PeerFeedbackDetail,
     ProjectCreate,
+    ProjectEvaluationCreate,
     ProjectEvaluationDetail,
     ProjectPublic,
     ProjectUpdate,
@@ -160,6 +167,7 @@ def _to_project_evaluation_detail(ev: ProjectEvaluation) -> ProjectEvaluationDet
         lecturer_id=ev.lecturer_id,
         scores=_to_evaluation_score_detail(ev.scores),
         submitted_at=ev.submitted_at,
+        submitted=ev.submitted,
     )
 
 
@@ -199,6 +207,57 @@ class ProjectNotFoundError(Exception):
 
 class AlreadyMemberError(Exception):
     """Raised when the target user is already a member of the project."""
+
+
+class EvaluationConflictError(Exception):
+    """Raised when a project evaluation cannot be created or updated due to a conflict.
+
+    This occurs when the project results are already unlocked, preventing any
+    further changes to submitted evaluations.
+    """
+
+
+async def _check_and_auto_unlock_project(
+    session: AsyncSession,
+    project_id: int,
+) -> None:
+    """Automatically unlock project results when all evaluations are complete.
+
+    The unlock fires when **both** of the following conditions are satisfied:
+
+    * Every lecturer assigned to the project's course has submitted a
+      ``ProjectEvaluation`` (``submitted=True``).
+    * Every project member has published a ``CourseEvaluation`` (``published=True``).
+
+    If either count is zero (no lecturers or no members), the condition is not
+    considered met and the project is left locked.  The caller is responsible
+    for committing the session after this call when an unlock occurs.
+    """
+    row = await db_get_project(session, project_id)
+    if row is None:
+        return
+
+    p, course = row
+    if course.id is None:
+        return
+
+    # Count lecturers assigned to this course.
+    lecturers_by_course = await get_course_lecturers(session, [course.id])
+    lecturer_count = len(lecturers_by_course.get(course.id, []))
+
+    # Count project members.
+    members_by_project = await get_project_members(session, [project_id])
+    member_count = len(members_by_project.get(project_id, []))
+
+    if lecturer_count == 0 or member_count == 0:
+        # Not enough participants to determine completion.
+        return
+
+    submitted_count = await count_submitted_project_evaluations(session, project_id)
+    published_count = await count_published_course_evaluations(session, project_id)
+
+    if submitted_count >= lecturer_count and published_count >= member_count:
+        await db_unlock_project_results(session, project_id)
 
 
 class ProjectsService:
@@ -599,3 +658,109 @@ class ProjectsService:
         await self._session.commit()
 
         return await self.get_project_detail(project_id, requester)
+
+    async def get_project_evaluation(
+        self,
+        project_id: int,
+        requester: User,
+    ) -> ProjectEvaluationDetail:
+        """Return the calling lecturer's evaluation for *project_id*.
+
+        Raises ``LookupError`` when the project does not exist or the calling
+        lecturer has not yet submitted an evaluation for this project.
+        Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
+        """
+        row = await db_get_project(self._session, project_id)
+        if row is None:
+            raise LookupError(f"Project {project_id} not found.")
+
+        _p, course = row
+        if course.id is None:
+            raise ValueError(f"Course returned from DB has no id: {course!r}")
+
+        await require_course_manage_access(self._session, course.id, requester)
+
+        if requester.id is None:
+            raise ValueError(f"Requester returned from DB has no id: {requester!r}")
+
+        evaluation = await get_project_evaluation_by_lecturer(
+            self._session, project_id, requester.id
+        )
+        if evaluation is None:
+            raise LookupError(
+                f"No evaluation found for lecturer {requester.id} on project {project_id}."
+            )
+        return _to_project_evaluation_detail(evaluation)
+
+    async def submit_project_evaluation(
+        self,
+        project_id: int,
+        body: ProjectEvaluationCreate,
+        requester: User,
+    ) -> ProjectEvaluationDetail:
+        """Create or update the calling lecturer's evaluation for *project_id*.
+
+        Draft saves (``body.submitted=False``) create or overwrite the evaluation
+        row without triggering the auto-unlock check.  Final submissions
+        (``body.submitted=True``) additionally call
+        ``_check_and_auto_unlock_project`` so that results are unlocked
+        automatically once all lecturers and students have submitted.
+
+        Raises ``LookupError`` when the project does not exist.
+        Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
+        Raises ``EvaluationConflictError`` when the project results are already
+        unlocked (editing is no longer permitted after unlock).
+        Raises ``ValueError`` when any ``criterion_code`` in the submitted scores
+        does not appear in the course's ``evaluation_criteria`` list.
+        """
+        row = await db_get_project(self._session, project_id)
+        if row is None:
+            raise LookupError(f"Project {project_id} not found.")
+
+        p, course = row
+        if course.id is None:
+            raise ValueError(f"Course returned from DB has no id: {course!r}")
+
+        await require_course_manage_access(self._session, course.id, requester)
+
+        if p.results_unlocked:
+            raise EvaluationConflictError(
+                f"Project {project_id} results are already unlocked; evaluation cannot be edited."
+            )
+
+        # Validate that every submitted criterion code exists on the course.
+        valid_codes = {c["code"] for c in course.evaluation_criteria}
+        submitted_codes = {s.criterion_code for s in body.scores}
+        invalid_codes = submitted_codes - valid_codes
+        if invalid_codes:
+            raise ValueError(
+                f"Invalid criterion code(s) for course {course.code}: {sorted(invalid_codes)}."
+            )
+
+        if requester.id is None:
+            raise ValueError(f"Requester returned from DB has no id: {requester!r}")
+
+        scores_dicts = [
+            {
+                "criterion_code": s.criterion_code,
+                "score": s.score,
+                "strengths": s.strengths,
+                "improvements": s.improvements,
+            }
+            for s in body.scores
+        ]
+
+        evaluation = await db_create_project_evaluation(
+            self._session,
+            project_id,
+            requester.id,
+            scores_dicts,
+            submitted=body.submitted,
+        )
+        await self._session.commit()
+
+        if body.submitted:
+            await _check_and_auto_unlock_project(self._session, project_id)
+            await self._session.commit()
+
+        return _to_project_evaluation_detail(evaluation)

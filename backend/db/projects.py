@@ -468,6 +468,104 @@ async def delete_project(session: AsyncSession, project_id: int) -> bool:
     return True
 
 
+async def get_project_evaluation_by_lecturer(
+    session: AsyncSession,
+    project_id: int,
+    lecturer_id: int,
+) -> ProjectEvaluation | None:
+    """Return the evaluation submitted by *lecturer_id* for *project_id*, or ``None``.
+
+    Used by the GET endpoint so that a lecturer can retrieve only their own row
+    before results are unlocked.
+    """
+    stmt = select(ProjectEvaluation).where(
+        ProjectEvaluation.project_id == project_id,
+        ProjectEvaluation.lecturer_id == lecturer_id,
+    )
+    return (await session.execute(stmt)).scalars().first()
+
+
+async def create_project_evaluation(
+    session: AsyncSession,
+    project_id: int,
+    lecturer_id: int,
+    scores: list[dict[str, object]],
+    *,
+    submitted: bool,
+) -> ProjectEvaluation:
+    """Insert or update the evaluation row for *(project_id, lecturer_id)*.
+
+    Uses an UPSERT so that the lecturer can save a draft (``submitted=False``)
+    and later update or finalise it (``submitted=True``) without conflicts.
+    The caller is responsible for committing the session after this call.
+    """
+    stmt = (
+        pg_insert(ProjectEvaluation)
+        .values(
+            project_id=project_id,
+            lecturer_id=lecturer_id,
+            scores=scores,
+            submitted=submitted,
+            submitted_at=datetime.now(UTC),
+        )
+        .on_conflict_do_update(
+            index_elements=["project_id", "lecturer_id"],
+            set_={
+                "scores": scores,
+                "submitted": submitted,
+                "submitted_at": datetime.now(UTC),
+            },
+        )
+    )
+    await session.execute(stmt)
+    await session.flush()
+    # Fetch the full ORM object after upsert to return consistent data.
+    evaluation = (
+        (
+            await session.execute(
+                select(ProjectEvaluation).where(
+                    ProjectEvaluation.project_id == project_id,
+                    ProjectEvaluation.lecturer_id == lecturer_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if evaluation is None:
+        raise RuntimeError(
+            f"Expected project_evaluation row for lecturer {lecturer_id}"
+            f" in project {project_id} after UPSERT."
+        )
+    return evaluation
+
+
+async def count_submitted_project_evaluations(
+    session: AsyncSession,
+    project_id: int,
+) -> int:
+    """Return the number of submitted (``submitted=True``) evaluations for *project_id*."""
+    stmt = select(func.count()).where(
+        ProjectEvaluation.project_id == project_id,
+        ProjectEvaluation.submitted.is_(True),
+    )
+    return (await session.execute(stmt)).scalar_one()
+
+
+async def count_published_course_evaluations(
+    session: AsyncSession,
+    project_id: int,
+) -> int:
+    """Return the number of published (``published=True``) course evaluations for *project_id*."""
+    from models.course_evaluation import CourseEvaluation
+
+    stmt = select(func.count()).where(
+        CourseEvaluation.project_id == project_id,
+        CourseEvaluation.published.is_(True),
+    )
+    return (await session.execute(stmt)).scalar_one()
+
+
 async def unlock_project_results(session: AsyncSession, project_id: int) -> Project | None:
     """Set ``results_unlocked=True`` on the project identified by *project_id*.
 
