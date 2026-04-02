@@ -15,7 +15,13 @@ from db.courses import create_course as db_create_course
 from db.courses import get_course as db_get_course
 from db.courses import get_courses as db_get_courses
 from db.courses import update_course as db_update_course
-from db.projects import get_or_create_user
+from db.projects import (
+    get_or_create_user,
+    get_peer_feedback_with_users_for_projects,
+    get_projects_for_course,
+    get_submitted_course_evaluations_for_projects,
+    get_submitted_project_evaluations_for_projects,
+)
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
 from schemas.courses import (
@@ -26,6 +32,10 @@ from schemas.courses import (
     CourseListItem,
     CourseStats,
     CourseUpdate,
+    CriterionScoreSummary,
+    EvaluationOverviewResponse,
+    ProjectOverviewItem,
+    StudentBonusSummary,
 )
 from schemas.projects import AddUserBody, LecturerPublic
 from services.auth import is_admin_or_course_lecturer, require_course_manage_access
@@ -335,3 +345,110 @@ class CoursesService:
             )
 
         await self._session.commit()
+
+    async def get_evaluation_overview(
+        self,
+        course_id: int,
+        *,
+        year: int | None = None,
+        requester: User,
+    ) -> EvaluationOverviewResponse:
+        """Return an aggregated evaluation overview for all projects in *course_id*.
+
+        For each project the response includes per-criterion average scores from
+        submitted lecturer evaluations, the average course-satisfaction rating from
+        submitted student course evaluations, and per-student total peer bonus points
+        received.
+
+        When *year* is provided only projects from that academic year are included.
+        Projects are ordered by academic year descending and project title ascending.
+
+        Raises ``CourseNotFoundError`` when the course does not exist.
+        Raises ``CoursePermissionError`` when *requester* is not an admin or an
+        assigned lecturer for the course.
+        """
+        course = await db_get_course(self._session, course_id)
+        if course is None:
+            raise CourseNotFoundError(f"Course {course_id} not found.")
+
+        cid = _require_course_id(course.id)
+
+        try:
+            await require_course_manage_access(self._session, cid, requester)
+        except PermissionError as exc:
+            raise CoursePermissionError(str(exc)) from exc
+
+        projects = await get_projects_for_course(self._session, cid, year=year)
+        project_ids = [p.id for p in projects if p.id is not None]
+
+        # Bulk-fetch all evaluation data in three queries.
+        lecturer_evals_by_project = await get_submitted_project_evaluations_for_projects(
+            self._session, project_ids
+        )
+        course_evals_by_project = await get_submitted_course_evaluations_for_projects(
+            self._session, project_ids
+        )
+        peer_feedback_by_project = await get_peer_feedback_with_users_for_projects(
+            self._session, project_ids
+        )
+
+        items: list[ProjectOverviewItem] = []
+        for project in projects:
+            pid = project.id
+            if pid is None:
+                continue
+
+            # Compute per-criterion average scores across submitted lecturer evaluations.
+            lecturer_evals = lecturer_evals_by_project.get(pid, [])
+            criterion_totals: dict[str, list[int]] = {}
+            for ev in lecturer_evals:
+                for score_entry in ev.scores:
+                    code = score_entry["criterion_code"]
+                    criterion_totals.setdefault(code, []).append(score_entry["score"])
+            avg_criterion_scores = [
+                CriterionScoreSummary(
+                    criterion_code=code,
+                    avg_score=sum(values) / len(values),
+                )
+                for code, values in criterion_totals.items()
+            ]
+
+            # Compute average course satisfaction rating.
+            submitted_course_evals = course_evals_by_project.get(pid, [])
+            avg_course_rating: float | None = None
+            if submitted_course_evals:
+                avg_course_rating = sum(ev.rating for ev in submitted_course_evals) / len(
+                    submitted_course_evals
+                )
+
+            # Aggregate peer bonus points per receiving student.
+            peer_fb_entries = peer_feedback_by_project.get(pid, [])
+            bonus_by_student: dict[int, tuple[str, int]] = {}
+            for feedback, receiving_user in peer_fb_entries:
+                sid = feedback.receiving_student_id
+                _, current_total = bonus_by_student.get(sid, (receiving_user.name, 0))
+                bonus_by_student[sid] = (receiving_user.name, current_total + feedback.bonus_points)
+
+            student_bonus_points = [
+                StudentBonusSummary(
+                    student_id=sid,
+                    student_name=name,
+                    total_bonus_points=total,
+                )
+                for sid, (name, total) in sorted(
+                    bonus_by_student.items(), key=lambda kv: kv[1][0]
+                )
+            ]
+
+            items.append(
+                ProjectOverviewItem(
+                    project_id=pid,
+                    project_title=project.title,
+                    academic_year=project.academic_year,
+                    avg_criterion_scores=avg_criterion_scores,
+                    avg_course_rating=avg_course_rating,
+                    student_bonus_points=student_bonus_points,
+                )
+            )
+
+        return EvaluationOverviewResponse(projects=items)

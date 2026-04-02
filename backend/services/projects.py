@@ -9,6 +9,7 @@ from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
 from db.projects import (
     add_project_member,
+    get_course_evaluation_by_student,
     get_course_evaluations,
     get_course_lecturers,
     get_lecturer_evaluation_statuses,
@@ -21,7 +22,9 @@ from db.projects import (
     get_projects,
     is_course_lecturer,
     is_project_member,
+    replace_peer_feedback,
     update_project,
+    upsert_course_evaluation,
 )
 from db.projects import (
     create_project as db_create_project,
@@ -47,6 +50,8 @@ from models.user import User, UserRole
 from schemas.projects import (
     AddMemberBody,
     CourseEvaluationDetail,
+    CourseEvaluationFormResponse,
+    CourseEvaluationUpsert,
     CoursePublic,
     EvaluationScoreDetail,
     LecturerPublic,
@@ -818,3 +823,164 @@ class ProjectsService:
             await self._session.commit()
 
         return _to_project_evaluation_detail(evaluation)
+
+    async def get_course_evaluation_form(
+        self,
+        project_id: int,
+        user: User,
+    ) -> CourseEvaluationFormResponse:
+        """Return all data a student needs to render the course-evaluation form.
+
+        Includes the list of teammates (members excluding the caller), the
+        course's peer-bonus budget, the caller's current draft evaluation
+        (if any), and the peer-feedback entries the caller has authored.
+
+        Raises ``ProjectNotFoundError`` when the project does not exist.
+        Raises ``PermissionDeniedError`` when *user* is not a project member.
+        """
+        row = await db_get_project(self._session, project_id)
+        if row is None:
+            raise ProjectNotFoundError(project_id)
+
+        p, course = row
+        user_id = _require_id(user)
+
+        if not await is_project_member(self._session, project_id, user_id):
+            raise PermissionDeniedError(
+                f"User {user_id} is not a member of project {project_id}."
+            )
+
+        members_by_project = await get_project_members(self._session, [project_id])
+        all_members = members_by_project.get(project_id, [])
+
+        # Teammates are all project members except the requesting student.
+        teammates = [
+            MemberPublic(
+                id=_require_id(m),
+                github_alias=m.github_alias,
+                name=m.name,
+                email=m.email,
+            )
+            for m in all_members
+            if m.id != user_id
+        ]
+
+        current_eval = await get_course_evaluation_by_student(
+            self._session, project_id, user_id
+        )
+        current_evaluation: CourseEvaluationDetail | None = None
+        authored_peer_feedback: list[PeerFeedbackDetail] = []
+
+        if current_eval is not None:
+            current_evaluation = _to_course_evaluation_detail(current_eval)
+            raw_authored = await get_peer_feedback_authored(self._session, project_id, user_id)
+            authored_peer_feedback = [_to_peer_feedback_detail(fb) for fb in raw_authored]
+
+        return CourseEvaluationFormResponse(
+            teammates=teammates,
+            peer_bonus_budget=course.peer_bonus_budget,
+            current_evaluation=current_evaluation,
+            authored_peer_feedback=authored_peer_feedback,
+            results_unlocked=p.results_unlocked,
+        )
+
+    async def save_course_evaluation(
+        self,
+        project_id: int,
+        body: CourseEvaluationUpsert,
+        user: User,
+    ) -> CourseEvaluationFormResponse:
+        """Create or update the calling student's course evaluation for *project_id*.
+
+        Draft saves (``body.submitted=False``) create or overwrite the evaluation
+        row without triggering the auto-unlock check.  Final submissions
+        (``body.submitted=True``) additionally call
+        ``_check_and_auto_unlock_project`` so that results are unlocked
+        automatically once all lecturers and students have submitted.  The
+        peer-feedback rows for this evaluation are fully replaced on every call.
+
+        Raises ``ProjectNotFoundError`` when the project does not exist.
+        Raises ``PermissionDeniedError`` when *user* is not a project member.
+        Raises ``EvaluationConflictError`` when the project results are already
+        unlocked (editing is no longer permitted after unlock).
+        Raises ``InvalidEvaluationDataError`` when a peer-feedback recipient is
+        not a project teammate, bonus points are negative, or the total bonus
+        does not equal ``Course.peer_bonus_budget`` on a final submission.
+        """
+        row = await db_get_project(self._session, project_id)
+        if row is None:
+            raise ProjectNotFoundError(project_id)
+
+        p, course = row
+        user_id = _require_id(user)
+
+        if not await is_project_member(self._session, project_id, user_id):
+            raise PermissionDeniedError(
+                f"User {user_id} is not a member of project {project_id}."
+            )
+
+        if p.results_unlocked:
+            raise EvaluationConflictError(
+                f"Project {project_id} results are already unlocked;"
+                " course evaluation cannot be edited."
+            )
+
+        # Validate that peer feedback recipients are actual teammates.
+        members_by_project = await get_project_members(self._session, [project_id])
+        all_members = members_by_project.get(project_id, [])
+        teammate_ids = {m.id for m in all_members if m.id is not None and m.id != user_id}
+
+        provided_recipient_ids = {fb.receiving_student_id for fb in body.peer_feedback}
+        invalid_recipients = provided_recipient_ids - teammate_ids
+        if invalid_recipients:
+            raise InvalidEvaluationDataError(
+                f"Invalid peer feedback recipient IDs: {sorted(invalid_recipients)}."
+                " Only project teammates may receive peer feedback."
+            )
+
+        # Validate that no bonus points are negative.
+        for fb in body.peer_feedback:
+            if fb.bonus_points < 0:
+                raise InvalidEvaluationDataError(
+                    f"Bonus points must be non-negative, got {fb.bonus_points}."
+                )
+
+        # On a final submission, validate the bonus-points budget is exactly met.
+        if body.submitted and course.peer_bonus_budget is not None:
+            total_bonus = sum(fb.bonus_points for fb in body.peer_feedback)
+            if total_bonus != course.peer_bonus_budget:
+                raise InvalidEvaluationDataError(
+                    f"Total peer bonus points must equal the course budget"
+                    f" ({course.peer_bonus_budget}), got {total_bonus}."
+                )
+
+        evaluation = await upsert_course_evaluation(
+            self._session,
+            project_id,
+            user_id,
+            rating=body.rating,
+            strengths=body.strengths,
+            improvements=body.improvements,
+            submitted=body.submitted,
+        )
+
+        if evaluation.id is None:
+            raise ValueError(f"CourseEvaluation returned from DB has no id: {evaluation!r}")
+
+        feedback_items: list[dict[str, object]] = [
+            {
+                "receiving_student_id": fb.receiving_student_id,
+                "strengths": fb.strengths,
+                "improvements": fb.improvements,
+                "bonus_points": fb.bonus_points,
+            }
+            for fb in body.peer_feedback
+        ]
+        await replace_peer_feedback(self._session, evaluation.id, feedback_items)
+        await self._session.commit()
+
+        if body.submitted:
+            await _check_and_auto_unlock_project(self._session, project_id)
+            await self._session.commit()
+
+        return await self.get_course_evaluation_form(project_id, user)

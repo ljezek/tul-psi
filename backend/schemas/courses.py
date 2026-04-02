@@ -139,3 +139,46 @@ class CourseLecturerPublic(BaseModel):
     name: str
     github_alias: str | None
     email: str
+
+
+class CriterionScoreSummary(BaseModel):
+    """Average score for a single evaluation criterion across submitted lecturer evaluations."""
+
+    criterion_code: str
+    avg_score: float
+
+
+class StudentBonusSummary(BaseModel):
+    """Total peer bonus points received by a single student within a project."""
+
+    student_id: int
+    student_name: str
+    total_bonus_points: int
+
+
+class ProjectOverviewItem(BaseModel):
+    """Aggregated evaluation summary for a single project in the overview.
+
+    ``avg_criterion_scores`` is empty when no lecturers have submitted evaluations.
+    ``avg_course_rating`` is ``None`` when no students have submitted course evaluations.
+    ``student_bonus_points`` is empty when the course has no peer-bonus scheme or no
+    peer feedback has been submitted.
+    """
+
+    project_id: int
+    project_title: str
+    academic_year: int
+    avg_criterion_scores: list[CriterionScoreSummary]
+    # Null when no submitted student course evaluations exist for this project.
+    avg_course_rating: float | None
+    student_bonus_points: list[StudentBonusSummary]
+
+
+class EvaluationOverviewResponse(BaseModel):
+    """Evaluation overview for all projects in a course.
+
+    Sorted by ``academic_year`` descending and then ``project_title`` ascending,
+    matching the ordering applied at the DB query layer.
+    """
+
+    projects: list[ProjectOverviewItem]
