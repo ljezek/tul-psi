@@ -3,8 +3,6 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 
-from settings import get_settings
-
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
@@ -40,19 +38,20 @@ class EmailTemplate:
     logic here (rather than inline in callers) makes it easy to later migrate
     to Jinja2 or another templating engine without touching call-sites.
 
-    All templates read ``frontend_url`` from the application settings so that
-    the portal link in each email body points to the correct environment.
+    All template methods require the caller to supply *portal_url* explicitly
+    so that this module has no dependency on application settings.  The caller
+    reads ``settings.frontend_url`` and passes it here.
     """
 
     @classmethod
-    def otp(cls, to: str, otp_code: str) -> EmailMessage:
+    def otp(cls, to: str, otp_code: str, *, portal_url: str) -> EmailMessage:
         """Return a one-time-password email addressed to *to*.
 
         Args:
             to: Recipient e-mail address.
             otp_code: The plaintext 6-digit OTP that the user must enter.
+            portal_url: Absolute URL of the frontend portal to embed in the body.
         """
-        portal_url = get_settings().frontend_url
         return EmailMessage(
             to=to,
             subject=f"{_SUBJECT_PREFIX}Your one-time login code",
@@ -67,15 +66,17 @@ class EmailTemplate:
         )
 
     @classmethod
-    def project_invite(cls, to: str, project_name: str, course_name: str) -> EmailMessage:
+    def project_invite(
+        cls, to: str, project_name: str, course_name: str, *, portal_url: str
+    ) -> EmailMessage:
         """Return a project-invitation email addressed to *to*.
 
         Args:
             to: Recipient e-mail address.
             project_name: Human-readable name of the project the user is invited to.
             course_name: Human-readable name of the course the project belongs to.
+            portal_url: Absolute URL of the frontend portal to embed in the body.
         """
-        portal_url = get_settings().frontend_url
         return EmailMessage(
             to=to,
             subject=f'{_SUBJECT_PREFIX}You have been invited to project "{project_name}"',
@@ -95,6 +96,7 @@ class EmailTemplate:
         to: str,
         course_name: str,
         *,
+        portal_url: str,
         peer_feedback_enabled: bool = False,
     ) -> EmailMessage:
         """Return a course-invitation email addressed to a lecturer.
@@ -102,10 +104,10 @@ class EmailTemplate:
         Args:
             to: Recipient e-mail address.
             course_name: Human-readable name of the course the lecturer is invited to.
+            portal_url: Absolute URL of the frontend portal to embed in the body.
             peer_feedback_enabled: When ``True``, the body mentions that the course
                 uses peer feedback assessment.
         """
-        portal_url = get_settings().frontend_url
         peer_feedback_note = (
             "\nThis course uses peer feedback assessment. "
             "Students will be asked to review each other's contributions.\n"
@@ -135,6 +137,7 @@ class EmailTemplate:
         to: str,
         project_name: str,
         *,
+        portal_url: str,
         peer_feedback_enabled: bool = False,
     ) -> EmailMessage:
         """Return a results-unlocked notification email addressed to *to*.
@@ -145,10 +148,10 @@ class EmailTemplate:
         Args:
             to: Recipient e-mail address.
             project_name: Human-readable name of the project whose results are now visible.
+            portal_url: Absolute URL of the frontend portal to embed in the body.
             peer_feedback_enabled: When ``True``, the body mentions that peer feedback
                 results are also available.
         """
-        portal_url = get_settings().frontend_url
         peer_feedback_note = (
             " Peer feedback contributions for this project are also visible."
             if peer_feedback_enabled
@@ -186,13 +189,14 @@ class EmailSender:
     accidentally used in non-local deployments.
 
     Args:
-        app_env: The application environment string.  When ``None`` (default),
-            it is read from :func:`~settings.get_settings`.  Pass an explicit
-            value in tests to avoid depending on the live settings object.
+        app_env: The application environment string (e.g. ``"local"``, ``"dev"``,
+            ``"production"``).  The caller is responsible for reading this from
+            settings and passing it here so that this class has no dependency on
+            the global settings object.
     """
 
-    def __init__(self, *, app_env: str | None = None) -> None:
-        self._app_env = app_env if app_env is not None else get_settings().app_env
+    def __init__(self, *, app_env: str) -> None:
+        self._app_env = app_env
 
     def send(self, message: EmailMessage) -> None:
         """Deliver *message* according to the current environment.

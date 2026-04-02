@@ -41,6 +41,7 @@ from schemas.projects import (
     ProjectUpdate,
 )
 from services.email import EmailSender, EmailTemplate
+from settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -330,7 +331,7 @@ class ProjectsService:
             authored_peer_feedback=authored_peer_feedback,
         )
 
-    async def _check_write_permission(self, project_id: int, user: User) -> None:
+    async def _check_write_permission(self, project_id: int, user: User) -> tuple[Project, Course]:
         """Raise ``PermissionDeniedError`` when *user* may not modify *project_id*.
 
         Write access is granted to:
@@ -341,27 +342,27 @@ class ProjectsService:
         Non-DB sanity checks are performed first to avoid unnecessary DB load.
         Raises ``ProjectNotFoundError`` when the project does not exist so the
         caller can map it to an appropriate HTTP 404 without an extra DB query.
+
+        Returns the ``(project, course)`` row so callers can reuse the already-fetched
+        data without an additional round-trip to the database.
         """
         # Perform non-DB check before any database access.
         if user.id is None:
             raise PermissionDeniedError("User has no id.")
 
-        # Admins have unconditional write access to all projects.
-        if user.role == UserRole.ADMIN:
-            row = await db_get_project(self._session, project_id)
-            if row is None:
-                raise ProjectNotFoundError(project_id)
-            return
-
         row = await db_get_project(self._session, project_id)
         if row is None:
             raise ProjectNotFoundError(project_id)
 
+        # Admins have unconditional write access to all projects.
+        if user.role == UserRole.ADMIN:
+            return row
+
         if user.role == UserRole.LECTURER:
             if await is_course_lecturer(self._session, project_id, user.id):
-                return
+                return row
         if await is_project_member(self._session, project_id, user.id):
-            return
+            return row
 
         raise PermissionDeniedError(
             f"User {user.id} is not authorised to modify project {project_id}."
@@ -407,24 +408,16 @@ class ProjectsService:
         """Add the user identified by *body.email* as a member of *project_id*.
 
         If no account exists for that e-mail address a new STUDENT account is
-        created.  A project-invitation email is sent to the new or existing user
-        via :class:`~services.email.EmailSender`.
+        created.  After the DB transaction commits, a project-invitation email is
+        sent via :class:`~services.email.EmailSender`.
 
         Raises ``ProjectNotFoundError`` when the project does not exist,
-        ``PermissionDeniedError`` when *user* is not a member or lecturer,
-        ``AlreadyMemberError`` when the target user is already on the project, and
-        ``NotImplementedError`` when email delivery is called outside a local environment
-        (real SMTP integration is not yet implemented).
+        ``PermissionDeniedError`` when *user* is not a member or lecturer, and
+        ``AlreadyMemberError`` when the target user is already on the project.
         """
-        await self._check_write_permission(project_id, user)
-
-        # Fetch project and course details for the invitation email.
-        # _check_write_permission already verified the project exists, but another
-        # process could have deleted it in the interim (TOCTOU). Guard defensively.
-        project_row = await db_get_project(self._session, project_id)
-        if project_row is None:
-            raise ProjectNotFoundError(project_id)
-        project, course = project_row
+        # _check_write_permission returns the (project, course) row so we do not
+        # need a second round-trip to fetch the project details for the email.
+        project, course = await self._check_write_permission(project_id, user)
 
         # Default name to the local part of the email address when none is provided.
         resolved_name = body.name if body.name is not None else body.email.split("@")[0]
@@ -446,11 +439,17 @@ class ProjectsService:
                 f"User {target_user.email} is already a member of project {project_id}."
             )
 
-        EmailSender().send(
+        # Commit first so the member row is durable before attempting delivery.
+        # Email send failures should not roll back a successful membership addition.
+        await self._session.commit()
+
+        _settings = get_settings()
+        EmailSender(app_env=_settings.app_env).send(
             EmailTemplate.project_invite(
                 to=body.email,
                 project_name=project.title,
                 course_name=course.name,
+                portal_url=_settings.frontend_url,
             )
         )
         logger.info(
@@ -458,7 +457,6 @@ class ProjectsService:
             extra={"email": body.email, "project_id": project_id, "new_user": created},
         )
 
-        await self._session.commit()
         return MemberPublic(
             id=target_user.id,
             github_alias=target_user.github_alias,

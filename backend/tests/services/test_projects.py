@@ -827,7 +827,7 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
             return_value=(new_member, True),
         ),
         patch(
-            "services.email.get_settings",
+            "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
         ),
     ):

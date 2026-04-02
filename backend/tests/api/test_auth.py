@@ -37,11 +37,8 @@ def _mock_settings() -> Generator[None, None, None]:
     # Provide minimal attributes expected by EmailSender/EmailTemplate.
     mock_settings.app_env = "local"
     mock_settings.frontend_url = "http://frontend.test"
-    # Ensure both auth and email services use the same mocked settings instance.
-    with (
-        patch("services.auth_service.get_settings", return_value=mock_settings),
-        patch("services.email.get_settings", return_value=mock_settings),
-    ):
+    # The auth service reads settings to sign JWTs and to pass env/url to EmailSender.
+    with patch("services.auth_service.get_settings", return_value=mock_settings):
         yield
 
 

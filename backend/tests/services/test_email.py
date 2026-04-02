@@ -26,13 +26,13 @@ def test_email_message_fields_and_immutability() -> None:
 
 def test_otp_template() -> None:
     """OTP template must address the recipient, embed the code, and reference OTP in subject."""
-    msg = EmailTemplate.otp(to="user@tul.cz", otp_code="987654")
+    msg = EmailTemplate.otp(to="user@tul.cz", otp_code="987654", portal_url="http://localhost:5173")
     assert msg.to == "user@tul.cz"
     assert "987654" in msg.body
     assert "one-time" in msg.subject.lower()
     assert msg.subject.startswith("TUL Student Projects:")
     # Body should include a link to the portal.
-    assert "http" in msg.body
+    assert "http://localhost:5173" in msg.body
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,10 @@ def test_otp_template() -> None:
 def test_project_invite_template() -> None:
     """Project invite must address the recipient, mention project/course, and have valid subject."""
     msg = EmailTemplate.project_invite(
-        to="student@tul.cz", project_name="Awesome App", course_name="PSI"
+        to="student@tul.cz",
+        project_name="Awesome App",
+        course_name="PSI",
+        portal_url="http://localhost:5173",
     )
     assert msg.to == "student@tul.cz"
     assert "Awesome App" in msg.body
@@ -51,7 +54,7 @@ def test_project_invite_template() -> None:
     assert "Awesome App" in msg.subject
     assert msg.subject.startswith("TUL Student Projects:")
     # Body should include a link to the portal.
-    assert "http" in msg.body
+    assert "http://localhost:5173" in msg.body
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +64,9 @@ def test_project_invite_template() -> None:
 
 def test_course_invite_template() -> None:
     """Course invite must address a lecturer, mention the course, and have a valid subject."""
-    msg = EmailTemplate.course_invite(to="lecturer@tul.cz", course_name="PSI")
+    msg = EmailTemplate.course_invite(
+        to="lecturer@tul.cz", course_name="PSI", portal_url="http://localhost:5173"
+    )
     assert msg.to == "lecturer@tul.cz"
     assert "PSI" in msg.body
     assert "PSI" in msg.subject
@@ -69,16 +74,22 @@ def test_course_invite_template() -> None:
     # The invite is specifically for a lecturer role.
     assert "lecturer" in msg.body.lower()
     # Body should include a link to the portal.
-    assert "http" in msg.body
+    assert "http://localhost:5173" in msg.body
 
 
 def test_course_invite_template_peer_feedback_mentioned_when_enabled() -> None:
     """EmailTemplate.course_invite body must mention peer feedback when the flag is True."""
     msg_with = EmailTemplate.course_invite(
-        to="lecturer@tul.cz", course_name="PSI", peer_feedback_enabled=True
+        to="lecturer@tul.cz",
+        course_name="PSI",
+        portal_url="http://localhost:5173",
+        peer_feedback_enabled=True,
     )
     msg_without = EmailTemplate.course_invite(
-        to="lecturer@tul.cz", course_name="PSI", peer_feedback_enabled=False
+        to="lecturer@tul.cz",
+        course_name="PSI",
+        portal_url="http://localhost:5173",
+        peer_feedback_enabled=False,
     )
     assert "peer feedback" in msg_with.body.lower()
     assert "peer feedback" not in msg_without.body.lower()
@@ -91,22 +102,30 @@ def test_course_invite_template_peer_feedback_mentioned_when_enabled() -> None:
 
 def test_results_unlocked_template() -> None:
     """Results unlocked must address the recipient, mention project name, and have valid subject."""
-    msg = EmailTemplate.results_unlocked(to="student@tul.cz", project_name="My Project")
+    msg = EmailTemplate.results_unlocked(
+        to="student@tul.cz", project_name="My Project", portal_url="http://localhost:5173"
+    )
     assert msg.to == "student@tul.cz"
     assert "My Project" in msg.body
     assert "My Project" in msg.subject
     assert msg.subject.startswith("TUL Student Projects:")
     # Body should include a link to the portal.
-    assert "http" in msg.body
+    assert "http://localhost:5173" in msg.body
 
 
 def test_results_unlocked_template_peer_feedback_mentioned_when_enabled() -> None:
     """EmailTemplate.results_unlocked body must mention peer feedback when the flag is True."""
     msg_with = EmailTemplate.results_unlocked(
-        to="student@tul.cz", project_name="My Project", peer_feedback_enabled=True
+        to="student@tul.cz",
+        project_name="My Project",
+        portal_url="http://localhost:5173",
+        peer_feedback_enabled=True,
     )
     msg_without = EmailTemplate.results_unlocked(
-        to="student@tul.cz", project_name="My Project", peer_feedback_enabled=False
+        to="student@tul.cz",
+        project_name="My Project",
+        portal_url="http://localhost:5173",
+        peer_feedback_enabled=False,
     )
     assert "peer feedback" in msg_with.body.lower()
     assert "peer feedback" not in msg_without.body.lower()
