@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -447,7 +447,7 @@ async def get_project_evaluation_by_lecturer(
     return (await session.execute(stmt)).scalars().first()
 
 
-async def create_project_evaluation(
+async def upsert_project_evaluation(
     session: AsyncSession,
     project_id: int,
     lecturer_id: int,
@@ -502,37 +502,63 @@ async def create_project_evaluation(
     return evaluation
 
 
-async def count_submitted_project_evaluations(
+async def get_lecturer_evaluation_statuses(
     session: AsyncSession,
     project_id: int,
-    lecturer_ids: set[int],
-) -> int:
-    """Return the number of submitted evaluations for *project_id* from *lecturer_ids*.
+    course_id: int,
+) -> list[tuple[User, bool]]:
+    """Return all lecturers assigned to *course_id* with their project-evaluation status.
 
-    Only counts rows where ``submitted=True`` AND the ``lecturer_id`` is in the
-    supplied set of currently assigned lecturer IDs, preventing stale rows from
-    unassigned lecturers from satisfying the auto-unlock condition.
+    Each entry is ``(user, submitted)`` where ``submitted`` is ``True`` when the
+    lecturer has a ``ProjectEvaluation`` row for *project_id* with ``submitted=True``,
+    and ``False`` otherwise (no row or draft).  Uses a LEFT JOIN so that lecturers
+    who have not yet saved any evaluation are still included.
     """
-    if not lecturer_ids:
-        return 0
-    stmt = select(func.count()).where(
-        ProjectEvaluation.project_id == project_id,
-        ProjectEvaluation.submitted.is_(True),
-        ProjectEvaluation.lecturer_id.in_(lecturer_ids),
+    submitted_flag = func.coalesce(ProjectEvaluation.submitted, False).label("submitted")
+    stmt = (
+        select(User, submitted_flag)
+        .select_from(CourseLecturer)
+        .join(User, User.id == CourseLecturer.user_id)
+        .outerjoin(
+            ProjectEvaluation,
+            and_(
+                ProjectEvaluation.project_id == project_id,
+                ProjectEvaluation.lecturer_id == CourseLecturer.user_id,
+            ),
+        )
+        .where(CourseLecturer.course_id == course_id)
     )
-    return (await session.execute(stmt)).scalar_one()
+    rows = (await session.execute(stmt)).all()
+    return [(user, bool(submitted)) for user, submitted in rows]
 
 
-async def count_submitted_course_evaluations(
+async def get_member_evaluation_statuses(
     session: AsyncSession,
     project_id: int,
-) -> int:
-    """Return the number of submitted (``submitted=True``) course evaluations for *project_id*."""
-    stmt = select(func.count()).where(
-        CourseEvaluation.project_id == project_id,
-        CourseEvaluation.submitted.is_(True),
+) -> list[tuple[User, bool]]:
+    """Return all members of *project_id* with their course-evaluation status.
+
+    Each entry is ``(user, submitted)`` where ``submitted`` is ``True`` when the
+    member has a ``CourseEvaluation`` row for *project_id* with ``submitted=True``,
+    and ``False`` otherwise.  Uses a LEFT JOIN so that members who have not yet
+    saved any evaluation are still included.
+    """
+    submitted_flag = func.coalesce(CourseEvaluation.submitted, False).label("submitted")
+    stmt = (
+        select(User, submitted_flag)
+        .select_from(ProjectMember)
+        .join(User, User.id == ProjectMember.user_id)
+        .outerjoin(
+            CourseEvaluation,
+            and_(
+                CourseEvaluation.project_id == project_id,
+                CourseEvaluation.student_id == ProjectMember.user_id,
+            ),
+        )
+        .where(ProjectMember.project_id == project_id)
     )
-    return (await session.execute(stmt)).scalar_one()
+    rows = (await session.execute(stmt)).all()
+    return [(user, bool(submitted)) for user, submitted in rows]
 
 
 async def unlock_project_results(session: AsyncSession, project_id: int) -> Project | None:
