@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
+from db.courses import create_course as db_create_course
+from db.courses import get_course_by_code as db_get_course_by_code
+from db.courses import update_course as db_update_course
+from models.course import Course, CourseTerm, ProjectType
+from schemas.courses import CourseCreate, CourseUpdate
+
 # ---------------------------------------------------------------------------
 # DB layer unit tests for courses write functions
 # ---------------------------------------------------------------------------
@@ -9,23 +15,18 @@ from unittest.mock import AsyncMock, MagicMock
 
 async def test_get_course_by_code_returns_none_when_not_found() -> None:
     """``get_course_by_code`` must return ``None`` when no row matches the given code."""
-    from db.courses import get_course_by_code
-
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = None
     session = AsyncMock()
     session.execute.return_value = mock_result
 
-    result = await get_course_by_code(session, "NONEXISTENT")
+    result = await db_get_course_by_code(session, "NONEXISTENT")
 
     assert result is None
 
 
 async def test_create_course_adds_to_session_and_flushes() -> None:
     """``create_course`` must add the new course to the session and flush."""
-    from models.course import CourseTerm, ProjectType
-    from schemas.courses import CourseCreate
-
     session = MagicMock()
     session.flush = AsyncMock()
 
@@ -37,9 +38,7 @@ async def test_create_course_adds_to_session_and_flushes() -> None:
         min_score=50,
     )
 
-    from db.courses import create_course
-
-    result = await create_course(session, data, created_by=1)
+    result = await db_create_course(session, data, created_by=1)
 
     session.add.assert_called_once()
     session.flush.assert_called_once()
@@ -50,9 +49,6 @@ async def test_create_course_adds_to_session_and_flushes() -> None:
 
 async def test_create_course_sets_optional_fields() -> None:
     """``create_course`` must persist optional fields provided in the payload."""
-    from models.course import CourseTerm, ProjectType
-    from schemas.courses import CourseCreate
-
     session = MagicMock()
     session.flush = AsyncMock()
 
@@ -68,9 +64,7 @@ async def test_create_course_sets_optional_fields() -> None:
         links=[{"label": "eL", "url": "https://example.com"}],
     )
 
-    from db.courses import create_course
-
-    result = await create_course(session, data, created_by=2)
+    result = await db_create_course(session, data, created_by=2)
 
     assert result.syllabus == "Course syllabus text."
     assert result.peer_bonus_budget == 5
@@ -82,9 +76,6 @@ async def test_create_course_sets_optional_fields() -> None:
 
 async def test_update_course_applies_only_set_fields() -> None:
     """``update_course`` must update only the fields present in the payload."""
-    from models.course import Course, CourseTerm
-    from schemas.courses import CourseUpdate
-
     session = MagicMock()
     session.flush = AsyncMock()
 
@@ -95,9 +86,7 @@ async def test_update_course_applies_only_set_fields() -> None:
 
     data = CourseUpdate(name="New Name")
 
-    from db.courses import update_course
-
-    result = await update_course(session, course, data)
+    result = await db_update_course(session, course, data)
 
     # Only 'name' should have been set; 'code' and 'term' remain unchanged.
     assert course.name == "New Name"
@@ -108,9 +97,6 @@ async def test_update_course_applies_only_set_fields() -> None:
 
 async def test_update_course_does_not_apply_unset_fields() -> None:
     """``update_course`` must not overwrite fields not present in the payload."""
-    from models.course import Course
-    from schemas.courses import CourseUpdate
-
     session = MagicMock()
     session.flush = AsyncMock()
 
@@ -120,9 +106,7 @@ async def test_update_course_does_not_apply_unset_fields() -> None:
     # Empty update — nothing should be touched.
     data = CourseUpdate()
 
-    from db.courses import update_course
-
-    await update_course(session, course, data)
+    await db_update_course(session, course, data)
 
     # min_score must remain at its original value.
     assert course.min_score == 60
@@ -130,9 +114,6 @@ async def test_update_course_does_not_apply_unset_fields() -> None:
 
 async def test_update_course_can_clear_nullable_field() -> None:
     """``update_course`` must allow setting a nullable field (e.g. syllabus) to None."""
-    from models.course import Course
-    from schemas.courses import CourseUpdate
-
     session = MagicMock()
     session.flush = AsyncMock()
 
@@ -141,8 +122,6 @@ async def test_update_course_can_clear_nullable_field() -> None:
 
     data = CourseUpdate(syllabus=None)
 
-    from db.courses import update_course
-
-    await update_course(session, course, data)
+    await db_update_course(session, course, data)
 
     assert course.syllabus is None

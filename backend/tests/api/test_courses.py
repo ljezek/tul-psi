@@ -285,19 +285,24 @@ _CREATE_BODY = {
 
 
 async def test_create_course_returns_201_for_admin(client: AsyncClient) -> None:
-    """POST /api/v1/courses must return HTTP 201 for an authenticated admin."""
+    """POST /api/v1/courses must return HTTP 201 and the created ``CourseDetail`` for an admin."""
     app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
     app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
     response = await client.post("/api/v1/courses", json=_CREATE_BODY)
     assert response.status_code == 201
-
-
-async def test_create_course_returns_course_detail(client: AsyncClient) -> None:
-    """POST /api/v1/courses must return the created course as a ``CourseDetail``."""
-    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
-    response = await client.post("/api/v1/courses", json=_CREATE_BODY)
     assert response.json() == _COURSE_DETAIL.model_dump(mode="json")
+
+
+async def test_create_course_forwards_body_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/courses must pass the parsed request body and current user to the service."""
+    mock_user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    await client.post("/api/v1/courses", json=_CREATE_BODY)
+    mock_service.create_course.assert_called_once()
+    call_args = mock_service.create_course.call_args
+    assert call_args.args[1] is mock_user
 
 
 async def test_create_course_returns_401_for_unauthenticated(client: AsyncClient) -> None:
@@ -354,18 +359,6 @@ async def test_create_course_returns_422_for_missing_required_fields(
     assert response.status_code == 422
 
 
-async def test_create_course_forwards_body_to_service(client: AsyncClient) -> None:
-    """POST /api/v1/courses must pass the parsed request body and current user to the service."""
-    mock_user = _make_user(UserRole.ADMIN)
-    mock_service = _make_service(detail=_COURSE_DETAIL)
-    app.dependency_overrides[get_courses_service] = lambda: mock_service
-    app.dependency_overrides[get_current_user] = lambda: mock_user
-    await client.post("/api/v1/courses", json=_CREATE_BODY)
-    mock_service.create_course.assert_called_once()
-    call_args = mock_service.create_course.call_args
-    assert call_args.args[1] is mock_user
-
-
 # ---------------------------------------------------------------------------
 # PATCH /api/v1/courses/{id} — update course
 # ---------------------------------------------------------------------------
@@ -374,19 +367,25 @@ _UPDATE_BODY = {"name": "Updated Name"}
 
 
 async def test_update_course_returns_200_for_admin(client: AsyncClient) -> None:
-    """PATCH /api/v1/courses/{id} must return HTTP 200 for an authenticated admin."""
+    """PATCH /api/v1/courses/{id} must return HTTP 200 and the updated ``CourseDetail``."""
     app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
     app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
     response = await client.patch("/api/v1/courses/1", json=_UPDATE_BODY)
     assert response.status_code == 200
-
-
-async def test_update_course_returns_course_detail(client: AsyncClient) -> None:
-    """PATCH /api/v1/courses/{id} must return the updated course as a ``CourseDetail``."""
-    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
-    response = await client.patch("/api/v1/courses/1", json=_UPDATE_BODY)
     assert response.json() == _COURSE_DETAIL.model_dump(mode="json")
+
+
+async def test_update_course_forwards_body_and_user_to_service(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must pass the course id, body, and current user to the service."""
+    mock_user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    await client.patch("/api/v1/courses/42", json=_UPDATE_BODY)
+    mock_service.update_course.assert_called_once()
+    call_args = mock_service.update_course.call_args
+    assert call_args.args[0] == 42
+    assert call_args.args[2] is mock_user
 
 
 async def test_update_course_returns_401_for_unauthenticated(client: AsyncClient) -> None:
@@ -445,16 +444,3 @@ async def test_update_course_returns_422_for_null_evaluation_criteria(
     app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
     response = await client.patch("/api/v1/courses/1", json={"evaluation_criteria": None})
     assert response.status_code == 422
-
-
-async def test_update_course_forwards_body_and_user_to_service(client: AsyncClient) -> None:
-    """PATCH /api/v1/courses/{id} must pass the course id, body, and current user to the service."""
-    mock_user = _make_user(UserRole.ADMIN)
-    mock_service = _make_service(detail=_COURSE_DETAIL)
-    app.dependency_overrides[get_courses_service] = lambda: mock_service
-    app.dependency_overrides[get_current_user] = lambda: mock_user
-    await client.patch("/api/v1/courses/42", json=_UPDATE_BODY)
-    mock_service.update_course.assert_called_once()
-    call_args = mock_service.update_course.call_args
-    assert call_args.args[0] == 42
-    assert call_args.args[2] is mock_user
