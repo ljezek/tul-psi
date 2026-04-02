@@ -612,7 +612,7 @@ async def test_add_lecturer_raises_permission_error_for_student() -> None:
     with (
         patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
         patch(
-            "services.courses.get_course_lecturers",
+            "services.auth.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={1: []},
         ),
@@ -730,7 +730,7 @@ async def test_remove_lecturer_raises_permission_error_for_unassigned_lecturer()
     with (
         patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
         patch(
-            "services.courses.get_course_lecturers",
+            "services.auth.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={1: []},
         ),

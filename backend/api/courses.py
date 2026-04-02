@@ -232,8 +232,9 @@ async def create_course_project(
         logger.exception(
             "Failed to create project",
             extra={"course_id": course_id},
-        )      
-      
+        )
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
 
 @router.post(
     "/{course_id}/lecturers",

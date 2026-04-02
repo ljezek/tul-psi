@@ -13,7 +13,7 @@ from models.peer_feedback import PeerFeedback
 from models.project import Project
 from models.project_evaluation import ProjectEvaluation
 from models.project_member import ProjectMember
-from models.user import User
+from models.user import User, UserRole
 
 
 def _escape_like(value: str) -> str:

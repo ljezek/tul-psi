@@ -257,13 +257,10 @@ class CoursesService:
         if course is None:
             raise CourseNotFoundError(f"Course {course_id} not found.")
 
-        lecturers_by_course = await get_course_lecturers(self._session, [course_id])
-        lecturer_ids = {u.id for u in lecturers_by_course.get(course_id, []) if u.id is not None}
-
-        if not _can_modify_course(current_user, lecturer_ids):
-            raise CoursePermissionError(
-                "Only admins and assigned lecturers can manage course lecturers."
-            )
+        try:
+            await require_course_manage_access(self._session, course_id, current_user)
+        except PermissionError as exc:
+            raise CoursePermissionError(str(exc)) from exc
 
         # Default name to the local part of the email address when none is provided.
         resolved_name = body.name if body.name is not None else body.email.split("@")[0]
@@ -323,13 +320,10 @@ class CoursesService:
         if course is None:
             raise CourseNotFoundError(f"Course {course_id} not found.")
 
-        lecturers_by_course = await get_course_lecturers(self._session, [course_id])
-        lecturer_ids = {u.id for u in lecturers_by_course.get(course_id, []) if u.id is not None}
-
-        if not _can_modify_course(current_user, lecturer_ids):
-            raise CoursePermissionError(
-                "Only admins and assigned lecturers can manage course lecturers."
-            )
+        try:
+            await require_course_manage_access(self._session, course_id, current_user)
+        except PermissionError as exc:
+            raise CoursePermissionError(str(exc)) from exc
 
         deleted = await remove_course_lecturer(self._session, course_id, user_id)
         if not deleted:
