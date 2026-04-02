@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_user
+from api.deps import get_current_user, require_current_user
 from db.session import get_session
 from models.course import CourseTerm
 from models.user import User
@@ -119,16 +119,6 @@ async def get_project(
     return project
 
 
-def _require_authenticated(current_user: User | None) -> User:
-    """Return *current_user* or raise HTTP 401 when the request is unauthenticated."""
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication is required.",
-        )
-    return current_user
-
-
 @router.patch(
     "/{project_id}",
     response_model=ProjectPublic,
@@ -144,7 +134,7 @@ def _require_authenticated(current_user: User | None) -> User:
 async def patch_project(
     project_id: int,
     body: ProjectUpdate,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> ProjectPublic:
     """Apply partial updates to the project identified by *project_id*.
@@ -153,9 +143,8 @@ async def patch_project(
     when unauthenticated, HTTP 403 when the caller is not a project member or
     course lecturer, and HTTP 404 when the project does not exist.
     """
-    user = _require_authenticated(current_user)
     try:
-        return await service.patch_project(project_id, body, user)
+        return await service.patch_project(project_id, body, current_user)
     except ProjectNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -164,10 +153,13 @@ async def patch_project(
     except PermissionDeniedError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to modify this project.",
+            detail=f"You do not have permission to modify project {project_id}.",
         ) from None
     except Exception:
-        logger.exception("Failed to update project", extra={"project_id": project_id})
+        logger.exception(
+            "Failed to update project",
+            extra={"project_id": project_id, "user_id": current_user.id},
+        )
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 
@@ -187,7 +179,7 @@ async def patch_project(
 async def add_project_member(
     project_id: int,
     body: AddMemberBody,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> MemberPublic:
     """Add the user identified by ``body.email`` to the project.
@@ -196,9 +188,8 @@ async def add_project_member(
     access, HTTP 404 when the project does not exist, and HTTP 409 when the
     target user is already a member.
     """
-    user = _require_authenticated(current_user)
     try:
-        return await service.add_member(project_id, body, user)
+        return await service.add_member(project_id, body, current_user)
     except ProjectNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -207,7 +198,7 @@ async def add_project_member(
     except PermissionDeniedError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to modify this project.",
+            detail=f"You do not have permission to modify project {project_id}.",
         ) from None
     except AlreadyMemberError:
         raise HTTPException(
@@ -215,5 +206,8 @@ async def add_project_member(
             detail="This user is already a member of the project.",
         ) from None
     except Exception:
-        logger.exception("Failed to add project member", extra={"project_id": project_id})
+        logger.exception(
+            "Failed to add project member",
+            extra={"project_id": project_id, "user_id": current_user.id},
+        )
         raise HTTPException(status_code=500, detail="Internal server error.") from None

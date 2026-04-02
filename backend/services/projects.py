@@ -333,18 +333,28 @@ class ProjectsService:
         """Raise ``PermissionDeniedError`` when *user* may not modify *project_id*.
 
         Write access is granted to:
-        - Any user who is a member of the project.
+        - Any ADMIN user (unconditional superuser access).
         - Any LECTURER who is assigned to the project's course.
+        - Any user who is a member of the project.
 
+        Non-DB sanity checks are performed first to avoid unnecessary DB load.
         Raises ``ProjectNotFoundError`` when the project does not exist so the
         caller can map it to an appropriate HTTP 404 without an extra DB query.
         """
+        # Perform non-DB check before any database access.
+        if user.id is None:
+            raise PermissionDeniedError("User has no id.")
+
+        # Admins have unconditional write access to all projects.
+        if user.role == UserRole.ADMIN:
+            row = await db_get_project(self._session, project_id)
+            if row is None:
+                raise ProjectNotFoundError(project_id)
+            return
+
         row = await db_get_project(self._session, project_id)
         if row is None:
             raise ProjectNotFoundError(project_id)
-
-        if user.id is None:
-            raise PermissionDeniedError("User has no id.")
 
         if user.role == UserRole.LECTURER:
             if await is_course_lecturer(self._session, project_id, user.id):
@@ -405,15 +415,22 @@ class ProjectsService:
         """
         await self._check_write_permission(project_id, user)
 
-        target_user, created = await get_or_create_user(self._session, body.email)
+        target_user, created = await get_or_create_user(
+            self._session,
+            body.email,
+            name=body.name,
+            github_alias=body.github_alias,
+        )
 
         if created:
-            # Notify the new user — log in lieu of SMTP while that integration is pending.
+            # TODO(#72): Send login-link notification email to the new user via SMTP.
+            # Log in lieu of real email delivery while that integration is pending.
             logger.info(
                 "New user created via project invite; send login link.",
                 extra={"email": body.email, "project_id": project_id},
             )
         else:
+            # TODO(#72): Send invitation notification email to the existing user via SMTP.
             logger.info(
                 "Existing user invited to project; send notification.",
                 extra={"email": body.email, "project_id": project_id},

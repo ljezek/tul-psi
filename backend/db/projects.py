@@ -311,8 +311,15 @@ async def update_project(
 async def get_or_create_user(
     session: AsyncSession,
     email: str,
+    *,
+    name: str | None = None,
+    github_alias: str | None = None,
 ) -> tuple[User, bool]:
     """Return the user matching *email*, creating a new STUDENT account if absent.
+
+    When creating a new account, *name* is used if supplied; otherwise it defaults
+    to the local part of the e-mail address (the portion before the ``@`` sign).
+    *github_alias* is stored verbatim and defaults to ``None``.
 
     Returns a ``(user, created)`` tuple where ``created`` is ``True`` when a new
     row was inserted and ``False`` when an existing row was returned.
@@ -323,7 +330,12 @@ async def get_or_create_user(
     if user is not None:
         return user, False
 
-    new_user = User(email=email, name=email, role=UserRole.STUDENT)
+    # Default name to the local part of the email address when not explicitly provided.
+    # Callers are expected to pass a pre-validated @tul.cz address; the split is safe.
+    resolved_name = name if name is not None else email.split("@")[0]
+    new_user = User(
+        email=email, name=resolved_name, github_alias=github_alias, role=UserRole.STUDENT
+    )
     session.add(new_user)
     # Flush so that new_user.id is populated before the caller can use it.
     await session.flush()

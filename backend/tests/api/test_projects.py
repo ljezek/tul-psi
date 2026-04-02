@@ -504,3 +504,35 @@ async def test_add_member_returns_500_on_service_error(client: AsyncClient) -> N
     response = await client.post("/api/v1/projects/1/members", json={"email": "bob@tul.cz"})
 
     assert response.status_code == 500
+
+
+async def test_add_member_rejects_non_tul_email(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 422 for non-@tul.cz addresses."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/members", json={"email": "bob@gmail.com"})
+
+    assert response.status_code == 422
+
+
+async def test_add_member_forwards_name_and_alias_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must forward optional name and github_alias fields."""
+    from schemas.projects import AddMemberBody
+
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(return_value=_NEW_MEMBER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.post(
+        "/api/v1/projects/1/members",
+        json={"email": "bob@tul.cz", "name": "Bob Smith", "github_alias": "bobsmith"},
+    )
+
+    call_args = mock_service.add_member.call_args
+    body = call_args.args[1]
+    assert body == AddMemberBody(email="bob@tul.cz", name="Bob Smith", github_alias="bobsmith")

@@ -834,3 +834,77 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
     assert result.id == 20
     assert result.email == "new@tul.cz"
     session.commit.assert_called_once()
+
+
+async def test_patch_project_grants_admin_write_access() -> None:
+    """``patch_project`` must grant write access to ADMIN users unconditionally.
+
+    An ADMIN who is neither a project member nor a course lecturer must still
+    be able to update the project — admins have blanket superuser access.
+    """
+    from models.course import Course, ProjectType
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "PSI"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    project = MagicMock(spec=Project)
+    project.id = 1
+    project.title = "Admin Update"
+    project.description = None
+    project.github_url = None
+    project.live_url = None
+    project.technologies = []
+    project.academic_year = 2025
+    project.results_unlocked = False
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+
+    user = MagicMock(spec=User)
+    user.id = 3
+    user.role = UserRole.ADMIN
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        # is_course_lecturer must NOT be called for admins — they have unconditional access.
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ) as mock_is_lecturer,
+        patch("services.projects.update_project", new_callable=AsyncMock, return_value=project),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: []},
+        ),
+    ):
+        from schemas.projects import ProjectUpdate
+
+        result = await ProjectsService(session).patch_project(
+            1, ProjectUpdate(title="Admin Update"), user
+        )
+
+    assert result is not None
+    assert result.title == "Admin Update"
+    mock_is_lecturer.assert_not_called()
