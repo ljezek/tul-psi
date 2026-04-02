@@ -126,3 +126,16 @@ class CourseUpdate(BaseModel):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"'{field}' may not be null; provide a list or omit the field.")
         return self
+
+
+class CourseLecturerPublic(BaseModel):
+    """Representation of a lecturer assigned to a course, returned by management endpoints.
+
+    Includes the ``id`` field (the user's primary key) so that callers can
+    reference the lecturer in subsequent operations such as DELETE.
+    """
+
+    id: int
+    name: str
+    github_alias: str | None
+    email: str

@@ -13,9 +13,21 @@ from api.deps import get_current_user, get_optional_current_user
 from main import app
 from models.course import CourseTerm, ProjectType
 from models.user import UserRole
-from schemas.courses import CourseDetail, CourseEvaluationPublic, CourseListItem, CourseStats
+from schemas.courses import (
+    CourseDetail,
+    CourseEvaluationPublic,
+    CourseLecturerPublic,
+    CourseListItem,
+    CourseStats,
+)
 from schemas.projects import CoursePublic, LecturerPublic, ProjectPublic
-from services.courses import CoursePermissionError, CoursesService
+from services.courses import (
+    CourseLecturerAlreadyAssignedError,
+    CourseLecturerNotAssignedError,
+    CourseNotFoundError,
+    CoursePermissionError,
+    CoursesService,
+)
 from services.projects import ProjectsService
 
 # ---------------------------------------------------------------------------
@@ -97,6 +109,8 @@ def _make_service(
     service.get_course = AsyncMock(return_value=detail)
     service.create_course = AsyncMock(return_value=detail)
     service.update_course = AsyncMock(return_value=detail)
+    service.add_lecturer = AsyncMock(return_value=None)
+    service.remove_lecturer = AsyncMock(return_value=None)
     return service
 
 
@@ -586,3 +600,235 @@ async def test_update_course_returns_422_for_null_evaluation_criteria(
     app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
     response = await client.patch("/api/v1/courses/1", json={"evaluation_criteria": None})
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/courses/{course_id}/lecturers — endpoint tests
+# ---------------------------------------------------------------------------
+
+_NEW_LECTURER = CourseLecturerPublic(
+    id=20, name="New Lecturer", github_alias=None, email="new.lecturer@tul.cz"
+)
+
+
+async def test_add_course_lecturer_returns_401_when_unauthenticated(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/courses/{id}/lecturers must return HTTP 401 for unauthenticated requests."""
+    mock_service = _make_service()
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    response = await client.post(
+        "/api/v1/courses/1/lecturers", json={"email": "new.lecturer@tul.cz"}
+    )
+    assert response.status_code == 401
+
+
+async def test_add_course_lecturer_returns_201_on_success(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/lecturers must return HTTP 201 with the new lecturer."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.add_lecturer = AsyncMock(return_value=_NEW_LECTURER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/courses/1/lecturers", json={"email": "new.lecturer@tul.cz"}
+    )
+
+    assert response.status_code == 201
+    assert response.json() == _NEW_LECTURER.model_dump(mode="json")
+
+
+async def test_add_course_lecturer_forwards_body_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/lecturers must forward the parsed body and user to the service."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.add_lecturer = AsyncMock(return_value=_NEW_LECTURER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    await client.post(
+        "/api/v1/courses/1/lecturers",
+        json={"email": "new.lecturer@tul.cz", "name": "New Lecturer"},
+    )
+
+    call_args = mock_service.add_lecturer.call_args
+    assert call_args.args[0] == 1
+    assert call_args.args[1].email == "new.lecturer@tul.cz"
+    assert call_args.args[2] is user
+
+
+async def test_add_course_lecturer_returns_404_when_course_not_found(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/courses/{id}/lecturers must return HTTP 404 when the course does not exist."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.add_lecturer = AsyncMock(side_effect=CourseNotFoundError("not found"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/courses/999/lecturers", json={"email": "new.lecturer@tul.cz"}
+    )
+
+    assert response.status_code == 404
+
+
+async def test_add_course_lecturer_returns_403_when_not_authorised(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/courses/{id}/lecturers must return HTTP 403 when caller lacks write access."""
+    user = _make_user(UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.add_lecturer = AsyncMock(side_effect=CoursePermissionError("no access"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/courses/1/lecturers", json={"email": "new.lecturer@tul.cz"}
+    )
+
+    assert response.status_code == 403
+
+
+async def test_add_course_lecturer_returns_409_when_already_assigned(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/courses/{id}/lecturers must return HTTP 409 when already assigned."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.add_lecturer = AsyncMock(
+        side_effect=CourseLecturerAlreadyAssignedError("already assigned")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/courses/1/lecturers", json={"email": "new.lecturer@tul.cz"}
+    )
+
+    assert response.status_code == 409
+
+
+async def test_add_course_lecturer_returns_422_for_non_tul_email(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/courses/{id}/lecturers must return HTTP 422 for non-@tul.cz addresses."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/courses/1/lecturers", json={"email": "lecturer@gmail.com"}
+    )
+
+    assert response.status_code == 422
+
+
+async def test_add_course_lecturer_returns_500_on_service_error(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/courses/{id}/lecturers must return HTTP 500 on unexpected service error."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.add_lecturer = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/courses/1/lecturers", json={"email": "new.lecturer@tul.cz"}
+    )
+
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/v1/courses/{course_id}/lecturers/{user_id} — endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_remove_course_lecturer_returns_401_when_unauthenticated(
+    client: AsyncClient,
+) -> None:
+    """DELETE /api/v1/courses/{id}/lecturers/{user_id} must return HTTP 401 when unauthenticated."""
+    mock_service = _make_service()
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    response = await client.delete("/api/v1/courses/1/lecturers/20")
+    assert response.status_code == 401
+
+
+async def test_remove_course_lecturer_returns_204_on_success(client: AsyncClient) -> None:
+    """DELETE /api/v1/courses/{id}/lecturers/{user_id} must return HTTP 204 on success."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.remove_lecturer = AsyncMock(return_value=None)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/courses/1/lecturers/20")
+
+    assert response.status_code == 204
+
+
+async def test_remove_course_lecturer_returns_403_when_not_authorised(
+    client: AsyncClient,
+) -> None:
+    """DELETE /api/v1/courses/{id}/lecturers/{user_id} must return HTTP 403 when lacking access."""
+    user = _make_user(UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.remove_lecturer = AsyncMock(side_effect=CoursePermissionError("no access"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/courses/1/lecturers/20")
+
+    assert response.status_code == 403
+
+
+async def test_remove_course_lecturer_returns_404_when_not_assigned(
+    client: AsyncClient,
+) -> None:
+    """DELETE /api/v1/courses/{id}/lecturers/{user_id} must return HTTP 404 when not assigned."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.remove_lecturer = AsyncMock(
+        side_effect=CourseLecturerNotAssignedError("not assigned")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/courses/1/lecturers/999")
+
+    assert response.status_code == 404
+
+
+async def test_remove_course_lecturer_returns_404_when_course_not_found(
+    client: AsyncClient,
+) -> None:
+    """DELETE /api/v1/courses/{id}/lecturers/{user_id} must return HTTP 404 when course missing."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.remove_lecturer = AsyncMock(side_effect=CourseNotFoundError("not found"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/courses/999/lecturers/20")
+
+    assert response.status_code == 404
+
+
+async def test_remove_course_lecturer_returns_500_on_service_error(
+    client: AsyncClient,
+) -> None:
+    """DELETE /api/v1/courses/{id}/lecturers/{user_id} must return HTTP 500 on unexpected error."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.remove_lecturer = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/courses/1/lecturers/20")
+
+    assert response.status_code == 500
