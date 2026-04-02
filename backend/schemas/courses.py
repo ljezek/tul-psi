@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectType
 from schemas.projects import LecturerPublic
@@ -74,3 +74,55 @@ class CourseDetail(BaseModel):
     lecturers: list[LecturerPublic]
     # Null for unauthenticated users and for roles without course access.
     course_evaluations: list[CourseEvaluationPublic] | None = None
+
+
+class CourseCreate(BaseModel):
+    """Request body for creating a new course.
+
+    Only admins may create courses.  The ``code`` must be unique across all
+    courses.  Optional structured fields default to empty lists so that the
+    minimal creation payload is just ``code``, ``name``, ``term``,
+    ``project_type``, and ``min_score``.
+    """
+
+    code: str = Field(max_length=50)
+    name: str = Field(max_length=255)
+    term: CourseTerm
+    project_type: ProjectType
+    min_score: int
+    syllabus: str | None = None
+    # Null means no peer-bonus-point scheme for this course.
+    peer_bonus_budget: int | None = None
+    evaluation_criteria: list[EvaluationCriterion] = Field(default_factory=list)
+    links: list[CourseLink] = Field(default_factory=list)
+
+
+class CourseUpdate(BaseModel):
+    """Request body for a partial course update (PATCH).
+
+    Only fields present in the request body are updated; omitted fields are
+    left unchanged.  ``syllabus`` can be set to ``null`` to clear it.
+    ``peer_bonus_budget`` can be set to ``null`` to disable the peer-bonus
+    scheme.  The JSONB list fields ``evaluation_criteria`` and ``links`` cannot
+    be set to ``null`` — omit them to leave them unchanged.
+    """
+
+    code: str | None = Field(default=None, max_length=50)
+    name: str | None = Field(default=None, max_length=255)
+    term: CourseTerm | None = None
+    project_type: ProjectType | None = None
+    min_score: int | None = None
+    # Setting to null clears the syllabus.
+    syllabus: str | None = None
+    # Setting to null disables the peer-bonus scheme.
+    peer_bonus_budget: int | None = None
+    evaluation_criteria: list[EvaluationCriterion] | None = None
+    links: list[CourseLink] | None = None
+
+    @model_validator(mode="after")
+    def _non_nullable_list_fields_not_null(self) -> CourseUpdate:
+        """Reject explicit null for JSONB list fields that are non-nullable in the DB."""
+        for field in ("evaluation_criteria", "links"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"'{field}' may not be null; provide a list or omit the field.")
+        return self

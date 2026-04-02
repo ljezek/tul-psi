@@ -2,13 +2,26 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.courses import create_course as db_create_course
 from db.courses import get_course as db_get_course
 from db.courses import get_course_evaluations, get_course_lecturers, get_course_project_stats
 from db.courses import get_courses as db_get_courses
+from db.courses import update_course as db_update_course
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
-from schemas.courses import CourseDetail, CourseEvaluationPublic, CourseListItem, CourseStats
+from schemas.courses import (
+    CourseCreate,
+    CourseDetail,
+    CourseEvaluationPublic,
+    CourseListItem,
+    CourseStats,
+    CourseUpdate,
+)
 from schemas.projects import LecturerPublic
+
+
+class CoursePermissionError(Exception):
+    """Raised when a user lacks the permission to create or modify a course."""
 
 
 def _require_course_id(course_id: int | None) -> int:
@@ -51,6 +64,25 @@ def _course_evaluation_public(ev: CourseEvaluation) -> CourseEvaluationPublic:
     )
 
 
+def _can_modify_course(
+    current_user: User,
+    course_lecturer_ids: set[int],
+) -> bool:
+    """Return ``True`` when ``current_user`` is allowed to modify a course.
+
+    Access is granted to:
+    - Admins (any course).
+    - Lecturers who are assigned to this specific course.
+
+    Returns ``False`` for students and for lecturers not assigned to the course.
+    """
+    if current_user.role == UserRole.ADMIN:
+        return True
+    if current_user.role == UserRole.LECTURER and current_user.id in course_lecturer_ids:
+        return True
+    return False
+
+
 def _can_view_evaluations(
     current_user: User | None,
     course_lecturer_ids: set[int],
@@ -66,11 +98,7 @@ def _can_view_evaluations(
     """
     if current_user is None:
         return False
-    if current_user.role == UserRole.ADMIN:
-        return True
-    if current_user.role == UserRole.LECTURER and current_user.id in course_lecturer_ids:
-        return True
-    return False
+    return _can_modify_course(current_user, course_lecturer_ids)
 
 
 class CoursesService:
@@ -157,3 +185,70 @@ class CoursesService:
             lecturers=[_lecturer_public(u, include_email=include_email) for u in lecturer_users],
             course_evaluations=course_evaluations,
         )
+
+    async def create_course(
+        self,
+        data: CourseCreate,
+        current_user: User,
+    ) -> CourseDetail:
+        """Create a new course and return its full detail.
+
+        Only admins are allowed to create courses.  Raises
+        ``CoursePermissionError`` if ``current_user`` is not an admin.
+
+        After inserting the row the session is committed so that the new
+        course is immediately visible to subsequent queries.
+        """
+        if current_user.role != UserRole.ADMIN:
+            raise CoursePermissionError("Only admins can create courses.")
+
+        created_by = current_user.id
+        course = await db_create_course(self._session, data, created_by)
+        await self._session.commit()
+
+        # Fetch the full detail (includes lecturers list — empty for a new course).
+        cid = _require_course_id(course.id)
+        result = await self.get_course(cid, current_user=current_user)
+        if result is None:
+            raise ValueError(f"Newly created course {cid} could not be retrieved.")
+        return result
+
+    async def update_course(
+        self,
+        course_id: int,
+        data: CourseUpdate,
+        current_user: User,
+    ) -> CourseDetail | None:
+        """Apply a partial update to the course identified by ``course_id``.
+
+        Returns ``None`` when no course with the given id exists.
+
+        Access is restricted to admins and to lecturers who are currently
+        assigned to the course.  Raises ``CoursePermissionError`` for any
+        other authenticated role or for a lecturer not assigned to this
+        course.
+
+        Only fields explicitly provided in the request body are modified;
+        omitted fields keep their existing values.
+        """
+        course = await db_get_course(self._session, course_id)
+        if course is None:
+            return None
+
+        # Lecturers are fetched here both for the permission check and,
+        # indirectly, for assembling the response via get_course below.
+        lecturers_by_course = await get_course_lecturers(self._session, [course_id])
+        lecturer_ids = {u.id for u in lecturers_by_course.get(course_id, []) if u.id is not None}
+
+        if not _can_modify_course(current_user, lecturer_ids):
+            raise CoursePermissionError(
+                "Only admins and assigned lecturers can update this course."
+            )
+
+        await db_update_course(self._session, course, data)
+        await self._session.commit()
+
+        result = await self.get_course(course_id, current_user=current_user)
+        if result is None:
+            raise ValueError(f"Course {course_id} disappeared after update.")
+        return result
