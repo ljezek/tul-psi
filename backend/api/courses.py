@@ -27,7 +27,6 @@ from services.courses import (
 )
 from services.projects import ProjectsService
 
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/courses", tags=["courses"])
