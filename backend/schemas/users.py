@@ -13,6 +13,7 @@ class UserPublic(BaseModel):
     github_alias: str | None = None
     name: str
     role: UserRole
+    is_active: bool
 
 
 class UserCreate(BaseModel):
@@ -22,6 +23,7 @@ class UserCreate(BaseModel):
     name: str
     github_alias: str | None = None
     role: UserRole = UserRole.STUDENT
+    is_active: bool = True
 
 
 class UserUpdate(BaseModel):
@@ -35,3 +37,4 @@ class AdminUserUpdate(UserUpdate):
     """Schema for admins to update any user, including their role."""
 
     role: UserRole | None = None
+    is_active: bool | None = None

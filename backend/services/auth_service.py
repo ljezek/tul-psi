@@ -65,10 +65,10 @@ async def request_otp(email: str, session: AsyncSession) -> None:
     """
     user = await db_auth.get_user_by_email(session, email)
 
-    if user is None:
-        # Silent success — do not reveal that the address is not registered.
+    if user is None or not user.is_active:
+        # Silent success — do not reveal that the address is not registered or is inactive.
         logger.warning(
-            "OTP requested for unregistered address; no token created.",
+            "OTP requested for unregistered or inactive address; no token created.",
             extra={"email": email},
         )
         return
@@ -120,9 +120,9 @@ async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
     used so that it cannot be resubmitted after the limit message is shown.
     """
     user = await db_auth.get_user_by_email(session, email)
-    if user is None:
+    if user is None or not user.is_active:
         logger.warning(
-            "OTP verification attempted for unregistered address.",
+            "OTP verification attempted for unregistered or inactive address.",
             extra={"email": email},
         )
         raise IncorrectOtpError

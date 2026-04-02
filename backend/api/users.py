@@ -40,6 +40,7 @@ async def get_me(current_user: User = Depends(require_current_user)) -> UserPubl
         github_alias=current_user.github_alias,
         name=current_user.name,
         role=current_user.role,
+        is_active=current_user.is_active,
     )
 
 

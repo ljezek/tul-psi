@@ -44,6 +44,7 @@ class UsersService:
                 github_alias=u.github_alias,
                 name=u.name,
                 role=u.role,
+                is_active=u.is_active,
             )
             for u in users
         ]
@@ -63,6 +64,7 @@ class UsersService:
             github_alias=user.github_alias,
             name=user.name,
             role=user.role,
+            is_active=user.is_active,
         )
 
     async def update_user(
@@ -85,6 +87,8 @@ class UsersService:
             user.github_alias = body.github_alias
         if body.role is not None:
             user.role = body.role
+        if body.is_active is not None:
+            user.is_active = body.is_active
 
         await self._session.commit()
         return UserPublic(
@@ -93,6 +97,7 @@ class UsersService:
             github_alias=user.github_alias,
             name=user.name,
             role=user.role,
+            is_active=user.is_active,
         )
 
     async def update_me(self, body: UserUpdate, current_user: User) -> UserPublic:
@@ -109,6 +114,7 @@ class UsersService:
             github_alias=current_user.github_alias,
             name=current_user.name,
             role=current_user.role,
+            is_active=current_user.is_active,
         )
 
     async def create_user(self, body: UserCreate, current_user: User) -> UserPublic:
@@ -127,6 +133,10 @@ class UsersService:
         if not created:
             raise UserAlreadyExistsError(f"User with email {body.email} already exists.")
 
+        # Set explicitly provided is_active state for newly created users if it differs from default
+        if body.is_active is not None:
+            user.is_active = body.is_active
+
         await self._session.commit()
         return UserPublic(
             id=user.id,  # type: ignore
@@ -134,4 +144,5 @@ class UsersService:
             github_alias=user.github_alias,
             name=user.name,
             role=user.role,
+            is_active=user.is_active,
         )

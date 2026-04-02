@@ -47,6 +47,7 @@ erDiagram
         string github_alias
         string name
         string role "ADMIN | LECTURER | STUDENT"
+        bool is_active
         timestamp created_at
     }
     OTP_TOKEN {
@@ -282,7 +283,7 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 
 ```json
 // User schema
-{ "id": 1, "email": "jan.novak@tul.cz", "github_alias": "jnovak", "name": "Jan Novák", "role": "STUDENT" }
+{ "id": 1, "email": "jan.novak@tul.cz", "github_alias": "jnovak", "name": "Jan Novák", "role": "STUDENT", "is_active": true }
 ```
 
 ### Courses
