@@ -27,14 +27,22 @@ async def get_or_create_user(
 
     Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) so concurrent requests
     for the same address are handled atomically without a separate SELECT before
-    INSERT.  *name* and *github_alias* are only used when a new row is created;
-    callers are responsible for computing any desired defaults (e.g. deriving
-    a display name from the local part of the e-mail address).
+    INSERT.  *github_alias* is only used when a new row is created.
+
+    When *name* is ``None``, a human-readable display name is derived from the
+    local part of the e-mail address: dots and underscores are treated as word
+    separators and each word is title-cased
+    (e.g. ``jan.novak@tul.cz`` → ``"Jan Novak"``, ``j_doe@tul.cz`` → ``"J Doe"``).
+    An explicit *name* is preferred when provided (e.g. from a request body).
 
     Returns a ``(user, created)`` tuple where ``created`` is ``True`` when a new
     row was inserted and ``False`` when an existing row was returned.
     The caller must commit the session after a successful return.
     """
+    if name is None:
+        prefix = email.split("@")[0]
+        name = " ".join(part.capitalize() for part in prefix.replace("_", ".").split("."))
+
     stmt = (
         pg_insert(User)
         .values(

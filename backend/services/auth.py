@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.courses import get_course_lecturers
 from models.user import User, UserRole
 
 
@@ -23,3 +26,27 @@ def is_admin_or_course_lecturer(
     if user.role == UserRole.LECTURER and user.id in course_lecturer_ids:
         return True
     return False
+
+
+async def require_course_manage_access(
+    session: AsyncSession,
+    course_id: int,
+    user: User,
+) -> None:
+    """Assert *user* may create, update, or delete resources for *course_id*.
+
+    Admins are granted access unconditionally without a DB query.  For all
+    other roles the course-lecturer assignment table is queried; the user id
+    must appear there.
+
+    Raises ``PermissionError`` when the user is not authorised.
+    """
+    if user.role == UserRole.ADMIN:
+        return
+    lecturers_by_course = await get_course_lecturers(session, [course_id])
+    lecturer_users = lecturers_by_course.get(course_id, [])
+    lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
+    if not is_admin_or_course_lecturer(user, lecturer_ids):
+        raise PermissionError(
+            f"User {user.id} is not authorised to manage resources for course {course_id}."
+        )

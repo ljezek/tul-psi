@@ -7,31 +7,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
-from db.courses import get_course_lecturers as db_get_course_lecturers_for_course
 from db.projects import (
     add_project_member,
+    create_project as db_create_project,
+    delete_project as db_delete_project,
     get_course_evaluations,
     get_course_lecturers,
     get_peer_feedback_authored,
     get_peer_feedback_received,
+    get_project as db_get_project,
     get_project_evaluations,
     get_project_members,
     get_projects,
     is_course_lecturer,
     is_project_member,
-    update_project,
-)
-from db.projects import (
-    create_project as db_create_project,
-)
-from db.projects import (
-    delete_project as db_delete_project,
-)
-from db.projects import (
-    get_project as db_get_project,
-)
-from db.projects import (
     unlock_project_results as db_unlock_project_results,
+    update_project,
 )
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
@@ -52,7 +43,7 @@ from schemas.projects import (
     ProjectPublic,
     ProjectUpdate,
 )
-from services.auth import is_admin_or_course_lecturer
+from services.auth import require_course_manage_access
 
 logger = logging.getLogger(__name__)
 
@@ -210,24 +201,6 @@ class ProjectsService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-
-    async def _require_course_manage_access(self, course_id: int, user: User) -> None:
-        """Assert *user* may create, update, or delete projects for *course_id*.
-
-        Admins bypass the lecturer DB query for performance — no DB round-trip
-        is needed for a role with unconditional write access.  For lecturers, the
-        course-lecturer assignment table is queried and the user id must be present.
-        All other roles (students, unauthenticated) raise ``PermissionError``.
-        """
-        if user.role == UserRole.ADMIN:
-            return
-        lecturers_by_course = await db_get_course_lecturers_for_course(self._session, [course_id])
-        lecturer_users = lecturers_by_course.get(course_id, [])
-        lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-        if not is_admin_or_course_lecturer(user, lecturer_ids):
-            raise PermissionError(
-                f"User {user.id} is not authorised to manage projects for course {course_id}."
-            )
 
     async def get_projects(
         self,
