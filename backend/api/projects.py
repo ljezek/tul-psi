@@ -310,12 +310,13 @@ async def get_project_evaluation(
         "Set ``submitted=False`` (default) to save a draft that can be updated later. "
         "Set ``submitted=True`` to finalise the evaluation; once all lecturers have submitted "
         "and all students have submitted their course evaluations, the project results are "
-        "unlocked automatically. "
+        "unlocked automatically and notification emails are sent to all participants. "
         "Editing is blocked (HTTP 409) once the project results have been unlocked. "
-        "Only accessible to admin users or lecturers assigned to the project's course."
+        "Only accessible to users explicitly assigned as lecturers for the project's course. "
+        "Admin users who are not assigned as course lecturers are denied (HTTP 403)."
     ),
 )
-async def submit_project_evaluation(
+async def save_project_evaluation(
     project_id: int,
     body: ProjectEvaluationCreate,
     current_user: User = Depends(require_current_user),
@@ -324,14 +325,15 @@ async def submit_project_evaluation(
     """Create or update the calling lecturer's evaluation for ``project_id``.
 
     Raises HTTP 401 when the caller is not authenticated.
-    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 403 when the caller is not an assigned lecturer for the project's course
+    (admin users without a lecturer assignment are also denied).
     Raises HTTP 404 when the project does not exist.
     Raises HTTP 409 when the project results are already unlocked.
     Raises HTTP 422 when a criterion code is not configured for the course or
     a score value is outside the allowed range.
     """
     try:
-        return await service.submit_project_evaluation(project_id, body, current_user)
+        return await service.save_project_evaluation(project_id, body, current_user)
     except LookupError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

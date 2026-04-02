@@ -97,24 +97,19 @@ class PeerFeedbackDetail(BaseModel):
     bonus_points: int
 
 
-class EvaluationScoreCreate(BaseModel):
-    """Single per-criterion score submitted by a lecturer as part of a project evaluation."""
-
-    criterion_code: str
-    score: int
-    strengths: str
-    improvements: str
-
-
 class ProjectEvaluationCreate(BaseModel):
     """Request body for ``POST /projects/{id}/project-evaluation``.
 
     ``submitted=False`` saves the evaluation as a draft that can be updated later.
     ``submitted=True`` marks the evaluation as final and triggers the automatic
     project-result unlock check once all lecturers and students have submitted.
+
+    ``EvaluationScoreDetail`` is reused for the per-criterion entries because the
+    fields needed when creating a score are identical to those returned in the detail
+    response (criterion_code, score, strengths, improvements).
     """
 
-    scores: list[EvaluationScoreCreate]
+    scores: list[EvaluationScoreDetail]
     # False means save as draft; True means finalise and trigger auto-unlock.
     submitted: bool = False
 

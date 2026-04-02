@@ -9,10 +9,10 @@ from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
 from db.projects import (
     add_project_member,
-    count_submitted_course_evaluations,
-    count_submitted_project_evaluations,
     get_course_evaluations,
     get_course_lecturers,
+    get_lecturer_evaluation_statuses,
+    get_member_evaluation_statuses,
     get_peer_feedback_authored,
     get_peer_feedback_received,
     get_project_evaluation_by_lecturer,
@@ -27,9 +27,6 @@ from db.projects import (
     create_project as db_create_project,
 )
 from db.projects import (
-    create_project_evaluation as db_create_project_evaluation,
-)
-from db.projects import (
     delete_project as db_delete_project,
 )
 from db.projects import (
@@ -37,6 +34,9 @@ from db.projects import (
 )
 from db.projects import (
     unlock_project_results as db_unlock_project_results,
+)
+from db.projects import (
+    upsert_project_evaluation as db_upsert_project_evaluation,
 )
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
@@ -58,7 +58,7 @@ from schemas.projects import (
     ProjectPublic,
     ProjectUpdate,
 )
-from services.auth import require_course_manage_access
+from services.auth import require_course_lecturer_access, require_course_manage_access
 from services.email import EmailSender, EmailTemplate
 from settings import get_settings
 
@@ -238,11 +238,13 @@ async def _check_and_auto_unlock_project(
       ``ProjectEvaluation`` (``submitted=True``).
     * Every project member has submitted a ``CourseEvaluation`` (``submitted=True``).
 
-    Counts are restricted to the currently assigned lecturer IDs to prevent stale
-    rows from former or unrelated lecturers from satisfying the condition.  If
-    either count is zero (no lecturers or no members), the condition is not
-    considered met and the project is left locked.  The caller is responsible
-    for committing the session after this call when an unlock occurs.
+    Uses two JOIN queries (rather than five separate count queries) to obtain both
+    the participant list and their submission status in one round-trip each.  If
+    either list is empty (no lecturers or no members) the condition is not considered
+    met and the project is left locked.  When the condition is met, results are
+    unlocked and a notification email is sent to every participant (students and
+    lecturers alike).  The caller is responsible for committing the session after
+    this call when an unlock occurs.
     """
     row = await db_get_project(session, project_id)
     if row is None:
@@ -252,29 +254,47 @@ async def _check_and_auto_unlock_project(
     if course.id is None:
         return
 
-    # Collect the IDs of lecturers currently assigned to this course.
-    lecturers_by_course = await get_course_lecturers(session, [course.id])
-    assigned_lecturers = lecturers_by_course.get(course.id, [])
-    lecturer_count = len(assigned_lecturers)
-    assigned_lecturer_ids = {u.id for u in assigned_lecturers if u.id is not None}
+    # Each query performs a LEFT JOIN to return every assigned participant together
+    # with their submission flag, reducing what was previously five separate queries
+    # down to three (including the project lookup above).
+    lecturer_statuses = await get_lecturer_evaluation_statuses(session, project_id, course.id)
+    member_statuses = await get_member_evaluation_statuses(session, project_id)
 
-    # Count project members.
-    members_by_project = await get_project_members(session, [project_id])
-    member_count = len(members_by_project.get(project_id, []))
-
-    if lecturer_count == 0 or member_count == 0:
+    if not lecturer_statuses or not member_statuses:
         # Not enough participants to determine completion.
         return
 
-    # Only count submissions from currently assigned lecturers to avoid
-    # stale rows from unassigned users satisfying the unlock condition.
-    submitted_count = await count_submitted_project_evaluations(
-        session, project_id, assigned_lecturer_ids
-    )
-    submitted_ce_count = await count_submitted_course_evaluations(session, project_id)
+    all_lecturers_submitted = all(submitted for _, submitted in lecturer_statuses)
+    all_members_submitted = all(submitted for _, submitted in member_statuses)
 
-    if submitted_count == lecturer_count and submitted_ce_count == member_count:
-        await db_unlock_project_results(session, project_id)
+    if not all_lecturers_submitted or not all_members_submitted:
+        return
+
+    await db_unlock_project_results(session, project_id)
+
+    # Send a notification email to every participant now that results are visible.
+    peer_feedback_enabled = course.peer_bonus_budget is not None
+    _settings = get_settings()
+    sender = EmailSender(app_env=_settings.app_env)
+    participants: list[User] = [u for u, _ in lecturer_statuses] + [u for u, _ in member_statuses]
+    for participant in participants:
+        if participant.email is None:
+            continue
+        sender.send(
+            EmailTemplate.results_unlocked(
+                to=participant.email,
+                project_name=p.title,
+                portal_url=_settings.frontend_url,
+                peer_feedback_enabled=peer_feedback_enabled,
+            )
+        )
+    logger.info(
+        "Project results unlocked and notification emails sent.",
+        extra={
+            "project_id": project_id,
+            "recipients": [u.email for u in participants if u.email is not None],
+        },
+    )
 
 
 class ProjectsService:
@@ -708,7 +728,7 @@ class ProjectsService:
             )
         return _to_project_evaluation_detail(evaluation)
 
-    async def submit_project_evaluation(
+    async def save_project_evaluation(
         self,
         project_id: int,
         body: ProjectEvaluationCreate,
@@ -722,8 +742,16 @@ class ProjectsService:
         ``_check_and_auto_unlock_project`` so that results are unlocked
         automatically once all lecturers and students have submitted.
 
+        Only users explicitly assigned as lecturers for the course may call this
+        method.  Unlike general course-management actions, admin users who are
+        not assigned as course lecturers are denied access — a project evaluation
+        is a per-lecturer artefact and should only be created by lecturers on
+        the course.
+
         Raises ``LookupError`` when the project does not exist.
-        Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
+        Raises ``PermissionError`` when *requester* is not an assigned lecturer for
+        the project's course (admin users without a lecturer assignment are also
+        denied).
         Raises ``EvaluationConflictError`` when the project results are already
         unlocked (editing is no longer permitted after unlock).
         Raises ``InvalidEvaluationDataError`` when any ``criterion_code`` is not
@@ -738,7 +766,9 @@ class ProjectsService:
         if course.id is None:
             raise ValueError(f"Course returned from DB has no id: {course!r}")
 
-        await require_course_manage_access(self._session, course.id, requester)
+        # Use the strict lecturer check: admin users who are not assigned to the
+        # course are denied, because evaluations are per-lecturer artefacts.
+        await require_course_lecturer_access(self._session, course.id, requester)
 
         if p.results_unlocked:
             raise EvaluationConflictError(
@@ -774,7 +804,7 @@ class ProjectsService:
             for s in body.scores
         ]
 
-        evaluation = await db_create_project_evaluation(
+        evaluation = await db_upsert_project_evaluation(
             self._session,
             project_id,
             requester_id,

@@ -1453,12 +1453,12 @@ async def test_service_get_project_evaluation_returns_detail() -> None:
 
 
 # ---------------------------------------------------------------------------
-# ProjectsService.submit_project_evaluation unit tests
+# ProjectsService.save_project_evaluation unit tests
 # ---------------------------------------------------------------------------
 
 
-async def test_submit_project_evaluation_raises_lookup_when_project_missing() -> None:
-    """``submit_project_evaluation`` must raise ``LookupError`` when the project is absent."""
+async def test_save_project_evaluation_raises_lookup_when_project_missing() -> None:
+    """``save_project_evaluation`` must raise ``LookupError`` when the project is absent."""
     from schemas.projects import ProjectEvaluationCreate
 
     session = MagicMock()
@@ -1468,13 +1468,13 @@ async def test_submit_project_evaluation_raises_lookup_when_project_missing() ->
         patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None),
         pytest.raises(LookupError),
     ):
-        await ProjectsService(session).submit_project_evaluation(
+        await ProjectsService(session).save_project_evaluation(
             99, ProjectEvaluationCreate(scores=[]), user
         )
 
 
-async def test_submit_project_evaluation_raises_permission_for_unassigned_lecturer() -> None:
-    """``submit_project_evaluation`` must raise ``PermissionError`` for unassigned lecturer."""
+async def test_save_project_evaluation_raises_permission_for_unassigned_lecturer() -> None:
+    """``save_project_evaluation`` must raise ``PermissionError`` for unassigned lecturer."""
     from schemas.projects import ProjectEvaluationCreate
 
     project, course = _make_seeding_project_and_course()
@@ -1494,19 +1494,23 @@ async def test_submit_project_evaluation_raises_permission_for_unassigned_lectur
         ),
         pytest.raises(PermissionError),
     ):
-        await ProjectsService(session).submit_project_evaluation(
+        await ProjectsService(session).save_project_evaluation(
             5, ProjectEvaluationCreate(scores=[]), user
         )
 
 
-async def test_submit_project_evaluation_raises_conflict_when_results_unlocked() -> None:
-    """``submit_project_evaluation`` raises ``EvaluationConflictError`` when unlocked."""
+async def test_save_project_evaluation_raises_permission_for_unassigned_admin() -> None:
+    """``save_project_evaluation`` must raise ``PermissionError`` for admin not on the course.
+
+    Unlike general course management, project evaluations require the caller to be
+    explicitly assigned as a course lecturer — admin users without the assignment
+    are also denied.
+    """
     from schemas.projects import ProjectEvaluationCreate
-    from services.projects import EvaluationConflictError
 
     project, course = _make_project_and_course()
-    project.results_unlocked = True
     session = MagicMock()
+    # Admin user whose id (1) is NOT in the returned lecturer list.
     user = _make_admin_user()
 
     with (
@@ -1515,17 +1519,50 @@ async def test_submit_project_evaluation_raises_conflict_when_results_unlocked()
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        pytest.raises(EvaluationConflictError),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: []},  # Admin is not assigned as a lecturer.
+        ),
+        pytest.raises(PermissionError),
     ):
-        await ProjectsService(session).submit_project_evaluation(
+        await ProjectsService(session).save_project_evaluation(
             1, ProjectEvaluationCreate(scores=[]), user
         )
 
 
-async def test_submit_project_evaluation_raises_for_invalid_criterion_code() -> None:
-    """``submit_project_evaluation`` raises ``InvalidEvaluationDataError`` for unknown codes."""
+async def test_save_project_evaluation_raises_conflict_when_results_unlocked() -> None:
+    """``save_project_evaluation`` raises ``EvaluationConflictError`` when unlocked."""
+    from schemas.projects import ProjectEvaluationCreate
+    from services.projects import EvaluationConflictError
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = True
+    session = MagicMock()
+    user = _make_lecturer_user()
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [MagicMock(id=user.id)]},
+        ),
+        pytest.raises(EvaluationConflictError),
+    ):
+        await ProjectsService(session).save_project_evaluation(
+            1, ProjectEvaluationCreate(scores=[]), user
+        )
+
+
+async def test_save_project_evaluation_raises_for_invalid_criterion_code() -> None:
+    """``save_project_evaluation`` raises ``InvalidEvaluationDataError`` for unknown codes."""
     from models.course import EvaluationCriterion
-    from schemas.projects import EvaluationScoreCreate, ProjectEvaluationCreate
+    from schemas.projects import EvaluationScoreDetail, ProjectEvaluationCreate
 
     project, course = _make_project_and_course()
     project.results_unlocked = False
@@ -1533,11 +1570,11 @@ async def test_submit_project_evaluation_raises_for_invalid_criterion_code() -> 
         EvaluationCriterion(code="code_quality", description="Code Quality", max_score=25)
     ]
     session = MagicMock()
-    user = _make_admin_user()
+    user = _make_lecturer_user()
 
     body = ProjectEvaluationCreate(
         scores=[
-            EvaluationScoreCreate(
+            EvaluationScoreDetail(
                 criterion_code="nonexistent",
                 score=10,
                 strengths="Good",
@@ -1552,15 +1589,20 @@ async def test_submit_project_evaluation_raises_for_invalid_criterion_code() -> 
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [MagicMock(id=user.id)]},
+        ),
         pytest.raises(InvalidEvaluationDataError, match="nonexistent"),
     ):
-        await ProjectsService(session).submit_project_evaluation(1, body, user)
+        await ProjectsService(session).save_project_evaluation(1, body, user)
 
 
-async def test_submit_project_evaluation_raises_for_score_exceeding_max() -> None:
-    """``submit_project_evaluation`` raises ``InvalidEvaluationDataError`` when score > max."""
+async def test_save_project_evaluation_raises_for_score_exceeding_max() -> None:
+    """``save_project_evaluation`` raises ``InvalidEvaluationDataError`` when score > max."""
     from models.course import EvaluationCriterion
-    from schemas.projects import EvaluationScoreCreate, ProjectEvaluationCreate
+    from schemas.projects import EvaluationScoreDetail, ProjectEvaluationCreate
 
     project, course = _make_project_and_course()
     project.results_unlocked = False
@@ -1568,11 +1610,11 @@ async def test_submit_project_evaluation_raises_for_score_exceeding_max() -> Non
         EvaluationCriterion(code="code_quality", description="Code Quality", max_score=25)
     ]
     session = MagicMock()
-    user = _make_admin_user()
+    user = _make_lecturer_user()
 
     body = ProjectEvaluationCreate(
         scores=[
-            EvaluationScoreCreate(
+            EvaluationScoreDetail(
                 criterion_code="code_quality",
                 score=30,  # Exceeds max_score of 25.
                 strengths="Good",
@@ -1587,18 +1629,23 @@ async def test_submit_project_evaluation_raises_for_score_exceeding_max() -> Non
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [MagicMock(id=user.id)]},
+        ),
         pytest.raises(InvalidEvaluationDataError, match="30"),
     ):
-        await ProjectsService(session).submit_project_evaluation(1, body, user)
+        await ProjectsService(session).save_project_evaluation(1, body, user)
 
 
-async def test_submit_project_evaluation_creates_draft_without_unlock_check() -> None:
+async def test_save_project_evaluation_creates_draft_without_unlock_check() -> None:
     """Draft submission (``submitted=False``) must save the row without triggering auto-unlock."""
     from datetime import UTC, datetime
 
     from models.course import EvaluationCriterion
     from models.project_evaluation import ProjectEvaluation
-    from schemas.projects import EvaluationScoreCreate, ProjectEvaluationCreate
+    from schemas.projects import EvaluationScoreDetail, ProjectEvaluationCreate
 
     project, course = _make_project_and_course()
     project.results_unlocked = False
@@ -1607,7 +1654,7 @@ async def test_submit_project_evaluation_creates_draft_without_unlock_check() ->
     ]
     session = MagicMock()
     session.commit = AsyncMock()
-    user = _make_admin_user()
+    user = _make_lecturer_user()
 
     evaluation = MagicMock(spec=ProjectEvaluation)
     evaluation.lecturer_id = 1
@@ -1624,7 +1671,7 @@ async def test_submit_project_evaluation_creates_draft_without_unlock_check() ->
 
     body = ProjectEvaluationCreate(
         scores=[
-            EvaluationScoreCreate(
+            EvaluationScoreDetail(
                 criterion_code="code_quality",
                 score=20,
                 strengths="Good",
@@ -1641,26 +1688,31 @@ async def test_submit_project_evaluation_creates_draft_without_unlock_check() ->
             return_value=(project, course),
         ),
         patch(
-            "services.projects.db_create_project_evaluation",
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [MagicMock(id=user.id)]},
+        ),
+        patch(
+            "services.projects.db_upsert_project_evaluation",
             new_callable=AsyncMock,
             return_value=evaluation,
-        ) as mock_create,
+        ) as mock_upsert,
     ):
-        result = await ProjectsService(session).submit_project_evaluation(1, body, user)
+        result = await ProjectsService(session).save_project_evaluation(1, body, user)
 
     assert result.submitted is False
-    mock_create.assert_called_once()
+    mock_upsert.assert_called_once()
     # Only one commit — no auto-unlock triggered for drafts.
     session.commit.assert_called_once()
 
 
-async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_check() -> None:
+async def test_save_project_evaluation_final_submission_triggers_auto_unlock_check() -> None:
     """Final submission (``submitted=True``) must call ``_check_and_auto_unlock_project``."""
     from datetime import UTC, datetime
 
     from models.course import EvaluationCriterion
     from models.project_evaluation import ProjectEvaluation
-    from schemas.projects import EvaluationScoreCreate, ProjectEvaluationCreate
+    from schemas.projects import EvaluationScoreDetail, ProjectEvaluationCreate
 
     project, course = _make_project_and_course()
     project.results_unlocked = False
@@ -1669,7 +1721,7 @@ async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_c
     ]
     session = MagicMock()
     session.commit = AsyncMock()
-    user = _make_admin_user()
+    user = _make_lecturer_user()
 
     evaluation = MagicMock(spec=ProjectEvaluation)
     evaluation.lecturer_id = 1
@@ -1679,7 +1731,7 @@ async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_c
 
     body = ProjectEvaluationCreate(
         scores=[
-            EvaluationScoreCreate(
+            EvaluationScoreDetail(
                 criterion_code="code_quality",
                 score=20,
                 strengths="Good",
@@ -1696,7 +1748,12 @@ async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_c
             return_value=(project, course),
         ),
         patch(
-            "services.projects.db_create_project_evaluation",
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [MagicMock(id=user.id)]},
+        ),
+        patch(
+            "services.projects.db_upsert_project_evaluation",
             new_callable=AsyncMock,
             return_value=evaluation,
         ),
@@ -1705,7 +1762,7 @@ async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_c
             new_callable=AsyncMock,
         ) as mock_check,
     ):
-        result = await ProjectsService(session).submit_project_evaluation(1, body, user)
+        result = await ProjectsService(session).save_project_evaluation(1, body, user)
 
     assert result.submitted is True
     mock_check.assert_called_once()
@@ -1720,7 +1777,13 @@ async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_c
 
 async def test_auto_unlock_fires_when_all_submitted() -> None:
     """Auto-unlock must call ``db_unlock_project_results`` when all evaluations are complete."""
+    from models.user import User
+
     project, course = _make_project_and_course()
+    lecturer = MagicMock(spec=User)
+    lecturer.email = "lecturer@tul.cz"
+    member = MagicMock(spec=User)
+    member.email = "student@tul.cz"
     session = MagicMock()
 
     with (
@@ -1730,29 +1793,24 @@ async def test_auto_unlock_fires_when_all_submitted() -> None:
             return_value=(project, course),
         ),
         patch(
-            "services.projects.get_course_lecturers",
+            "services.projects.get_lecturer_evaluation_statuses",
             new_callable=AsyncMock,
-            return_value={10: [MagicMock()]},  # 1 lecturer
+            return_value=[(lecturer, True)],  # 1 lecturer, submitted.
         ),
         patch(
-            "services.projects.get_project_members",
+            "services.projects.get_member_evaluation_statuses",
             new_callable=AsyncMock,
-            return_value={1: [MagicMock()]},  # 1 member
-        ),
-        patch(
-            "services.projects.count_submitted_project_evaluations",
-            new_callable=AsyncMock,
-            return_value=1,  # 1 submitted == 1 lecturer
-        ),
-        patch(
-            "services.projects.count_submitted_course_evaluations",
-            new_callable=AsyncMock,
-            return_value=1,  # 1 submitted == 1 member
+            return_value=[(member, True)],  # 1 member, submitted.
         ),
         patch(
             "services.projects.db_unlock_project_results",
             new_callable=AsyncMock,
         ) as mock_unlock,
+        patch("services.projects.EmailSender"),  # Prevent real email side-effects.
+        patch(
+            "services.projects.get_settings",
+            return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
+        ),
     ):
         from services.projects import _check_and_auto_unlock_project
 
@@ -1763,7 +1821,12 @@ async def test_auto_unlock_fires_when_all_submitted() -> None:
 
 async def test_auto_unlock_does_not_fire_when_not_all_lecturers_submitted() -> None:
     """Auto-unlock must not fire when not all lecturers have submitted."""
+    from models.user import User
+
     project, course = _make_project_and_course()
+    lecturer1 = MagicMock(spec=User)
+    lecturer2 = MagicMock(spec=User)
+    member = MagicMock(spec=User)
     session = MagicMock()
 
     with (
@@ -1773,24 +1836,15 @@ async def test_auto_unlock_does_not_fire_when_not_all_lecturers_submitted() -> N
             return_value=(project, course),
         ),
         patch(
-            "services.projects.get_course_lecturers",
+            "services.projects.get_lecturer_evaluation_statuses",
             new_callable=AsyncMock,
-            return_value={10: [MagicMock(), MagicMock()]},  # 2 lecturers
+            # 2 lecturers: one submitted, one not.
+            return_value=[(lecturer1, True), (lecturer2, False)],
         ),
         patch(
-            "services.projects.get_project_members",
+            "services.projects.get_member_evaluation_statuses",
             new_callable=AsyncMock,
-            return_value={1: [MagicMock()]},  # 1 member
-        ),
-        patch(
-            "services.projects.count_submitted_project_evaluations",
-            new_callable=AsyncMock,
-            return_value=1,  # Only 1 of 2 lecturers submitted.
-        ),
-        patch(
-            "services.projects.count_submitted_course_evaluations",
-            new_callable=AsyncMock,
-            return_value=1,
+            return_value=[(member, True)],
         ),
         patch(
             "services.projects.db_unlock_project_results",
@@ -1806,7 +1860,10 @@ async def test_auto_unlock_does_not_fire_when_not_all_lecturers_submitted() -> N
 
 async def test_auto_unlock_does_not_fire_when_no_members() -> None:
     """Auto-unlock must not fire when there are no project members."""
+    from models.user import User
+
     project, course = _make_project_and_course()
+    lecturer = MagicMock(spec=User)
     session = MagicMock()
 
     with (
@@ -1816,14 +1873,14 @@ async def test_auto_unlock_does_not_fire_when_no_members() -> None:
             return_value=(project, course),
         ),
         patch(
-            "services.projects.get_course_lecturers",
+            "services.projects.get_lecturer_evaluation_statuses",
             new_callable=AsyncMock,
-            return_value={10: [MagicMock()]},  # 1 lecturer
+            return_value=[(lecturer, True)],  # 1 lecturer submitted.
         ),
         patch(
-            "services.projects.get_project_members",
+            "services.projects.get_member_evaluation_statuses",
             new_callable=AsyncMock,
-            return_value={1: []},  # No members.
+            return_value=[],  # No members.
         ),
         patch(
             "services.projects.db_unlock_project_results",

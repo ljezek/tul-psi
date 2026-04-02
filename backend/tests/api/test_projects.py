@@ -796,7 +796,7 @@ async def test_get_project_evaluation_returns_500_on_unexpected_error(
 # ---------------------------------------------------------------------------
 
 
-async def test_submit_project_evaluation_returns_201(client: AsyncClient) -> None:
+async def test_save_project_evaluation_returns_201(client: AsyncClient) -> None:
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 201."""
     from datetime import UTC, datetime
 
@@ -811,7 +811,7 @@ async def test_submit_project_evaluation_returns_201(client: AsyncClient) -> Non
 
     user = _make_authenticated_user(role=UserRole.LECTURER)
     mock_service = _make_service()
-    mock_service.submit_project_evaluation = AsyncMock(return_value=evaluation)
+    mock_service.save_project_evaluation = AsyncMock(return_value=evaluation)
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
@@ -824,7 +824,7 @@ async def test_submit_project_evaluation_returns_201(client: AsyncClient) -> Non
     assert response.json()["submitted"] is False
 
 
-async def test_submit_project_evaluation_returns_401_when_unauthenticated(
+async def test_save_project_evaluation_returns_401_when_unauthenticated(
     client: AsyncClient,
 ) -> None:
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 401 for unauthenticated."""
@@ -836,13 +836,13 @@ async def test_submit_project_evaluation_returns_401_when_unauthenticated(
     assert response.status_code == 401
 
 
-async def test_submit_project_evaluation_returns_403_on_permission_error(
+async def test_save_project_evaluation_returns_403_on_permission_error(
     client: AsyncClient,
 ) -> None:
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 403 on PermissionError."""
     user = _make_authenticated_user(role=UserRole.STUDENT)
     mock_service = _make_service()
-    mock_service.submit_project_evaluation = AsyncMock(side_effect=PermissionError("not allowed"))
+    mock_service.save_project_evaluation = AsyncMock(side_effect=PermissionError("not allowed"))
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
@@ -854,13 +854,13 @@ async def test_submit_project_evaluation_returns_403_on_permission_error(
     assert response.status_code == 403
 
 
-async def test_submit_project_evaluation_returns_404_when_project_not_found(
+async def test_save_project_evaluation_returns_404_when_project_not_found(
     client: AsyncClient,
 ) -> None:
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 404 when project missing."""
     user = _make_authenticated_user(role=UserRole.LECTURER)
     mock_service = _make_service()
-    mock_service.submit_project_evaluation = AsyncMock(side_effect=LookupError("not found"))
+    mock_service.save_project_evaluation = AsyncMock(side_effect=LookupError("not found"))
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
@@ -872,7 +872,7 @@ async def test_submit_project_evaluation_returns_404_when_project_not_found(
     assert response.status_code == 404
 
 
-async def test_submit_project_evaluation_returns_409_when_results_unlocked(
+async def test_save_project_evaluation_returns_409_when_results_unlocked(
     client: AsyncClient,
 ) -> None:
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 409 when unlocked."""
@@ -880,7 +880,7 @@ async def test_submit_project_evaluation_returns_409_when_results_unlocked(
 
     user = _make_authenticated_user(role=UserRole.LECTURER)
     mock_service = _make_service()
-    mock_service.submit_project_evaluation = AsyncMock(
+    mock_service.save_project_evaluation = AsyncMock(
         side_effect=EvaluationConflictError("results unlocked")
     )
     app.dependency_overrides[get_current_user] = lambda: user
@@ -894,7 +894,7 @@ async def test_submit_project_evaluation_returns_409_when_results_unlocked(
     assert response.status_code == 409
 
 
-async def test_submit_project_evaluation_returns_422_on_invalid_criterion(
+async def test_save_project_evaluation_returns_422_on_invalid_criterion(
     client: AsyncClient,
 ) -> None:
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 422 for invalid criteria."""
@@ -902,7 +902,7 @@ async def test_submit_project_evaluation_returns_422_on_invalid_criterion(
 
     user = _make_authenticated_user(role=UserRole.LECTURER)
     mock_service = _make_service()
-    mock_service.submit_project_evaluation = AsyncMock(
+    mock_service.save_project_evaluation = AsyncMock(
         side_effect=InvalidEvaluationDataError("Invalid criterion code(s): ['bad'].")
     )
     app.dependency_overrides[get_current_user] = lambda: user
@@ -920,13 +920,13 @@ async def test_submit_project_evaluation_returns_422_on_invalid_criterion(
     assert response.status_code == 422
 
 
-async def test_submit_project_evaluation_returns_500_on_unexpected_error(
+async def test_save_project_evaluation_returns_500_on_unexpected_error(
     client: AsyncClient,
 ) -> None:
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 500 on unexpected error."""
     user = _make_authenticated_user(role=UserRole.LECTURER)
     mock_service = _make_service()
-    mock_service.submit_project_evaluation = AsyncMock(side_effect=RuntimeError("db failure"))
+    mock_service.save_project_evaluation = AsyncMock(side_effect=RuntimeError("db failure"))
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
