@@ -316,6 +316,15 @@ class CoursesService:
             role=UserRole.LECTURER,
         )
 
+        if target_user.id is None:
+            raise ValueError(f"User returned from DB has no id after flush: {target_user!r}")
+
+        added = await add_course_lecturer(self._session, course_id, target_user.id)
+        if not added:
+            raise CourseLecturerAlreadyAssignedError(
+                f"User {target_user.email} is already a lecturer on course {course_id}."
+            )
+
         if created:
             # TODO(#72): Send login-link notification email to the new user via SMTP.
             # Log in lieu of real email delivery while that integration is pending.
@@ -328,15 +337,6 @@ class CoursesService:
             logger.info(
                 "Existing user invited as lecturer; send notification.",
                 extra={"email": body.email, "course_id": course_id},
-            )
-
-        if target_user.id is None:
-            raise ValueError(f"User returned from DB has no id after flush: {target_user!r}")
-
-        added = await add_course_lecturer(self._session, course_id, target_user.id)
-        if not added:
-            raise CourseLecturerAlreadyAssignedError(
-                f"User {target_user.email} is already a lecturer on course {course_id}."
             )
 
         await self._session.commit()
