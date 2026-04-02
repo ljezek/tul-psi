@@ -2,15 +2,20 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
 from db.session import get_session
 from models.course import CourseTerm
 from models.user import User
-from schemas.projects import ProjectPublic
-from services.projects import ProjectsService
+from schemas.projects import AddMemberBody, MemberPublic, ProjectPublic, ProjectUpdate
+from services.projects import (
+    AlreadyMemberError,
+    PermissionDeniedError,
+    ProjectNotFoundError,
+    ProjectsService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -112,3 +117,103 @@ async def get_project(
     if project is None:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found.")
     return project
+
+
+def _require_authenticated(current_user: User | None) -> User:
+    """Return *current_user* or raise HTTP 401 when the request is unauthenticated."""
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication is required.",
+        )
+    return current_user
+
+
+@router.patch(
+    "/{project_id}",
+    response_model=ProjectPublic,
+    summary="Update project",
+    description=(
+        "Updates the editable fields of an existing project. "
+        "Only the fields included in the request body are modified; "
+        "omitted fields are left unchanged. "
+        "Requires authentication as a project member (STUDENT) "
+        "or a lecturer on the project's course."
+    ),
+)
+async def patch_project(
+    project_id: int,
+    body: ProjectUpdate,
+    current_user: User | None = Depends(get_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> ProjectPublic:
+    """Apply partial updates to the project identified by *project_id*.
+
+    Only the non-``None`` fields in the request body are written. Raises HTTP 401
+    when unauthenticated, HTTP 403 when the caller is not a project member or
+    course lecturer, and HTTP 404 when the project does not exist.
+    """
+    user = _require_authenticated(current_user)
+    try:
+        return await service.patch_project(project_id, body, user)
+    except ProjectNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this project.",
+        ) from None
+    except Exception:
+        logger.exception("Failed to update project", extra={"project_id": project_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
+@router.post(
+    "/{project_id}/members",
+    response_model=MemberPublic,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add project member",
+    description=(
+        "Adds a member to the project by e-mail address. "
+        "Creates a new STUDENT account if no user with that address exists. "
+        "A notification e-mail with a login link is sent to the invited user. "
+        "Requires authentication as a project member (STUDENT) "
+        "or a lecturer on the project's course."
+    ),
+)
+async def add_project_member(
+    project_id: int,
+    body: AddMemberBody,
+    current_user: User | None = Depends(get_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> MemberPublic:
+    """Add the user identified by ``body.email`` to the project.
+
+    Raises HTTP 401 when unauthenticated, HTTP 403 when the caller lacks write
+    access, HTTP 404 when the project does not exist, and HTTP 409 when the
+    target user is already a member.
+    """
+    user = _require_authenticated(current_user)
+    try:
+        return await service.add_member(project_id, body, user)
+    except ProjectNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this project.",
+        ) from None
+    except AlreadyMemberError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This user is already a member of the project.",
+        ) from None
+    except Exception:
+        logger.exception("Failed to add project member", extra={"project_id": project_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None

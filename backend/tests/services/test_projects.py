@@ -6,7 +6,12 @@ import pytest
 
 from models.course import CourseTerm
 from models.user import UserRole
-from services.projects import ProjectsService
+from services.projects import (
+    AlreadyMemberError,
+    PermissionDeniedError,
+    ProjectNotFoundError,
+    ProjectsService,
+)
 
 # ---------------------------------------------------------------------------
 # ProjectsService.get_projects unit tests
@@ -476,3 +481,356 @@ async def test_service_get_project_detail_student_sees_peer_feedback_not_course_
     assert result.received_peer_feedback[0].receiving_student_id == 5
     assert result.authored_peer_feedback is not None
     assert result.authored_peer_feedback[0].receiving_student_id == 6
+
+
+# ---------------------------------------------------------------------------
+# ProjectsService.patch_project unit tests
+# ---------------------------------------------------------------------------
+
+
+async def test_patch_project_raises_not_found_when_project_missing() -> None:
+    """``patch_project`` must raise ``ProjectNotFoundError`` when the project does not exist."""
+    from models.user import User
+
+    session = MagicMock()
+    user = MagicMock(spec=User)
+    user.id = 1
+    user.role = UserRole.STUDENT
+
+    with (
+        patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None),
+        pytest.raises(ProjectNotFoundError),
+    ):
+        await ProjectsService(session).patch_project(
+            99,
+            __import__("schemas.projects", fromlist=["ProjectUpdate"]).ProjectUpdate(title="X"),
+            user,
+        )
+
+
+async def test_patch_project_raises_permission_denied_when_not_member() -> None:
+    """``patch_project`` must raise ``PermissionDeniedError`` when caller is not a member."""
+    from models.course import Course
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    project = MagicMock(spec=Project)
+    project.id = 1
+
+    session = MagicMock()
+    user = MagicMock(spec=User)
+    user.id = 99
+    user.role = UserRole.STUDENT
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "services.projects.is_project_member",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        pytest.raises(PermissionDeniedError),
+    ):
+        from schemas.projects import ProjectUpdate
+
+        await ProjectsService(session).patch_project(1, ProjectUpdate(title="X"), user)
+
+
+async def test_patch_project_member_can_update() -> None:
+    """``patch_project`` must write updates and return the enriched project for a member."""
+    from models.course import Course, ProjectType
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "PSI"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    project = MagicMock(spec=Project)
+    project.id = 1
+    project.title = "Updated"
+    project.description = None
+    project.github_url = None
+    project.live_url = None
+    project.technologies = []
+    project.academic_year = 2025
+    project.results_unlocked = False
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+
+    user = MagicMock(spec=User)
+    user.id = 5
+    user.role = UserRole.STUDENT
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "services.projects.is_project_member",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch("services.projects.update_project", new_callable=AsyncMock, return_value=project),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: []},
+        ),
+    ):
+        from schemas.projects import ProjectUpdate
+
+        result = await ProjectsService(session).patch_project(
+            1, ProjectUpdate(title="Updated"), user
+        )
+
+    assert result is not None
+    assert result.title == "Updated"
+    session.commit.assert_called_once()
+
+
+async def test_patch_project_lecturer_can_update_without_membership() -> None:
+    """``patch_project`` must allow a lecturer to update even without project membership."""
+    from models.course import Course, ProjectType
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "PSI"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    project = MagicMock(spec=Project)
+    project.id = 1
+    project.title = "Lecturer Update"
+    project.description = None
+    project.github_url = None
+    project.live_url = None
+    project.technologies = []
+    project.academic_year = 2025
+    project.results_unlocked = False
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+
+    user = MagicMock(spec=User)
+    user.id = 7
+    user.role = UserRole.LECTURER
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch("services.projects.update_project", new_callable=AsyncMock, return_value=project),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: []},
+        ),
+    ):
+        from schemas.projects import ProjectUpdate
+
+        result = await ProjectsService(session).patch_project(
+            1, ProjectUpdate(title="Lecturer Update"), user
+        )
+
+    assert result is not None
+    assert result.title == "Lecturer Update"
+
+
+# ---------------------------------------------------------------------------
+# ProjectsService.add_member unit tests
+# ---------------------------------------------------------------------------
+
+
+async def test_add_member_raises_not_found_when_project_missing() -> None:
+    """``add_member`` must raise ``ProjectNotFoundError`` when the project does not exist."""
+    from models.user import User
+
+    session = MagicMock()
+    user = MagicMock(spec=User)
+    user.id = 1
+    user.role = UserRole.STUDENT
+
+    with (
+        patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None),
+        pytest.raises(ProjectNotFoundError),
+    ):
+        from schemas.projects import AddMemberBody
+
+        await ProjectsService(session).add_member(99, AddMemberBody(email="x@tul.cz"), user)
+
+
+async def test_add_member_raises_already_member_when_duplicate() -> None:
+    """``add_member`` must raise ``AlreadyMemberError`` when the user is already a member."""
+    from models.course import Course
+    from models.project import Project
+    from models.project_member import ProjectMember
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    project = MagicMock(spec=Project)
+    project.id = 1
+
+    existing_user = MagicMock(spec=User)
+    existing_user.id = 10
+    existing_user.email = "bob@tul.cz"
+    existing_user.name = "Bob"
+    existing_user.github_alias = None
+
+    existing_member = MagicMock(spec=ProjectMember)
+
+    session = MagicMock()
+    user = MagicMock(spec=User)
+    user.id = 5
+    user.role = UserRole.STUDENT
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "services.projects.is_project_member",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "services.projects.get_or_create_user",
+            new_callable=AsyncMock,
+            return_value=(existing_user, False),
+        ),
+        patch(
+            "services.projects.add_project_member",
+            new_callable=AsyncMock,
+            return_value=(existing_member, False),
+        ),
+        pytest.raises(AlreadyMemberError),
+    ):
+        from schemas.projects import AddMemberBody
+
+        await ProjectsService(session).add_member(1, AddMemberBody(email="bob@tul.cz"), user)
+
+
+async def test_add_member_creates_user_and_returns_member_public() -> None:
+    """``add_member`` must create a new user when none exists and return ``MemberPublic``."""
+    from models.course import Course
+    from models.project import Project
+    from models.project_member import ProjectMember
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    project = MagicMock(spec=Project)
+    project.id = 1
+
+    new_user = MagicMock(spec=User)
+    new_user.id = 20
+    new_user.email = "new@tul.cz"
+    new_user.name = "new@tul.cz"
+    new_user.github_alias = None
+
+    new_member = MagicMock(spec=ProjectMember)
+    new_member.id = 100
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+
+    user = MagicMock(spec=User)
+    user.id = 5
+    user.role = UserRole.STUDENT
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "services.projects.is_project_member",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "services.projects.get_or_create_user",
+            new_callable=AsyncMock,
+            return_value=(new_user, True),
+        ),
+        patch(
+            "services.projects.add_project_member",
+            new_callable=AsyncMock,
+            return_value=(new_member, True),
+        ),
+    ):
+        from schemas.projects import AddMemberBody
+
+        result = await ProjectsService(session).add_member(
+            1, AddMemberBody(email="new@tul.cz"), user
+        )
+
+    assert result.id == 20
+    assert result.email == "new@tul.cz"
+    session.commit.assert_called_once()

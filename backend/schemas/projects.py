@@ -95,6 +95,26 @@ class PeerFeedbackDetail(BaseModel):
     bonus_points: int
 
 
+class ProjectUpdate(BaseModel):
+    """Request body for ``PATCH /projects/{id}``.
+
+    All fields are optional — only the supplied fields will be updated.
+    Passing ``None`` explicitly clears the optional text fields.
+    """
+
+    title: str | None = None
+    description: str | None = None
+    github_url: str | None = None
+    live_url: str | None = None
+    technologies: list[str] | None = None
+
+
+class AddMemberBody(BaseModel):
+    """Request body for ``POST /projects/{id}/members``."""
+
+    email: str
+
+
 class ProjectPublic(BaseModel):
     """Project representation returned to all callers.
 

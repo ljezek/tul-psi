@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.projects import (
+    add_project_member,
     get_course_evaluations,
     get_course_lecturers,
+    get_or_create_user,
     get_peer_feedback_authored,
     get_peer_feedback_received,
     get_project_evaluations,
     get_project_members,
     get_projects,
+    is_course_lecturer,
+    is_project_member,
+    update_project,
 )
 from db.projects import (
     get_project as db_get_project,
@@ -23,6 +29,7 @@ from models.project import Project
 from models.project_evaluation import ProjectEvaluation
 from models.user import User, UserRole
 from schemas.projects import (
+    AddMemberBody,
     CourseEvaluationDetail,
     CoursePublic,
     EvaluationScoreDetail,
@@ -31,7 +38,10 @@ from schemas.projects import (
     PeerFeedbackDetail,
     ProjectEvaluationDetail,
     ProjectPublic,
+    ProjectUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _require_id(user: User) -> int:
@@ -163,6 +173,18 @@ def _to_peer_feedback_detail(feedback: PeerFeedback) -> PeerFeedbackDetail:
         improvements=feedback.improvements,
         bonus_points=feedback.bonus_points,
     )
+
+
+class PermissionDeniedError(Exception):
+    """Raised when the requesting user is not authorised to modify a project."""
+
+
+class ProjectNotFoundError(Exception):
+    """Raised when the requested project does not exist."""
+
+
+class AlreadyMemberError(Exception):
+    """Raised when the target user is already a member of the project."""
 
 
 class ProjectsService:
@@ -305,4 +327,119 @@ class ProjectsService:
             course_evaluations=course_evaluations,
             received_peer_feedback=received_peer_feedback,
             authored_peer_feedback=authored_peer_feedback,
+        )
+
+    async def _check_write_permission(self, project_id: int, user: User) -> None:
+        """Raise ``PermissionDeniedError`` when *user* may not modify *project_id*.
+
+        Write access is granted to:
+        - Any user who is a member of the project.
+        - Any LECTURER who is assigned to the project's course.
+
+        Raises ``ProjectNotFoundError`` when the project does not exist so the
+        caller can map it to an appropriate HTTP 404 without an extra DB query.
+        """
+        row = await db_get_project(self._session, project_id)
+        if row is None:
+            raise ProjectNotFoundError(project_id)
+
+        if user.id is None:
+            raise PermissionDeniedError("User has no id.")
+
+        if user.role == UserRole.LECTURER:
+            if await is_course_lecturer(self._session, project_id, user.id):
+                return
+        if await is_project_member(self._session, project_id, user.id):
+            return
+
+        raise PermissionDeniedError(
+            f"User {user.id} is not authorised to modify project {project_id}."
+        )
+
+    async def patch_project(
+        self,
+        project_id: int,
+        body: ProjectUpdate,
+        user: User,
+    ) -> ProjectPublic:
+        """Apply *body* updates to the project identified by *project_id*.
+
+        Only non-``None`` fields in *body* are written; ``None`` means "leave unchanged".
+        Raises ``ProjectNotFoundError`` when the project does not exist and
+        ``PermissionDeniedError`` when *user* is not a member or lecturer.
+        """
+        await self._check_write_permission(project_id, user)
+
+        await update_project(
+            self._session,
+            project_id,
+            title=body.title,
+            description=body.description,
+            github_url=body.github_url,
+            live_url=body.live_url,
+            technologies=body.technologies,
+        )
+        await self._session.commit()
+
+        result = await self.get_project_detail(project_id, user)
+        if result is None:
+            # Should not happen — we already verified the project exists above.
+            raise ProjectNotFoundError(project_id)
+        return result
+
+    async def add_member(
+        self,
+        project_id: int,
+        body: AddMemberBody,
+        user: User,
+    ) -> MemberPublic:
+        """Add the user identified by *body.email* as a member of *project_id*.
+
+        If no account exists for that e-mail address a new STUDENT account is
+        created.  A login-link notification is logged (in lieu of real SMTP
+        delivery while that integration is pending).
+
+        Raises ``ProjectNotFoundError`` when the project does not exist,
+        ``PermissionDeniedError`` when *user* is not a member or lecturer, and
+        ``AlreadyMemberError`` when the target user is already on the project.
+        """
+        await self._check_write_permission(project_id, user)
+
+        target_user, created = await get_or_create_user(self._session, body.email)
+
+        if created:
+            # Notify the new user — log in lieu of SMTP while that integration is pending.
+            logger.info(
+                "New user created via project invite; send login link.",
+                extra={"email": body.email, "project_id": project_id},
+            )
+        else:
+            logger.info(
+                "Existing user invited to project; send notification.",
+                extra={"email": body.email, "project_id": project_id},
+            )
+
+        if user.id is None:
+            raise PermissionDeniedError("Inviting user has no id.")
+
+        if target_user.id is None:
+            raise ValueError(f"User returned from DB has no id after flush: {target_user!r}")
+
+        member_row, added = await add_project_member(
+            self._session,
+            project_id,
+            target_user.id,
+            invited_by=user.id,
+        )
+        if not added:
+            raise AlreadyMemberError(
+                f"User {target_user.email} is already a member of project {project_id}."
+            )
+
+        await self._session.commit()
+        return MemberPublic(
+            id=target_user.id,
+            github_alias=target_user.github_alias,
+            name=target_user.name,
+            email=target_user.email,
         )
