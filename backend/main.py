@@ -5,7 +5,7 @@ import os
 import sys
 
 from fastapi import FastAPI
-from pythonjsonlogger.jsonlogger import JsonFormatter
+from pythonjsonlogger.json import JsonFormatter
 
 from api.auth import router as auth_router
 from api.courses import router as courses_router

@@ -19,6 +19,8 @@ from models.user import UserRole
 # Fixtures
 # ---------------------------------------------------------------------------
 
+_JWT_SECRET = "test-secret-that-is-long-enough-for-hmac-sha256"  # noqa: S105
+
 
 @pytest.fixture(autouse=True)
 def _override_session() -> Generator[None, None, None]:
@@ -33,7 +35,7 @@ def _mock_settings() -> Generator[None, None, None]:
     """Stub application settings so tests do not require a real database URL."""
     mock_settings = MagicMock()
     mock_settings.show_otp_dev_only = False
-    mock_settings.jwt_secret = "test-secret"  # noqa: S105
+    mock_settings.jwt_secret = _JWT_SECRET
     mock_settings.jwt_algorithm = "HS256"
     # Use "local" so the route does not set the Secure flag on the cookie — the
     # test HTTP client uses plain HTTP, and a Secure cookie would be dropped.
@@ -209,7 +211,7 @@ async def test_otp_verify_jwt_claims_and_expiry(client: AsyncClient) -> None:
             json={"email": "jan.novak@tul.cz", "otp": "483921"},
         )
     token_value = response.cookies["session"]
-    payload = jwt.decode(token_value, "test-secret", algorithms=["HS256"])
+    payload = jwt.decode(token_value, _JWT_SECRET, algorithms=["HS256"])
     assert payload["user_id"] == 42
     assert payload["role"] == UserRole.STUDENT.value
     exp = datetime.fromtimestamp(payload["exp"], tz=UTC)
