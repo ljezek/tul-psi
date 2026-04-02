@@ -34,7 +34,14 @@ def _override_session() -> Generator[None, None, None]:
 def _mock_settings() -> Generator[None, None, None]:
     """Stub application settings so tests do not require a real database URL."""
     mock_settings = MagicMock()
-    with patch("services.auth_service.get_settings", return_value=mock_settings):
+    # Provide minimal attributes expected by EmailSender/EmailTemplate.
+    mock_settings.app_env = "local"
+    mock_settings.frontend_url = "http://frontend.test"
+    # Ensure both auth and email services use the same mocked settings instance.
+    with (
+        patch("services.auth_service.get_settings", return_value=mock_settings),
+        patch("services.email.get_settings", return_value=mock_settings),
+    ):
         yield
 
 
