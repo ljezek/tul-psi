@@ -23,7 +23,9 @@ async def get_projects(
 ):
     client_type = detect_client_type(request)
     try:
-        projects = await service.get_projects(academic_year=academic_year, subject=subject, client_type=client_type)
+        projects = await service.get_projects(
+            academic_year=academic_year, subject=subject, client_type=client_type
+        )
         request.state.log_extra = {"projects_count": len(projects)}
         return projects
     except RuntimeError as exc:

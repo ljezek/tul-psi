@@ -20,12 +20,16 @@ async def health(settings: Settings = Depends(get_settings)):
     enrich_ok = True
 
     try:
-        await load_projects_from_db(settings.projects_data_file, settings.simulated_db_delay_ms, error_rate=0.0)
+        await load_projects_from_db(
+            settings.projects_data_file, settings.simulated_db_delay_ms, error_rate=0.0
+        )
     except Exception:
         db_ok = False
 
     try:
-        await enrich_project_info("health-check", settings.simulated_http_delay_ms, error_rate=0.0)
+        await enrich_project_info(
+            "health-check", settings.simulated_http_delay_ms, error_rate=0.0
+        )
     except Exception:
         enrich_ok = False
 

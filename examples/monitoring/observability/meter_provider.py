@@ -24,4 +24,3 @@ def setup_meter_provider(settings: Settings) -> None:
     reader = PeriodicExportingMetricReader(exporter, export_interval_millis=15000)
     meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
     metrics.set_meter_provider(meter_provider)
-

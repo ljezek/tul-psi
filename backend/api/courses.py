@@ -359,7 +359,5 @@ async def get_evaluation_overview(
     except CoursePermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except Exception:
-        logger.exception(
-            "Failed to retrieve evaluation overview", extra={"course_id": course_id}
-        )
+        logger.exception("Failed to retrieve evaluation overview", extra={"course_id": course_id})
         raise HTTPException(status_code=500, detail="Internal server error.") from None

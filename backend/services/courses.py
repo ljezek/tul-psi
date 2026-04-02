@@ -435,9 +435,7 @@ class CoursesService:
                     student_name=name,
                     total_bonus_points=total,
                 )
-                for sid, (name, total) in sorted(
-                    bonus_by_student.items(), key=lambda kv: kv[1][0]
-                )
+                for sid, (name, total) in sorted(bonus_by_student.items(), key=lambda kv: kv[1][0])
             ]
 
             items.append(

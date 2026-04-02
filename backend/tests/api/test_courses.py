@@ -949,9 +949,7 @@ async def test_get_evaluation_overview_forwards_year_filter(client: AsyncClient)
 
     await client.get("/api/v1/courses/5/evaluation-overview?year=2025")
 
-    mock_service.get_evaluation_overview.assert_called_once_with(
-        5, year=2025, requester=user
-    )
+    mock_service.get_evaluation_overview.assert_called_once_with(5, year=2025, requester=user)
 
 
 async def test_get_evaluation_overview_forwards_none_when_no_year(client: AsyncClient) -> None:
@@ -963,9 +961,7 @@ async def test_get_evaluation_overview_forwards_none_when_no_year(client: AsyncC
 
     await client.get("/api/v1/courses/5/evaluation-overview")
 
-    mock_service.get_evaluation_overview.assert_called_once_with(
-        5, year=None, requester=user
-    )
+    mock_service.get_evaluation_overview.assert_called_once_with(5, year=None, requester=user)
 
 
 async def test_get_evaluation_overview_returns_500_on_unexpected_error(

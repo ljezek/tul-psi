@@ -90,4 +90,5 @@ app.include_router(projects_router)
 
 if settings.otel_enabled:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
     FastAPIInstrumentor.instrument_app(app)

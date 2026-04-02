@@ -846,9 +846,7 @@ class ProjectsService:
         user_id = _require_id(user)
 
         if not await is_project_member(self._session, project_id, user_id):
-            raise PermissionDeniedError(
-                f"User {user_id} is not a member of project {project_id}."
-            )
+            raise PermissionDeniedError(f"User {user_id} is not a member of project {project_id}.")
 
         members_by_project = await get_project_members(self._session, [project_id])
         all_members = members_by_project.get(project_id, [])
@@ -865,9 +863,7 @@ class ProjectsService:
             if m.id != user_id
         ]
 
-        current_eval = await get_course_evaluation_by_student(
-            self._session, project_id, user_id
-        )
+        current_eval = await get_course_evaluation_by_student(self._session, project_id, user_id)
         current_evaluation: CourseEvaluationDetail | None = None
         authored_peer_feedback: list[PeerFeedbackDetail] = []
 
@@ -915,9 +911,7 @@ class ProjectsService:
         user_id = _require_id(user)
 
         if not await is_project_member(self._session, project_id, user_id):
-            raise PermissionDeniedError(
-                f"User {user_id} is not a member of project {project_id}."
-            )
+            raise PermissionDeniedError(f"User {user_id} is not a member of project {project_id}.")
 
         if p.results_unlocked:
             raise EvaluationConflictError(

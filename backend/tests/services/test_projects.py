@@ -1937,9 +1937,7 @@ async def test_get_course_evaluation_form_raises_when_not_a_member() -> None:
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=False
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=False),
         pytest.raises(PermissionDeniedError),
     ):
         await ProjectsService(session).get_course_evaluation_form(1, user)
@@ -1969,9 +1967,7 @@ async def test_get_course_evaluation_form_returns_no_draft_when_none_exists() ->
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=True
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
         patch(
             "services.projects.get_project_members",
             new_callable=AsyncMock,
@@ -2020,9 +2016,7 @@ async def test_get_course_evaluation_form_returns_draft_when_exists() -> None:
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=True
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
         patch(
             "services.projects.get_project_members",
             new_callable=AsyncMock,
@@ -2083,9 +2077,7 @@ async def test_save_course_evaluation_raises_permission_error_for_non_member() -
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=False
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=False),
         pytest.raises(PermissionDeniedError),
     ):
         await ProjectsService(session).save_course_evaluation(1, body, user)
@@ -2108,9 +2100,7 @@ async def test_save_course_evaluation_raises_conflict_when_results_unlocked() ->
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=True
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
         pytest.raises(EvaluationConflictError),
     ):
         await ProjectsService(session).save_course_evaluation(1, body, user)
@@ -2141,9 +2131,7 @@ async def test_save_course_evaluation_raises_invalid_data_for_unknown_recipient(
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=True
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
         patch(
             "services.projects.get_project_members",
             new_callable=AsyncMock,
@@ -2181,9 +2169,7 @@ async def test_save_course_evaluation_raises_invalid_data_when_bonus_budget_not_
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=True
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
         patch(
             "services.projects.get_project_members",
             new_callable=AsyncMock,
@@ -2232,9 +2218,7 @@ async def test_save_course_evaluation_triggers_auto_unlock_on_final_submission()
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        patch(
-            "services.projects.is_project_member", new_callable=AsyncMock, return_value=True
-        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
         patch(
             "services.projects.get_project_members",
             new_callable=AsyncMock,
