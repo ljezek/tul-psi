@@ -845,6 +845,11 @@ class ProjectsService:
         p, course = row
         user_id = _require_id(user)
 
+        if user.role != UserRole.STUDENT:
+            raise PermissionDeniedError(
+                "Only students may access the course evaluation form."
+            )
+
         if not await is_project_member(self._session, project_id, user_id):
             raise PermissionDeniedError(f"User {user_id} is not a member of project {project_id}.")
 
@@ -896,12 +901,14 @@ class ProjectsService:
         peer-feedback rows for this evaluation are fully replaced on every call.
 
         Raises ``ProjectNotFoundError`` when the project does not exist.
-        Raises ``PermissionDeniedError`` when *user* is not a project member.
+        Raises ``PermissionDeniedError`` when *user* is not a student or not a project member.
         Raises ``EvaluationConflictError`` when the project results are already
         unlocked (editing is no longer permitted after unlock).
         Raises ``InvalidEvaluationDataError`` when a peer-feedback recipient is
-        not a project teammate, bonus points are negative, or the total bonus
-        does not equal ``Course.peer_bonus_budget`` on a final submission.
+        not a project teammate, bonus points are non-zero when the course has no
+        peer-bonus scheme, bonus points are negative or exceed ``2 × peer_bonus_budget``,
+        or the total bonus does not equal ``peer_bonus_budget × N_teammates`` on a
+        final submission.
         """
         row = await db_get_project(self._session, project_id)
         if row is None:
@@ -909,6 +916,11 @@ class ProjectsService:
 
         p, course = row
         user_id = _require_id(user)
+
+        if user.role != UserRole.STUDENT:
+            raise PermissionDeniedError(
+                "Only students may submit a course evaluation."
+            )
 
         if not await is_project_member(self._session, project_id, user_id):
             raise PermissionDeniedError(f"User {user_id} is not a member of project {project_id}.")
@@ -932,33 +944,39 @@ class ProjectsService:
                 " Only project teammates may receive peer feedback."
             )
 
-        # Validate that no bonus points are negative or exceed twice the per-teammate budget.
-        for fb in body.peer_feedback:
-            if fb.bonus_points < 0:
-                raise InvalidEvaluationDataError(
-                    f"Bonus points must be non-negative, got {fb.bonus_points}."
-                )
-            if (
-                course.peer_bonus_budget is not None
-                and fb.bonus_points > 2 * course.peer_bonus_budget
-            ):
-                raise InvalidEvaluationDataError(
-                    f"Bonus points for a single teammate must not exceed"
-                    f" 2 × peer_bonus_budget ({2 * course.peer_bonus_budget}),"
-                    f" got {fb.bonus_points}."
-                )
+        # Validate bonus points. When the peer-bonus scheme is disabled (budget is None),
+        # all bonus_points must be zero to prevent skewing the overview aggregation.
+        if course.peer_bonus_budget is None:
+            for fb in body.peer_feedback:
+                if fb.bonus_points != 0:
+                    raise InvalidEvaluationDataError(
+                        "Bonus points must be zero when the course has no peer-bonus scheme,"
+                        f" got {fb.bonus_points}."
+                    )
+        else:
+            for fb in body.peer_feedback:
+                if fb.bonus_points < 0:
+                    raise InvalidEvaluationDataError(
+                        f"Bonus points must be non-negative, got {fb.bonus_points}."
+                    )
+                if fb.bonus_points > 2 * course.peer_bonus_budget:
+                    raise InvalidEvaluationDataError(
+                        f"Bonus points for a single teammate must not exceed"
+                        f" 2 × peer_bonus_budget ({2 * course.peer_bonus_budget}),"
+                        f" got {fb.bonus_points}."
+                    )
 
-        # On a final submission, the total distributed bonus must equal
-        # peer_bonus_budget × number_of_teammates (each teammate is worth one budget unit).
-        if body.submitted and course.peer_bonus_budget is not None:
-            total_bonus = sum(fb.bonus_points for fb in body.peer_feedback)
-            expected_total = len(teammate_ids) * course.peer_bonus_budget
-            if total_bonus != expected_total:
-                raise InvalidEvaluationDataError(
-                    f"Total peer bonus points must equal peer_bonus_budget × teammates"
-                    f" ({course.peer_bonus_budget} × {len(teammate_ids)} = {expected_total}),"
-                    f" got {total_bonus}."
-                )
+            # On a final submission, the total distributed bonus must equal
+            # peer_bonus_budget × number_of_teammates (each teammate is worth one budget unit).
+            if body.submitted:
+                total_bonus = sum(fb.bonus_points for fb in body.peer_feedback)
+                expected_total = len(teammate_ids) * course.peer_bonus_budget
+                if total_bonus != expected_total:
+                    raise InvalidEvaluationDataError(
+                        f"Total peer bonus points must equal peer_bonus_budget × teammates"
+                        f" ({course.peer_bonus_budget} × {len(teammate_ids)} = {expected_total}),"
+                        f" got {total_bonus}."
+                    )
 
         evaluation = await upsert_course_evaluation(
             self._session,

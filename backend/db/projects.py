@@ -733,20 +733,25 @@ async def get_peer_feedback_with_users_for_projects(
     session: AsyncSession,
     project_ids: list[int],
 ) -> dict[int, list[tuple[PeerFeedback, User]]]:
-    """Return all peer feedback rows for *project_ids*, grouped by project id.
+    """Return submitted peer feedback rows for *project_ids*, grouped by project id.
 
     Each entry is ``(peer_feedback, receiving_user)`` so that callers can
-    display the receiving student's name without a further lookup.  Uses a
-    JOIN through ``course_evaluation`` to resolve the project association.
+    display the receiving student's name without a further lookup. Uses an
+    explicit join chain through ``course_evaluation`` to resolve the project
+    association and excludes draft course evaluations from the overview data.
     """
     if not project_ids:
         return {}
 
     stmt = (
         select(CourseEvaluation.project_id, PeerFeedback, User)
+        .select_from(PeerFeedback)
         .join(CourseEvaluation, PeerFeedback.course_evaluation_id == CourseEvaluation.id)
         .join(User, PeerFeedback.receiving_student_id == User.id)
-        .where(CourseEvaluation.project_id.in_(project_ids))
+        .where(
+            CourseEvaluation.project_id.in_(project_ids),
+            CourseEvaluation.submitted.is_(True),
+        )
     )
     result: dict[int, list[tuple[PeerFeedback, User]]] = {}
     for project_id, feedback, user in (await session.execute(stmt)).all():

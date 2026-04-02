@@ -1943,6 +1943,25 @@ async def test_get_course_evaluation_form_raises_when_not_a_member() -> None:
         await ProjectsService(session).get_course_evaluation_form(1, user)
 
 
+async def test_get_course_evaluation_form_raises_for_non_student() -> None:
+    """``get_course_evaluation_form`` must raise ``PermissionDeniedError`` for non-students."""
+    from services.projects import PermissionDeniedError
+
+    project, course = _make_project_and_course()
+    session = MagicMock()
+    lecturer = _make_lecturer_user()
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        pytest.raises(PermissionDeniedError, match="Only students"),
+    ):
+        await ProjectsService(session).get_course_evaluation_form(1, lecturer)
+
+
 async def test_get_course_evaluation_form_returns_no_draft_when_none_exists() -> None:
     """``get_course_evaluation_form`` must return ``current_evaluation=None`` with no draft."""
 
@@ -2083,6 +2102,27 @@ async def test_save_course_evaluation_raises_permission_error_for_non_member() -
         await ProjectsService(session).save_course_evaluation(1, body, user)
 
 
+async def test_save_course_evaluation_raises_for_non_student() -> None:
+    """``save_course_evaluation`` must raise ``PermissionDeniedError`` for non-students."""
+    from schemas.projects import CourseEvaluationUpsert
+    from services.projects import PermissionDeniedError
+
+    project, course = _make_project_and_course()
+    session = MagicMock()
+    lecturer = _make_lecturer_user()
+    body = CourseEvaluationUpsert(rating=3)
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        pytest.raises(PermissionDeniedError, match="Only students"),
+    ):
+        await ProjectsService(session).save_course_evaluation(1, body, lecturer)
+
+
 async def test_save_course_evaluation_raises_conflict_when_results_unlocked() -> None:
     """``save_course_evaluation`` must raise ``EvaluationConflictError`` if results are unlocked."""
     from schemas.projects import CourseEvaluationUpsert
@@ -2177,6 +2217,80 @@ async def test_save_course_evaluation_raises_when_per_recipient_bonus_too_high()
             return_value={1: [teammate]},
         ),
         pytest.raises(InvalidEvaluationDataError, match="2 × peer_bonus_budget"),
+    ):
+        await ProjectsService(session).save_course_evaluation(1, body, user)
+
+
+async def test_save_course_evaluation_raises_for_negative_bonus_points() -> None:
+    """``save_course_evaluation`` must raise ``InvalidEvaluationDataError`` for negative bonus."""
+    from models.user import User
+    from schemas.projects import CourseEvaluationUpsert, PeerFeedbackInput
+    from services.projects import InvalidEvaluationDataError
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    course.peer_bonus_budget = 10
+    session = MagicMock()
+    user = _make_student_user(user_id=5)
+
+    teammate = MagicMock(spec=User)
+    teammate.id = 7
+
+    body = CourseEvaluationUpsert(
+        rating=4,
+        peer_feedback=[PeerFeedbackInput(receiving_student_id=7, bonus_points=-1)],
+    )
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [teammate]},
+        ),
+        pytest.raises(InvalidEvaluationDataError, match="non-negative"),
+    ):
+        await ProjectsService(session).save_course_evaluation(1, body, user)
+
+
+async def test_save_course_evaluation_raises_when_bonus_nonzero_without_budget() -> None:
+    """``save_course_evaluation`` must raise when bonus_points > 0 and no peer-bonus scheme."""
+    from models.user import User
+    from schemas.projects import CourseEvaluationUpsert, PeerFeedbackInput
+    from services.projects import InvalidEvaluationDataError
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    course.peer_bonus_budget = None
+    session = MagicMock()
+    user = _make_student_user(user_id=5)
+
+    teammate = MagicMock(spec=User)
+    teammate.id = 7
+
+    body = CourseEvaluationUpsert(
+        rating=4,
+        peer_feedback=[PeerFeedbackInput(receiving_student_id=7, bonus_points=5)],
+    )
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [teammate]},
+        ),
+        pytest.raises(InvalidEvaluationDataError, match="no peer-bonus scheme"),
     ):
         await ProjectsService(session).save_course_evaluation(1, body, user)
 
