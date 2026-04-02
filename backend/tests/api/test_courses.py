@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.exc import IntegrityError
 
 from api.courses import get_courses_service, get_projects_service
 from api.deps import get_current_user, get_optional_current_user
@@ -14,7 +15,7 @@ from models.course import CourseTerm, ProjectType
 from models.user import UserRole
 from schemas.courses import CourseDetail, CourseEvaluationPublic, CourseListItem, CourseStats
 from schemas.projects import CoursePublic, LecturerPublic, ProjectPublic
-from services.courses import CoursesService
+from services.courses import CoursePermissionError, CoursesService
 from services.projects import ProjectsService
 
 # ---------------------------------------------------------------------------
@@ -94,6 +95,8 @@ def _make_service(
     service = MagicMock(spec=CoursesService)
     service.get_courses = AsyncMock(return_value=courses or [])
     service.get_course = AsyncMock(return_value=detail)
+    service.create_course = AsyncMock(return_value=detail)
+    service.update_course = AsyncMock(return_value=detail)
     return service
 
 
@@ -409,3 +412,175 @@ async def test_create_course_project_forwards_data_to_service(client: AsyncClien
     assert call_args.args[1].title == "My Project"
     assert call_args.args[1].owner_email == "alice@tul.cz"
     assert call_args.args[2] is mock_user
+# POST /api/v1/courses — create course
+# ---------------------------------------------------------------------------
+
+_CREATE_BODY = {
+    "code": "NEW",
+    "name": "New Course",
+    "term": "WINTER",
+    "project_type": "TEAM",
+    "min_score": 50,
+}
+
+
+async def test_create_course_returns_201_for_admin(client: AsyncClient) -> None:
+    """POST /api/v1/courses must return HTTP 201 and the created ``CourseDetail`` for an admin."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.post("/api/v1/courses", json=_CREATE_BODY)
+    assert response.status_code == 201
+    assert response.json() == _COURSE_DETAIL.model_dump(mode="json")
+
+
+async def test_create_course_forwards_body_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/courses must pass the parsed request body and current user to the service."""
+    mock_user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    await client.post("/api/v1/courses", json=_CREATE_BODY)
+    mock_service.create_course.assert_called_once()
+    call_args = mock_service.create_course.call_args
+    assert call_args.args[1] is mock_user
+
+
+async def test_create_course_returns_401_for_unauthenticated(client: AsyncClient) -> None:
+    """POST /api/v1/courses must return HTTP 401 when no session is present."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: None
+    response = await client.post("/api/v1/courses", json=_CREATE_BODY)
+    assert response.status_code == 401
+
+
+async def test_create_course_returns_403_for_lecturer(client: AsyncClient) -> None:
+    """POST /api/v1/courses must return HTTP 403 when the caller is a lecturer."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.LECTURER)
+    response = await client.post("/api/v1/courses", json=_CREATE_BODY)
+    assert response.status_code == 403
+
+
+async def test_create_course_returns_403_for_student(client: AsyncClient) -> None:
+    """POST /api/v1/courses must return HTTP 403 when the caller is a student."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.STUDENT)
+    response = await client.post("/api/v1/courses", json=_CREATE_BODY)
+    assert response.status_code == 403
+
+
+async def test_create_course_returns_409_on_duplicate_code(client: AsyncClient) -> None:
+    """POST /api/v1/courses must return HTTP 409 when the course code is already in use."""
+    mock_service = _make_service()
+    mock_service.create_course.side_effect = IntegrityError("", {}, Exception())
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.post("/api/v1/courses", json=_CREATE_BODY)
+    assert response.status_code == 409
+
+
+async def test_create_course_returns_500_on_service_error(client: AsyncClient) -> None:
+    """POST /api/v1/courses must return HTTP 500 when an unexpected error occurs."""
+    mock_service = _make_service()
+    mock_service.create_course.side_effect = RuntimeError("db failure")
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.post("/api/v1/courses", json=_CREATE_BODY)
+    assert response.status_code == 500
+
+
+async def test_create_course_returns_422_for_missing_required_fields(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/courses must return HTTP 422 when required fields are missing."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.post("/api/v1/courses", json={"code": "X"})
+    assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/v1/courses/{id} — update course
+# ---------------------------------------------------------------------------
+
+_UPDATE_BODY = {"name": "Updated Name"}
+
+
+async def test_update_course_returns_200_for_admin(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must return HTTP 200 and the updated ``CourseDetail``."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.patch("/api/v1/courses/1", json=_UPDATE_BODY)
+    assert response.status_code == 200
+    assert response.json() == _COURSE_DETAIL.model_dump(mode="json")
+
+
+async def test_update_course_forwards_body_and_user_to_service(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must pass the course id, body, and current user to the service."""
+    mock_user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    await client.patch("/api/v1/courses/42", json=_UPDATE_BODY)
+    mock_service.update_course.assert_called_once()
+    call_args = mock_service.update_course.call_args
+    assert call_args.args[0] == 42
+    assert call_args.args[2] is mock_user
+
+
+async def test_update_course_returns_401_for_unauthenticated(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must return HTTP 401 when no session is present."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: None
+    response = await client.patch("/api/v1/courses/1", json=_UPDATE_BODY)
+    assert response.status_code == 401
+
+
+async def test_update_course_returns_403_on_permission_error(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must return HTTP 403 when the service raises permission error."""
+    mock_service = _make_service()
+    mock_service.update_course.side_effect = CoursePermissionError("Not allowed.")
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.STUDENT)
+    response = await client.patch("/api/v1/courses/1", json=_UPDATE_BODY)
+    assert response.status_code == 403
+
+
+async def test_update_course_returns_404_when_not_found(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must return HTTP 404 when the course does not exist."""
+    mock_service = _make_service(detail=None)
+    mock_service.update_course = AsyncMock(return_value=None)
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.patch("/api/v1/courses/999", json=_UPDATE_BODY)
+    assert response.status_code == 404
+
+
+async def test_update_course_returns_409_on_duplicate_code(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must return HTTP 409 when the new code conflicts."""
+    mock_service = _make_service()
+    mock_service.update_course.side_effect = IntegrityError("", {}, Exception())
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.patch("/api/v1/courses/1", json={"code": "EXISTING"})
+    assert response.status_code == 409
+
+
+async def test_update_course_returns_500_on_service_error(client: AsyncClient) -> None:
+    """PATCH /api/v1/courses/{id} must return HTTP 500 when an unexpected error occurs."""
+    mock_service = _make_service()
+    mock_service.update_course.side_effect = RuntimeError("db failure")
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.patch("/api/v1/courses/1", json=_UPDATE_BODY)
+    assert response.status_code == 500
+
+
+async def test_update_course_returns_422_for_null_evaluation_criteria(
+    client: AsyncClient,
+) -> None:
+    """PATCH /api/v1/courses/{id} must return HTTP 422 when evaluation_criteria is set to null."""
+    app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.ADMIN)
+    response = await client.patch("/api/v1/courses/1", json={"evaluation_criteria": None})
+    assert response.status_code == 422
