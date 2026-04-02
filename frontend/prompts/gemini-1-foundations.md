@@ -9,7 +9,7 @@ You are building the production React frontend for the **Student Projects Catalo
 - `tailwind.config.js` has a custom `tul-blue` (#0077c8) color and Inter font
 - The backend API is at `VITE_API_URL` (default `http://localhost:8000`), all endpoints prefixed `/api/v1`
 - Authentication is cookie-based: the backend sets an HttpOnly `session` cookie after OTP verification
-- There is NO logout endpoint on the backend — implement logout by deleting the `session` cookie client-side
+- There is NO logout endpoint on the backend — do not attempt to delete the HttpOnly `session` cookie client-side; instead, implement logout as clearing frontend auth state only, and note that server authentication will persist until the cookie expires
 - Read `prototype/LanguageContext.tsx` and `prototype/components/Button.tsx` for reference patterns
 
 ## Task
@@ -41,7 +41,6 @@ interface MemberPublic { id: number; github_alias: string | null; name: string; 
 interface EvaluationCriterion { code: string; description: string; max_score: number }
 interface CourseLink { label: string; url: string }
 interface CoursePublic { code: string; name: string; syllabus: string | null; term: CourseTerm; project_type: ProjectType; min_score: number; peer_bonus_budget: number | null; evaluation_criteria: EvaluationCriterion[]; links: CourseLink[]; lecturers: LecturerPublic[] }
-interface MemberPublic { id: number; github_alias: string | null; name: string; email: string | null }
 interface EvaluationScoreDetail { criterion_code: string; score: number; strengths: string; improvements: string }
 interface ProjectEvaluationDetail { lecturer_id: number; scores: EvaluationScoreDetail[]; updated_at: string; submitted: boolean }
 interface CourseEvaluationDetail { id: number; student_id: number; rating: number; strengths: string | null; improvements: string | null; submitted: boolean; updated_at: string }
@@ -77,7 +76,7 @@ Requirements:
   - For 204 responses, returns `undefined as T`
 - Export named functions for each endpoint:
   - `requestOtp(email: string): Promise<{ message: string }>`  — POST `/api/v1/auth/otp/request`
-  - `verifyOtp(email: string, otp: string): Promise<void>` — POST `/api/v1/auth/otp/verify`
+  - `verifyOtp(email: string, otp: string): Promise<Record<string, never>>` — POST `/api/v1/auth/otp/verify` (the backend returns HTTP 200 with `{}` on success)
   - `getCurrentUser(): Promise<UserPublic>` — GET `/api/v1/users/me`
   - `updateCurrentUser(data: { name?: string; github_alias?: string | null }): Promise<UserPublic>` — PATCH `/api/v1/users/me`
   - `getProjects(filters?: { q?: string; course?: string; year?: number; term?: CourseTerm; technology?: string }): Promise<ProjectPublic[]>` — GET `/api/v1/projects` with query params
