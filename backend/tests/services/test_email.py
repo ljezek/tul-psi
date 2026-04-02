@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from io import StringIO
-from unittest.mock import patch
-
 import pytest
 
 from services.email import EmailMessage, EmailSender, EmailTemplate
@@ -12,17 +9,12 @@ from services.email import EmailMessage, EmailSender, EmailTemplate
 # ---------------------------------------------------------------------------
 
 
-def test_email_message_fields() -> None:
-    """EmailMessage must expose the three fields it was constructed with."""
+def test_email_message_fields_and_immutability() -> None:
+    """EmailMessage must expose its fields and reject mutation (frozen dataclass)."""
     msg = EmailMessage(to="a@tul.cz", subject="Hi", body="Hello")
     assert msg.to == "a@tul.cz"
     assert msg.subject == "Hi"
     assert msg.body == "Hello"
-
-
-def test_email_message_is_immutable() -> None:
-    """EmailMessage must be frozen; attribute assignment must raise AttributeError."""
-    msg = EmailMessage(to="a@tul.cz", subject="Hi", body="Hello")
     with pytest.raises(AttributeError):
         msg.to = "other@tul.cz"  # type: ignore[misc]
 
@@ -32,22 +24,15 @@ def test_email_message_is_immutable() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_otp_template_addressing() -> None:
-    """EmailTemplate.otp must set the ``to`` field to the supplied recipient."""
-    msg = EmailTemplate.otp(to="user@tul.cz", otp_code="123456")
-    assert msg.to == "user@tul.cz"
-
-
-def test_otp_template_contains_code() -> None:
-    """EmailTemplate.otp body must contain the OTP code."""
+def test_otp_template() -> None:
+    """OTP template must address the recipient, embed the code, and reference OTP in subject."""
     msg = EmailTemplate.otp(to="user@tul.cz", otp_code="987654")
+    assert msg.to == "user@tul.cz"
     assert "987654" in msg.body
-
-
-def test_otp_template_has_subject() -> None:
-    """EmailTemplate.otp must produce a non-empty subject line."""
-    msg = EmailTemplate.otp(to="user@tul.cz", otp_code="000000")
-    assert msg.subject
+    assert "one-time" in msg.subject.lower()
+    assert msg.subject.startswith("TUL Student Projects:")
+    # Body should include a link to the portal.
+    assert "http" in msg.body
 
 
 # ---------------------------------------------------------------------------
@@ -55,29 +40,18 @@ def test_otp_template_has_subject() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_project_invite_addressing() -> None:
-    """EmailTemplate.project_invite must set the ``to`` field correctly."""
-    msg = EmailTemplate.project_invite(
-        to="student@tul.cz", project_name="My Project", course_name="PSI"
-    )
-    assert msg.to == "student@tul.cz"
-
-
-def test_project_invite_contains_names() -> None:
-    """EmailTemplate.project_invite body must mention both project and course names."""
-    msg = EmailTemplate.project_invite(
-        to="student@tul.cz", project_name="My Project", course_name="PSI"
-    )
-    assert "My Project" in msg.body
-    assert "PSI" in msg.body
-
-
-def test_project_invite_subject_contains_project_name() -> None:
-    """EmailTemplate.project_invite subject must reference the project name."""
+def test_project_invite_template() -> None:
+    """Project invite must address the recipient, mention project/course, and have valid subject."""
     msg = EmailTemplate.project_invite(
         to="student@tul.cz", project_name="Awesome App", course_name="PSI"
     )
+    assert msg.to == "student@tul.cz"
+    assert "Awesome App" in msg.body
+    assert "PSI" in msg.body
     assert "Awesome App" in msg.subject
+    assert msg.subject.startswith("TUL Student Projects:")
+    # Body should include a link to the portal.
+    assert "http" in msg.body
 
 
 # ---------------------------------------------------------------------------
@@ -85,22 +59,29 @@ def test_project_invite_subject_contains_project_name() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_course_invite_addressing() -> None:
-    """EmailTemplate.course_invite must set the ``to`` field correctly."""
-    msg = EmailTemplate.course_invite(to="student@tul.cz", course_name="PSI")
-    assert msg.to == "student@tul.cz"
-
-
-def test_course_invite_contains_course_name() -> None:
-    """EmailTemplate.course_invite body must mention the course name."""
-    msg = EmailTemplate.course_invite(to="student@tul.cz", course_name="PSI")
+def test_course_invite_template() -> None:
+    """Course invite must address a lecturer, mention the course, and have a valid subject."""
+    msg = EmailTemplate.course_invite(to="lecturer@tul.cz", course_name="PSI")
+    assert msg.to == "lecturer@tul.cz"
     assert "PSI" in msg.body
-
-
-def test_course_invite_subject_contains_course_name() -> None:
-    """EmailTemplate.course_invite subject must reference the course name."""
-    msg = EmailTemplate.course_invite(to="student@tul.cz", course_name="PSI")
     assert "PSI" in msg.subject
+    assert msg.subject.startswith("TUL Student Projects:")
+    # The invite is specifically for a lecturer role.
+    assert "lecturer" in msg.body.lower()
+    # Body should include a link to the portal.
+    assert "http" in msg.body
+
+
+def test_course_invite_template_peer_feedback_mentioned_when_enabled() -> None:
+    """EmailTemplate.course_invite body must mention peer feedback when the flag is True."""
+    msg_with = EmailTemplate.course_invite(
+        to="lecturer@tul.cz", course_name="PSI", peer_feedback_enabled=True
+    )
+    msg_without = EmailTemplate.course_invite(
+        to="lecturer@tul.cz", course_name="PSI", peer_feedback_enabled=False
+    )
+    assert "peer feedback" in msg_with.body.lower()
+    assert "peer feedback" not in msg_without.body.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -108,55 +89,64 @@ def test_course_invite_subject_contains_course_name() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_results_unlocked_addressing() -> None:
-    """EmailTemplate.results_unlocked must set the ``to`` field correctly."""
+def test_results_unlocked_template() -> None:
+    """Results unlocked must address the recipient, mention project name, and have valid subject."""
     msg = EmailTemplate.results_unlocked(to="student@tul.cz", project_name="My Project")
     assert msg.to == "student@tul.cz"
-
-
-def test_results_unlocked_contains_project_name() -> None:
-    """EmailTemplate.results_unlocked body must mention the project name."""
-    msg = EmailTemplate.results_unlocked(to="student@tul.cz", project_name="My Project")
     assert "My Project" in msg.body
-
-
-def test_results_unlocked_subject_contains_project_name() -> None:
-    """EmailTemplate.results_unlocked subject must reference the project name."""
-    msg = EmailTemplate.results_unlocked(to="student@tul.cz", project_name="My Project")
     assert "My Project" in msg.subject
+    assert msg.subject.startswith("TUL Student Projects:")
+    # Body should include a link to the portal.
+    assert "http" in msg.body
+
+
+def test_results_unlocked_template_peer_feedback_mentioned_when_enabled() -> None:
+    """EmailTemplate.results_unlocked body must mention peer feedback when the flag is True."""
+    msg_with = EmailTemplate.results_unlocked(
+        to="student@tul.cz", project_name="My Project", peer_feedback_enabled=True
+    )
+    msg_without = EmailTemplate.results_unlocked(
+        to="student@tul.cz", project_name="My Project", peer_feedback_enabled=False
+    )
+    assert "peer feedback" in msg_with.body.lower()
+    assert "peer feedback" not in msg_without.body.lower()
 
 
 # ---------------------------------------------------------------------------
-# EmailSender
+# EmailSender — local environment
 # ---------------------------------------------------------------------------
 
 
-def test_email_sender_writes_to_stderr() -> None:
-    """EmailSender.send must write output to stderr, not stdout."""
-    msg = EmailMessage(to="dev@tul.cz", subject="Test", body="Hello from test")
-    buf = StringIO()
-    with patch("sys.stderr", buf):
-        EmailSender().send(msg)
-    output = buf.getvalue()
-    assert output  # Something was written.
-
-
-def test_email_sender_output_contains_fields() -> None:
-    """EmailSender.send output must include the recipient, subject, and body."""
+def test_email_sender_local_outputs_to_stderr_and_not_stdout(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Local EmailSender must write to stderr, include all fields, and not touch stdout."""
     msg = EmailMessage(to="dev@tul.cz", subject="Test Subject", body="Test Body Content")
-    buf = StringIO()
-    with patch("sys.stderr", buf):
-        EmailSender().send(msg)
-    output = buf.getvalue()
-    assert "dev@tul.cz" in output
-    assert "Test Subject" in output
-    assert "Test Body Content" in output
-
-
-def test_email_sender_does_not_write_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
-    """EmailSender.send must write to stderr and nothing to stdout."""
-    msg = EmailMessage(to="dev@tul.cz", subject="Test", body="Hello")
-    EmailSender().send(msg)
+    EmailSender(app_env="local").send(msg)
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err != ""
+    assert "dev@tul.cz" in captured.err
+    assert "Test Subject" in captured.err
+    assert "Test Body Content" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# EmailSender — non-local environment
+# ---------------------------------------------------------------------------
+
+
+def test_email_sender_raises_in_non_local_env(capsys: pytest.CaptureFixture[str]) -> None:
+    """Non-local EmailSender must raise NotImplementedError and produce no output."""
+    msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
+    with pytest.raises(NotImplementedError):
+        EmailSender(app_env="production").send(msg)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+
+
+def test_email_sender_raises_in_dev_env() -> None:
+    """EmailSender must also raise NotImplementedError in the 'dev' environment."""
+    msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
+    with pytest.raises(NotImplementedError):
+        EmailSender(app_env="dev").send(msg)

@@ -40,6 +40,7 @@ from schemas.projects import (
     ProjectPublic,
     ProjectUpdate,
 )
+from services.email import EmailSender, EmailTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -406,14 +407,24 @@ class ProjectsService:
         """Add the user identified by *body.email* as a member of *project_id*.
 
         If no account exists for that e-mail address a new STUDENT account is
-        created.  A login-link notification is logged (in lieu of real SMTP
-        delivery while that integration is pending).
+        created.  A project-invitation email is sent to the new or existing user
+        via :class:`~services.email.EmailSender`.
 
         Raises ``ProjectNotFoundError`` when the project does not exist,
-        ``PermissionDeniedError`` when *user* is not a member or lecturer, and
-        ``AlreadyMemberError`` when the target user is already on the project.
+        ``PermissionDeniedError`` when *user* is not a member or lecturer,
+        ``AlreadyMemberError`` when the target user is already on the project, and
+        ``NotImplementedError`` when email delivery is called outside a local environment
+        (real SMTP integration is not yet implemented).
         """
         await self._check_write_permission(project_id, user)
+
+        # Fetch project and course details for the invitation email.
+        # _check_write_permission already verified the project exists, but another
+        # process could have deleted it in the interim (TOCTOU). Guard defensively.
+        project_row = await db_get_project(self._session, project_id)
+        if project_row is None:
+            raise ProjectNotFoundError(project_id)
+        project, course = project_row
 
         # Default name to the local part of the email address when none is provided.
         resolved_name = body.name if body.name is not None else body.email.split("@")[0]
@@ -423,26 +434,6 @@ class ProjectsService:
             resolved_name,
             body.github_alias,
         )
-
-        if created:
-            # TODO(#72): Send login-link notification email to the new user via SMTP.
-            # Log in lieu of real email delivery while that integration is pending.
-            logger.info(
-                "New user created via project invite; send login link.",
-                extra={"email": body.email, "project_id": project_id},
-            )
-        else:
-            # TODO(#72): Send invitation notification email to the existing user via SMTP.
-            logger.info(
-                "Existing user invited to project; send notification.",
-                extra={"email": body.email, "project_id": project_id},
-            )
-
-        if user.id is None:
-            raise PermissionDeniedError("Inviting user has no id.")
-
-        if target_user.id is None:
-            raise ValueError(f"User returned from DB has no id after flush: {target_user!r}")
 
         member_row, added = await add_project_member(
             self._session,
@@ -454,6 +445,18 @@ class ProjectsService:
             raise AlreadyMemberError(
                 f"User {target_user.email} is already a member of project {project_id}."
             )
+
+        EmailSender().send(
+            EmailTemplate.project_invite(
+                to=body.email,
+                project_name=project.title,
+                course_name=course.name,
+            )
+        )
+        logger.info(
+            "Project invitation email sent.",
+            extra={"email": body.email, "project_id": project_id, "new_user": created},
+        )
 
         await self._session.commit()
         return MemberPublic(

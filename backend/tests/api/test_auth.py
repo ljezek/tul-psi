@@ -34,9 +34,6 @@ def _override_session() -> Generator[None, None, None]:
 def _mock_settings() -> Generator[None, None, None]:
     """Stub application settings so tests do not require a real database URL."""
     mock_settings = MagicMock()
-    # Ensure dev-only OTP display is disabled; otherwise a truthy MagicMock attribute
-    # could cause tests to print OTPs to stderr and become flaky.
-    mock_settings.show_otp_dev_only = False
     with patch("services.auth_service.get_settings", return_value=mock_settings):
         yield
 

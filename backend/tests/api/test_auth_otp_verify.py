@@ -32,7 +32,6 @@ def _override_session() -> Generator[None, None, None]:
 def _mock_settings() -> Generator[None, None, None]:
     """Stub application settings so tests do not require a real database URL."""
     mock_settings = MagicMock()
-    mock_settings.show_otp_dev_only = False
     mock_settings.jwt_secret = "test-secret"  # noqa: S105
     mock_settings.jwt_algorithm = "HS256"
     # Use "local" so the route does not set the Secure flag on the cookie — the

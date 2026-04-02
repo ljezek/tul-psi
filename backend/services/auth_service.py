@@ -62,10 +62,6 @@ async def request_otp(email: str, session: AsyncSession) -> None:
     Any previously active (non-used) tokens for the user are invalidated before
     the new token is inserted to prevent token accumulation and limit the attack
     surface if an earlier code was intercepted.
-
-    # TODO: Replace the ``show_otp_dev_only`` fallback below with real SMTP email delivery
-    # once an email sending service (e.g., SendGrid, Azure Communication
-    # Services) is integrated.
     """
     user = await db_auth.get_user_by_email(session, email)
 
@@ -95,15 +91,7 @@ async def request_otp(email: str, session: AsyncSession) -> None:
     await session.commit()
 
     logger.info("OTP token generated.", extra={"email": email})
-    if get_settings().show_otp_dev_only:
-        # Dev-only fallback: send OTP via the fake email sender when SMTP is not yet configured.
-        # Do not enable show_otp_dev_only in production — it exposes the secret to anyone
-        # with log/stderr access and defeats the purpose of the OTP.
-        logger.warning(
-            "show_otp_dev_only is enabled; plaintext OTP will be printed to stderr.",
-            extra={"email": email},
-        )
-        EmailSender().send(EmailTemplate.otp(to=email, otp_code=otp))
+    EmailSender().send(EmailTemplate.otp(to=email, otp_code=otp))
 
 
 class IncorrectOtpError(Exception):
