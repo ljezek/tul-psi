@@ -415,11 +415,13 @@ class ProjectsService:
         """
         await self._check_write_permission(project_id, user)
 
+        # Default name to the local part of the email address when none is provided.
+        resolved_name = body.name if body.name is not None else body.email.split("@")[0]
         target_user, created = await get_or_create_user(
             self._session,
             body.email,
-            name=body.name,
-            github_alias=body.github_alias,
+            resolved_name,
+            body.github_alias,
         )
 
         if created:

@@ -83,6 +83,8 @@ async def require_current_user(
             detail="Authentication is required.",
         )
     return current_user
+
+
 async def get_optional_current_user(
     request: Request,
     session: AsyncSession = Depends(get_session),

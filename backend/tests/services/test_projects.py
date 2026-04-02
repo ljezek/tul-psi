@@ -501,9 +501,11 @@ async def test_patch_project_raises_not_found_when_project_missing() -> None:
         patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None),
         pytest.raises(ProjectNotFoundError),
     ):
+        from schemas.projects import ProjectUpdate
+
         await ProjectsService(session).patch_project(
             99,
-            __import__("schemas.projects", fromlist=["ProjectUpdate"]).ProjectUpdate(title="X"),
+            ProjectUpdate(title="X"),
             user,
         )
 

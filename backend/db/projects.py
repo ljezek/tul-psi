@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.course import Course, CourseTerm
@@ -311,35 +314,39 @@ async def update_project(
 async def get_or_create_user(
     session: AsyncSession,
     email: str,
-    *,
     name: str | None = None,
     github_alias: str | None = None,
 ) -> tuple[User, bool]:
     """Return the user matching *email*, creating a new STUDENT account if absent.
 
-    When creating a new account, *name* is used if supplied; otherwise it defaults
-    to the local part of the e-mail address (the portion before the ``@`` sign).
-    *github_alias* is stored verbatim and defaults to ``None``.
+    Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) so concurrent requests
+    for the same address are handled atomically without a separate SELECT before
+    INSERT.  *name* and *github_alias* are only used when a new row is created;
+    callers are responsible for computing any desired defaults (e.g. deriving
+    a display name from the local part of the e-mail address).
 
     Returns a ``(user, created)`` tuple where ``created`` is ``True`` when a new
     row was inserted and ``False`` when an existing row was returned.
     The caller must commit the session after a successful return.
     """
-    stmt = select(User).where(User.email == email)
-    user = (await session.execute(stmt)).scalars().first()
-    if user is not None:
-        return user, False
-
-    # Default name to the local part of the email address when not explicitly provided.
-    # Callers are expected to pass a pre-validated @tul.cz address; the split is safe.
-    resolved_name = name if name is not None else email.split("@")[0]
-    new_user = User(
-        email=email, name=resolved_name, github_alias=github_alias, role=UserRole.STUDENT
+    stmt = (
+        pg_insert(User)
+        .values(
+            email=email,
+            name=name,
+            github_alias=github_alias,
+            role=UserRole.STUDENT,
+            created_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing(index_elements=["email"])
     )
-    session.add(new_user)
-    # Flush so that new_user.id is populated before the caller can use it.
-    await session.flush()
-    return new_user, True
+    result = await session.execute(stmt)
+    created = result.rowcount > 0
+    # Fetch the full ORM object whether just inserted or pre-existing.
+    user = (await session.execute(select(User).where(User.email == email))).scalars().first()
+    if user is None:
+        raise RuntimeError(f"Expected user row for {email!r} after UPSERT.")
+    return user, created
 
 
 async def add_project_member(
@@ -350,24 +357,41 @@ async def add_project_member(
 ) -> tuple[ProjectMember, bool]:
     """Add *user_id* as a member of *project_id*, invited by *invited_by*.
 
+    Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) against the unique constraint
+    ``uq_project_member_project_user`` so concurrent invites for the same user
+    are handled atomically without a race-prone SELECT before INSERT.
+
     Returns a ``(member, created)`` tuple.  When the user is already a member
     ``created`` is ``False`` and the existing row is returned unchanged.
     The caller must commit the session after a successful return.
     """
-    stmt = select(ProjectMember).where(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == user_id,
+    stmt = (
+        pg_insert(ProjectMember)
+        .values(
+            project_id=project_id,
+            user_id=user_id,
+            invited_by=invited_by,
+            invited_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing(constraint="uq_project_member_project_user")
     )
-    existing = (await session.execute(stmt)).scalars().first()
-    if existing is not None:
-        return existing, False
-
-    member = ProjectMember(
-        project_id=project_id,
-        user_id=user_id,
-        invited_by=invited_by,
+    result = await session.execute(stmt)
+    created = result.rowcount > 0
+    # Fetch the full ORM object whether just inserted or pre-existing.
+    member = (
+        (
+            await session.execute(
+                select(ProjectMember).where(
+                    ProjectMember.project_id == project_id,
+                    ProjectMember.user_id == user_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
     )
-    session.add(member)
-    # Flush so that the primary key is available before commit.
-    await session.flush()
-    return member, True
+    if member is None:
+        raise RuntimeError(
+            f"Expected member row for user {user_id} in project {project_id} after UPSERT."
+        )
+    return member, created
