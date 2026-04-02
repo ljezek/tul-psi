@@ -8,11 +8,14 @@ from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectTy
 class LecturerPublic(BaseModel):
     """Public representation of a lecturer assigned to a course.
 
-    E-mail is intentionally omitted — it is not visible to unauthenticated users.
+    ``email`` is ``None`` for unauthenticated requests and is populated when the
+    caller holds a valid session, regardless of their role.
     """
 
     name: str
     github_alias: str | None
+    # Null for unauthenticated callers; populated when a valid session is present.
+    email: str | None = None
 
 
 class CoursePublic(BaseModel):

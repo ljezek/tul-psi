@@ -3,10 +3,11 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.courses import get_course as db_get_course
-from db.courses import get_course_lecturers, get_course_project_stats
+from db.courses import get_course_evaluations, get_course_lecturers, get_course_project_stats
 from db.courses import get_courses as db_get_courses
-from models.user import User
-from schemas.courses import CourseDetail, CourseListItem, CourseStats
+from models.course_evaluation import CourseEvaluation
+from models.user import User, UserRole
+from schemas.courses import CourseDetail, CourseEvaluationPublic, CourseListItem, CourseStats
 from schemas.projects import LecturerPublic
 
 
@@ -21,9 +22,55 @@ def _require_course_id(course_id: int | None) -> int:
     return course_id
 
 
-def _lecturer_public(user: User) -> LecturerPublic:
-    """Build a ``LecturerPublic`` from a ``User`` row."""
-    return LecturerPublic(name=user.name, github_alias=user.github_alias)
+def _lecturer_public(user: User, *, include_email: bool) -> LecturerPublic:
+    """Build a ``LecturerPublic`` from a ``User`` row.
+
+    ``email`` is included when ``include_email`` is ``True``, which should
+    only be the case when the requesting user holds a valid session.
+    """
+    return LecturerPublic(
+        name=user.name,
+        github_alias=user.github_alias,
+        email=user.email if include_email else None,
+    )
+
+
+def _course_evaluation_public(ev: CourseEvaluation) -> CourseEvaluationPublic:
+    """Build a ``CourseEvaluationPublic`` from a ``CourseEvaluation`` row."""
+    if ev.id is None:
+        raise ValueError(f"CourseEvaluation returned from DB has no id: {ev!r}")
+    return CourseEvaluationPublic(
+        id=ev.id,
+        project_id=ev.project_id,
+        student_id=ev.student_id,
+        rating=ev.rating,
+        strengths=ev.strengths,
+        improvements=ev.improvements,
+        published=ev.published,
+        submitted_at=ev.submitted_at,
+    )
+
+
+def _can_view_evaluations(
+    current_user: User | None,
+    course_lecturer_ids: set[int],
+) -> bool:
+    """Return ``True`` when ``current_user`` is allowed to see course evaluations.
+
+    Access is granted to:
+    - Admins (any course).
+    - Lecturers who are assigned to this specific course.
+
+    Returns ``False`` for unauthenticated users, students, and lecturers who
+    are not assigned to the requested course.
+    """
+    if current_user is None:
+        return False
+    if current_user.role == UserRole.ADMIN:
+        return True
+    if current_user.role == UserRole.LECTURER and current_user.id in course_lecturer_ids:
+        return True
+    return False
 
 
 class CoursesService:
@@ -37,7 +84,7 @@ class CoursesService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_courses(self) -> list[CourseListItem]:
+    async def get_courses(self, current_user: User | None = None) -> list[CourseListItem]:
         """Return all courses with aggregated stats for the list endpoint."""
         courses = await db_get_courses(self._session)
 
@@ -55,19 +102,29 @@ class CoursesService:
                     id=cid,
                     code=course.code,
                     name=course.name,
+                    syllabus=course.syllabus,
+                    lecturer_names=sorted(u.name for u in lecturer_users),
                     stats=CourseStats(
                         project_count=project_count,
                         academic_years=academic_years,
-                        lecturer_names=sorted(u.name for u in lecturer_users),
                     ),
                 )
             )
         return items
 
-    async def get_course(self, course_id: int) -> CourseDetail | None:
+    async def get_course(
+        self,
+        course_id: int,
+        current_user: User | None = None,
+    ) -> CourseDetail | None:
         """Return the full public detail of the course with ``course_id``.
 
         Returns ``None`` when no course with the given id exists.
+
+        ``current_user`` controls two optional enrichments:
+        - Lecturer e-mail addresses are included when any authenticated user requests the detail.
+        - ``course_evaluations`` are populated only for admin users and for lecturers
+          assigned to this course.
         """
         course = await db_get_course(self._session, course_id)
         if course is None:
@@ -76,6 +133,15 @@ class CoursesService:
         cid = _require_course_id(course.id)
         lecturers_by_course = await get_course_lecturers(self._session, [cid])
         lecturer_users = lecturers_by_course.get(cid, [])
+
+        include_email = current_user is not None
+        lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
+        show_evaluations = _can_view_evaluations(current_user, lecturer_ids)
+
+        course_evaluations: list[CourseEvaluationPublic] | None = None
+        if show_evaluations:
+            raw = await get_course_evaluations(self._session, cid)
+            course_evaluations = [_course_evaluation_public(ev) for ev in raw]
 
         return CourseDetail(
             id=cid,
@@ -88,5 +154,6 @@ class CoursesService:
             peer_bonus_budget=course.peer_bonus_budget,
             evaluation_criteria=course.evaluation_criteria,
             links=course.links,
-            lecturers=[_lecturer_public(u) for u in lecturer_users],
+            lecturers=[_lecturer_public(u, include_email=include_email) for u in lecturer_users],
+            course_evaluations=course_evaluations,
         )

@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.course import Course
+from models.course_evaluation import CourseEvaluation
 from models.course_lecturer import CourseLecturer
 from models.project import Project
 from models.user import User
@@ -71,3 +72,26 @@ async def get_course_lecturers(
     for course_id, user in (await session.execute(stmt)).all():
         result.setdefault(course_id, []).append(user)
     return result
+
+
+async def get_course_evaluations(
+    session: AsyncSession,
+    course_id: int,
+) -> list[CourseEvaluation]:
+    """Return all course evaluations for projects with ``results_unlocked`` in the given course.
+
+    Only projects whose ``results_unlocked`` flag is ``True`` are considered,
+    ensuring that the data is aligned with the student-facing results visibility.
+    Both draft and published evaluations are returned so that admin and lecturer
+    users have full visibility.
+    """
+    stmt = (
+        select(CourseEvaluation)
+        .join(Project, CourseEvaluation.project_id == Project.id)
+        .where(
+            Project.course_id == course_id,
+            Project.results_unlocked.is_(True),
+        )
+        .order_by(CourseEvaluation.project_id, CourseEvaluation.id)
+    )
+    return list((await session.execute(stmt)).scalars().all())
