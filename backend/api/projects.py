@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
@@ -112,3 +112,89 @@ async def get_project(
     if project is None:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found.")
     return project
+
+
+@router.post(
+    "/{project_id}/unlock",
+    response_model=ProjectPublic,
+    summary="Unlock project results",
+    description=(
+        "Manually unlocks the evaluation results for the specified project, "
+        "overriding the automatic unlock condition. "
+        "Only accessible to admin users or lecturers assigned to the project's course."
+    ),
+)
+async def unlock_project(
+    project_id: int,
+    current_user: User | None = Depends(get_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> ProjectPublic:
+    """Set ``results_unlocked=True`` on the project identified by ``project_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 404 when the project does not exist.
+    """
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication is required.",
+        )
+    try:
+        return await service.unlock_project(project_id, current_user)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorised to unlock results for this project.",
+        ) from None
+    except Exception:
+        logger.exception("Failed to unlock project results", extra={"project_id": project_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
+@router.delete(
+    "/{project_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a project",
+    description=(
+        "Deletes the specified project and all its associated data. "
+        "Only accessible to admin users or lecturers assigned to the project's course."
+    ),
+)
+async def delete_project(
+    project_id: int,
+    current_user: User | None = Depends(get_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> Response:
+    """Delete the project identified by ``project_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 404 when the project does not exist.
+    """
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication is required.",
+        )
+    try:
+        await service.delete_project(project_id, current_user)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorised to delete this project.",
+        ) from None
+    except Exception:
+        logger.exception("Failed to delete project", extra={"project_id": project_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

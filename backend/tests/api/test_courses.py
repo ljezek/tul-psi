@@ -7,14 +7,15 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import AsyncClient
 
-from api.courses import get_courses_service
+from api.courses import get_courses_service, get_projects_service
 from api.deps import get_current_user, get_optional_current_user
 from main import app
 from models.course import CourseTerm, ProjectType
 from models.user import UserRole
 from schemas.courses import CourseDetail, CourseEvaluationPublic, CourseListItem, CourseStats
-from schemas.projects import LecturerPublic
+from schemas.projects import CoursePublic, LecturerPublic, ProjectPublic
 from services.courses import CoursesService
+from services.projects import ProjectsService
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -118,6 +119,7 @@ def _clear_dependency_overrides() -> Generator[None, None, None]:
     app.dependency_overrides[get_current_user] = lambda: None
     yield
     app.dependency_overrides.pop(get_courses_service, None)
+    app.dependency_overrides.pop(get_projects_service, None)
     app.dependency_overrides.pop(get_optional_current_user, None)
     app.dependency_overrides.pop(get_current_user, None)
 
@@ -266,3 +268,144 @@ async def test_get_course_evaluations_null_for_unauthenticated(client: AsyncClie
     app.dependency_overrides[get_optional_current_user] = lambda: None
     response = await client.get("/api/v1/courses/1")
     assert response.json()["course_evaluations"] is None
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/courses/{course_id}/projects
+# ---------------------------------------------------------------------------
+
+_SEEDED_PROJECT = ProjectPublic(
+    id=10,
+    title="New Project",
+    description=None,
+    github_url=None,
+    live_url=None,
+    technologies=[],
+    academic_year=2025,
+    results_unlocked=False,
+    course=CoursePublic(
+        code="PSI",
+        name="PSI Course",
+        syllabus=None,
+        term=CourseTerm.WINTER,
+        project_type=ProjectType.TEAM,
+        min_score=50,
+        peer_bonus_budget=None,
+        evaluation_criteria=[],
+        links=[],
+        lecturers=[LecturerPublic(name="Lect", github_alias=None, email="lect@tul.cz")],
+    ),
+    members=[],
+)
+
+_PROJECT_CREATE_PAYLOAD = {
+    "title": "New Project",
+    "academic_year": 2025,
+}
+
+
+def _make_projects_service(project: ProjectPublic | None = None) -> ProjectsService:
+    """Return a mock ``ProjectsService`` configured for seeding tests."""
+    service = MagicMock(spec=ProjectsService)
+    service.create_project = AsyncMock(return_value=project or _SEEDED_PROJECT)
+    return service
+
+
+async def test_create_course_project_returns_201(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must return HTTP 201 for a lecturer."""
+    mock_user = _make_user(UserRole.LECTURER)
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_projects_service] = lambda: _make_projects_service()
+
+    response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
+
+    assert response.status_code == 201
+
+
+async def test_create_course_project_returns_201_for_admin(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must return HTTP 201 for an admin."""
+    mock_user = _make_user(UserRole.ADMIN)
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_projects_service] = lambda: _make_projects_service()
+
+    response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
+
+    assert response.status_code == 201
+
+
+async def test_create_course_project_returns_project_schema(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must return the created ``ProjectPublic``."""
+    mock_user = _make_user(UserRole.LECTURER)
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_projects_service] = lambda: _make_projects_service()
+
+    response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
+
+    assert response.json() == _SEEDED_PROJECT.model_dump(mode="json")
+
+
+async def test_create_course_project_returns_401_unauthenticated(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must return HTTP 401 when not authenticated."""
+    app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_projects_service] = lambda: _make_projects_service()
+
+    response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
+
+    assert response.status_code == 401
+
+
+async def test_create_course_project_returns_403_for_student(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must return HTTP 403 when called by a student."""
+    mock_user = _make_user(UserRole.STUDENT)
+    mock_service = _make_projects_service()
+    mock_service.create_project.side_effect = PermissionError("Not authorised.")
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
+
+    assert response.status_code == 403
+
+
+async def test_create_course_project_returns_404_for_unknown_course(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must return HTTP 404 when the course does not exist."""
+    mock_user = _make_user(UserRole.ADMIN)
+    mock_service = _make_projects_service()
+    mock_service.create_project.side_effect = LookupError("Course 99 not found.")
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/courses/99/projects", json=_PROJECT_CREATE_PAYLOAD)
+
+    assert response.status_code == 404
+
+
+async def test_create_course_project_returns_500_on_service_error(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must return HTTP 500 on an unexpected error."""
+    mock_user = _make_user(UserRole.ADMIN)
+    mock_service = _make_projects_service()
+    mock_service.create_project.side_effect = RuntimeError("db failure")
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
+
+    assert response.status_code == 500
+
+
+async def test_create_course_project_forwards_data_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/courses/{id}/projects must forward body and requester to the service."""
+    mock_user = _make_user(UserRole.ADMIN)
+    mock_service = _make_projects_service()
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    payload = {"title": "My Project", "academic_year": 2025, "owner_email": "alice@tul.cz"}
+    await client.post("/api/v1/courses/3/projects", json=payload)
+
+    mock_service.create_project.assert_called_once()
+    call_args = mock_service.create_project.call_args
+    assert call_args.args[0] == 3  # course_id
+    assert call_args.args[1].title == "My Project"
+    assert call_args.args[1].owner_email == "alice@tul.cz"
+    assert call_args.args[2] is mock_user

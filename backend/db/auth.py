@@ -7,12 +7,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from models import OtpToken, User
+from models.user import UserRole
 
 
 async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     """Return the User row matching *email*, or None if no such user exists."""
     result = await session.execute(select(User).where(User.email == email))
     return result.scalars().first()
+
+
+async def create_user(
+    session: AsyncSession,
+    *,
+    email: str,
+    name: str,
+    role: UserRole = UserRole.STUDENT,
+) -> User:
+    """Create and persist a new User with the given attributes.
+
+    The caller is responsible for committing the session after this call
+    (or relying on an enclosing transaction).
+    """
+    user = User(email=email, name=name, role=role)
+    session.add(user)
+    await session.flush()
+    return user
 
 
 async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:

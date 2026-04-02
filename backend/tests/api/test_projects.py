@@ -311,3 +311,163 @@ async def test_get_project_authenticated_500_on_service_error(client: AsyncClien
     response = await client.get("/api/v1/projects/1")
 
     assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/projects/{project_id}/unlock — endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_unlock_project_returns_200(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/unlock must return HTTP 200 for a lecturer."""
+    user = _make_authenticated_user(UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.unlock_project = AsyncMock(return_value=_PROJECT_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/unlock")
+
+    assert response.status_code == 200
+
+
+async def test_unlock_project_returns_project_schema(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/unlock must return the updated ``ProjectPublic``."""
+    user = _make_authenticated_user(UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.unlock_project = AsyncMock(return_value=_PROJECT_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/unlock")
+
+    assert response.json() == _PROJECT_DETAIL.model_dump(mode="json")
+
+
+async def test_unlock_project_returns_401_when_unauthenticated(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/unlock must return HTTP 401 when not authenticated."""
+    app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_projects_service] = lambda: _make_service()
+
+    response = await client.post("/api/v1/projects/1/unlock")
+
+    assert response.status_code == 401
+
+
+async def test_unlock_project_returns_403_on_permission_error(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/unlock must return HTTP 403 when not authorised."""
+    user = _make_authenticated_user(UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.unlock_project = AsyncMock(side_effect=PermissionError("Not authorised."))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/unlock")
+
+    assert response.status_code == 403
+
+
+async def test_unlock_project_returns_404_when_not_found(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/unlock must return HTTP 404 when the project does not exist."""
+    user = _make_authenticated_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.unlock_project = AsyncMock(side_effect=LookupError("Project 99 not found."))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/99/unlock")
+
+    assert response.status_code == 404
+
+
+async def test_unlock_project_forwards_id_and_user_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/unlock must forward the project id and user to the service."""
+    user = _make_authenticated_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.unlock_project = AsyncMock(return_value=_PROJECT_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.post("/api/v1/projects/42/unlock")
+
+    mock_service.unlock_project.assert_called_once_with(42, user)
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/v1/projects/{project_id} — endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_delete_project_returns_204(client: AsyncClient) -> None:
+    """DELETE /api/v1/projects/{id} must return HTTP 204 on success."""
+    user = _make_authenticated_user(UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.delete_project = AsyncMock(return_value=None)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/projects/1")
+
+    assert response.status_code == 204
+
+
+async def test_delete_project_returns_401_when_unauthenticated(client: AsyncClient) -> None:
+    """DELETE /api/v1/projects/{id} must return HTTP 401 when not authenticated."""
+    app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_projects_service] = lambda: _make_service()
+
+    response = await client.delete("/api/v1/projects/1")
+
+    assert response.status_code == 401
+
+
+async def test_delete_project_returns_403_on_permission_error(client: AsyncClient) -> None:
+    """DELETE /api/v1/projects/{id} must return HTTP 403 when not authorised."""
+    user = _make_authenticated_user(UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.delete_project = AsyncMock(side_effect=PermissionError("Not authorised."))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/projects/1")
+
+    assert response.status_code == 403
+
+
+async def test_delete_project_returns_404_when_not_found(client: AsyncClient) -> None:
+    """DELETE /api/v1/projects/{id} must return HTTP 404 when the project does not exist."""
+    user = _make_authenticated_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.delete_project = AsyncMock(side_effect=LookupError("Project 99 not found."))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/projects/99")
+
+    assert response.status_code == 404
+
+
+async def test_delete_project_returns_500_on_service_error(client: AsyncClient) -> None:
+    """DELETE /api/v1/projects/{id} must return HTTP 500 on an unexpected error."""
+    user = _make_authenticated_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.delete_project = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.delete("/api/v1/projects/1")
+
+    assert response.status_code == 500
+
+
+async def test_delete_project_forwards_id_and_user_to_service(client: AsyncClient) -> None:
+    """DELETE /api/v1/projects/{id} must forward the project id and user to the service."""
+    user = _make_authenticated_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.delete_project = AsyncMock(return_value=None)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.delete("/api/v1/projects/42")
+
+    mock_service.delete_project.assert_called_once_with(42, user)

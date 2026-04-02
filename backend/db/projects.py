@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.course import Course, CourseTerm
@@ -231,3 +231,112 @@ async def get_peer_feedback_authored(
         )
     )
     return list((await session.execute(stmt)).scalars().all())
+
+
+async def create_project(
+    session: AsyncSession,
+    *,
+    course_id: int,
+    title: str,
+    description: str | None,
+    github_url: str | None,
+    live_url: str | None,
+    technologies: list[str],
+    academic_year: int,
+) -> Project:
+    """Insert a new ``Project`` row and return it with the generated primary key.
+
+    The caller is responsible for committing the session after this call.
+    ``session.flush()`` is used to obtain the generated primary key without
+    a full commit, allowing the caller to stage further related changes (e.g.
+    ``ProjectMember``) in the same transaction.
+    """
+    project = Project(
+        title=title,
+        description=description,
+        github_url=github_url,
+        live_url=live_url,
+        technologies=technologies,
+        academic_year=academic_year,
+        course_id=course_id,
+    )
+    session.add(project)
+    await session.flush()
+    return project
+
+
+async def add_project_member(
+    session: AsyncSession,
+    *,
+    project_id: int,
+    user_id: int,
+    invited_by: int | None = None,
+) -> ProjectMember:
+    """Insert a ``ProjectMember`` row linking *user_id* to *project_id*.
+
+    ``invited_by`` is the id of the lecturer who performed the seeding action;
+    pass ``None`` when the member is added without an explicit inviter.
+    The caller is responsible for committing the session after this call.
+    """
+    member = ProjectMember(
+        project_id=project_id,
+        user_id=user_id,
+        invited_by=invited_by,
+    )
+    session.add(member)
+    await session.flush()
+    return member
+
+
+async def delete_project(session: AsyncSession, project_id: int) -> bool:
+    """Delete the project with *project_id* and all its dependent rows.
+
+    Rows are removed in dependency order to satisfy foreign-key constraints:
+    1. ``peer_feedback`` rows linked via ``course_evaluation``
+    2. ``course_evaluation`` rows for the project
+    3. ``project_evaluation`` rows for the project
+    4. ``project_member`` rows for the project
+    5. The ``project`` row itself
+
+    Returns ``True`` when a row was found and deleted, ``False`` when no such
+    project exists.  The caller is responsible for committing the session.
+    """
+    project = (
+        (await session.execute(select(Project).where(Project.id == project_id))).scalars().first()
+    )
+    if project is None:
+        return False
+
+    # Collect course_evaluation ids so we can delete their peer_feedback rows.
+    eval_ids_stmt = select(CourseEvaluation.id).where(CourseEvaluation.project_id == project_id)
+    eval_ids = list((await session.execute(eval_ids_stmt)).scalars().all())
+
+    if eval_ids:
+        await session.execute(
+            delete(PeerFeedback).where(PeerFeedback.course_evaluation_id.in_(eval_ids))
+        )
+    await session.execute(delete(CourseEvaluation).where(CourseEvaluation.project_id == project_id))
+    await session.execute(
+        delete(ProjectEvaluation).where(ProjectEvaluation.project_id == project_id)
+    )
+    await session.execute(delete(ProjectMember).where(ProjectMember.project_id == project_id))
+    await session.execute(delete(Project).where(Project.id == project_id))
+    await session.flush()
+    return True
+
+
+async def unlock_project_results(session: AsyncSession, project_id: int) -> Project | None:
+    """Set ``results_unlocked=True`` on the project identified by *project_id*.
+
+    Returns the updated ``Project`` row, or ``None`` when no such project exists.
+    The caller is responsible for committing the session after this call.
+    """
+    project = (
+        (await session.execute(select(Project).where(Project.id == project_id))).scalars().first()
+    )
+    if project is None:
+        return None
+    project.results_unlocked = True
+    session.add(project)
+    await session.flush()
+    return project

@@ -95,6 +95,23 @@ class PeerFeedbackDetail(BaseModel):
     bonus_points: int
 
 
+class ProjectCreate(BaseModel):
+    """Input schema for creating a new project.
+
+    ``owner_email`` is optional; when provided the system looks up (or creates)
+    the student account and seeds an initial project member, faking an invite email.
+    """
+
+    title: str
+    description: str | None = None
+    github_url: str | None = None
+    live_url: str | None = None
+    technologies: list[str] = []
+    academic_year: int
+    # Optional email of the student who owns this project.
+    owner_email: str | None = None
+
+
 class ProjectPublic(BaseModel):
     """Project representation returned to all callers.
 
