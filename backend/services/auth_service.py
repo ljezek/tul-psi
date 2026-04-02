@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import random
 import string
-import sys
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
@@ -12,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import auth as db_auth
 from models import OtpToken, User
+from services.email import EmailSender, EmailTemplate
 from settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -96,14 +96,14 @@ async def request_otp(email: str, session: AsyncSession) -> None:
 
     logger.info("OTP token generated.", extra={"email": email})
     if get_settings().show_otp_dev_only:
-        # Dev-only fallback: print OTP to stderr when SMTP is not yet configured.
+        # Dev-only fallback: send OTP via the fake email sender when SMTP is not yet configured.
         # Do not enable show_otp_dev_only in production — it exposes the secret to anyone
         # with log/stderr access and defeats the purpose of the OTP.
         logger.warning(
             "show_otp_dev_only is enabled; plaintext OTP will be printed to stderr.",
             extra={"email": email},
         )
-        print(f"[DEV] OTP for {email}: {otp}", file=sys.stderr)  # noqa: T201
+        EmailSender().send(EmailTemplate.otp(to=email, otp_code=otp))
 
 
 class IncorrectOtpError(Exception):
