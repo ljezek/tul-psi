@@ -42,7 +42,7 @@ async def get_current_user(
 
     settings = get_settings()
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except jwt.PyJWTError:
         logger.warning("Invalid or expired JWT; raising HTTP 401.")
         raise HTTPException(

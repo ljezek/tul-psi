@@ -19,10 +19,6 @@ class Settings(BaseSettings):
     # Used by the FastAPI application at runtime.
     database_url: str
 
-    # Secret used to sign and verify JWT session tokens.
-    # Must be set to a long, random string in production — the default is only for local dev.
-    jwt_secret: str = "dev-secret-CHANGE-ME-in-production"  # noqa: S105
-
     # When True, the plaintext OTP is printed to stderr after generation.
     # Enable only in non-production environments as a stand-in for SMTP delivery.
     show_otp_dev_only: bool = False

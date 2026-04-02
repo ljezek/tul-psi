@@ -61,6 +61,7 @@ async def test_get_current_user_returns_user_for_valid_token() -> None:
         patch("api.deps.get_user_by_id", new_callable=AsyncMock, return_value=user),
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
         result = await get_current_user(request, session)
 
     assert result is user
@@ -79,6 +80,7 @@ async def test_get_current_user_raises_401_for_invalid_token() -> None:
         pytest.raises(HTTPException) as exc_info,
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
@@ -99,6 +101,7 @@ async def test_get_current_user_raises_401_for_missing_user_id_in_payload() -> N
         pytest.raises(HTTPException) as exc_info,
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
@@ -120,6 +123,7 @@ async def test_get_current_user_raises_401_when_user_not_in_db() -> None:
         pytest.raises(HTTPException) as exc_info,
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
@@ -140,6 +144,7 @@ async def test_get_current_user_raises_401_for_non_integer_user_id() -> None:
         pytest.raises(HTTPException) as exc_info,
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
