@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_user, get_optional_current_user
+from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
 from models.user import User, UserRole
 from schemas.courses import CourseCreate, CourseDetail, CourseListItem, CourseUpdate
@@ -62,18 +62,13 @@ async def list_courses(
 async def create_course(
     body: CourseCreate,
     service: CoursesService = Depends(get_courses_service),
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_current_user),
 ) -> CourseDetail:
     """Create and return a new course.
 
     Only admins may call this endpoint.  Raises HTTP 401 when the request is
     unauthenticated and HTTP 403 when the caller is not an admin.
     """
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required.",
-        )
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -111,7 +106,7 @@ async def update_course(
     course_id: int,
     body: CourseUpdate,
     service: CoursesService = Depends(get_courses_service),
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_current_user),
 ) -> CourseDetail:
     """Partially update the course identified by ``course_id``.
 
@@ -119,11 +114,6 @@ async def update_course(
     caller is a student or a lecturer not assigned to this course, and HTTP
     404 when no course with the given id exists.
     """
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required.",
-        )
     try:
         result = await service.update_course(course_id, body, current_user)
     except CoursePermissionError as exc:
