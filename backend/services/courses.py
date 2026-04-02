@@ -202,7 +202,12 @@ class CoursesService:
         if current_user.role != UserRole.ADMIN:
             raise CoursePermissionError("Only admins can create courses.")
 
-        created_by = _require_course_id(current_user.id)
+        if current_user.id is None:
+            # This should not happen for authenticated users, but we guard against it
+            # explicitly so that the error message correctly identifies the missing id.
+            raise ValueError("Current user must have an id to create a course.")
+
+        created_by = current_user.id
         course = await db_create_course(self._session, data, created_by)
         await self._session.commit()
 
