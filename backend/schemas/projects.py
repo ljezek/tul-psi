@@ -1,24 +1,28 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectType
 
 
 class LecturerPublic(BaseModel):
-    """Public representation of a lecturer assigned to a course.
+    """Representation of a lecturer assigned to a course.
 
-    E-mail is intentionally omitted — it is not visible to unauthenticated users.
+    ``email`` is ``None`` for unauthenticated users and populated for authenticated ones.
     """
 
     name: str
     github_alias: str | None
+    # Null for unauthenticated users — email is only visible to authenticated callers.
+    email: str | None = None
 
 
 class CoursePublic(BaseModel):
-    """Public representation of a course embedded in a project response.
+    """Representation of a course embedded in a project response.
 
-    All fields here are visible to unauthenticated users. ``code`` is the natural
+    All non-email fields are visible to unauthenticated users. ``code`` is the natural
     unique identifier for a course and replaces an integer ``id`` for lookups.
     """
 
@@ -36,15 +40,69 @@ class CoursePublic(BaseModel):
 
 
 class MemberPublic(BaseModel):
-    """Public representation of a project team member."""
+    """Representation of a project team member.
+
+    ``email`` is ``None`` for unauthenticated users and populated for authenticated ones.
+    """
 
     id: int
     github_alias: str | None
     name: str
+    # Null for unauthenticated users — email is only visible to authenticated callers.
+    email: str | None = None
+
+
+class EvaluationScoreDetail(BaseModel):
+    """Single per-criterion score within a ``ProjectEvaluationDetail``."""
+
+    criterion_code: str
+    score: int
+    strengths: str
+    improvements: str
+
+
+class ProjectEvaluationDetail(BaseModel):
+    """Lecturer evaluation of the project, visible when results are unlocked."""
+
+    lecturer_id: int
+    scores: list[EvaluationScoreDetail]
+    submitted_at: datetime
+
+
+class CourseEvaluationDetail(BaseModel):
+    """Student course evaluation, visible to lecturers/admins when results are unlocked."""
+
+    id: int
+    student_id: int
+    rating: int
+    strengths: str | None
+    improvements: str | None
+    published: bool
+    submitted_at: datetime
+
+
+class PeerFeedbackDetail(BaseModel):
+    """Peer feedback entry visible based on role when results are unlocked.
+
+    Students see only feedback *received by* them or *written by* them.
+    Lecturers and admins see all peer feedback via the course evaluations.
+    """
+
+    course_evaluation_id: int
+    receiving_student_id: int
+    strengths: str | None
+    improvements: str | None
+    bonus_points: int
 
 
 class ProjectPublic(BaseModel):
-    """Public representation of a project returned by the discovery endpoint."""
+    """Project representation returned to all callers.
+
+    For unauthenticated requests, private fields (``results_unlocked``,
+    ``course.lecturers[*].email``, ``members[*].email``, and all evaluation
+    collections) are ``None``.  Authenticated callers receive those fields
+    populated according to their role.
+    """
 
     id: int
     title: str
@@ -55,3 +113,13 @@ class ProjectPublic(BaseModel):
     academic_year: int
     course: CoursePublic
     members: list[MemberPublic]
+    # Null for unauthenticated users.
+    results_unlocked: bool | None = None
+    # Populated for all roles when results_unlocked is True.
+    project_evaluations: list[ProjectEvaluationDetail] | None = None
+    # Populated for lecturer/admin when results_unlocked is True.
+    course_evaluations: list[CourseEvaluationDetail] | None = None
+    # Populated for student when results_unlocked is True.
+    received_peer_feedback: list[PeerFeedbackDetail] | None = None
+    # Populated for student when results_unlocked is True.
+    authored_peer_feedback: list[PeerFeedbackDetail] | None = None

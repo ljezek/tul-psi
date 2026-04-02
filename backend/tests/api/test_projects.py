@@ -6,9 +6,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import AsyncClient
 
+from api.deps import get_current_user
 from api.projects import get_projects_service
 from main import app
 from models.course import CourseTerm, ProjectType
+from models.user import UserRole
 from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
 from services.projects import ProjectsService
 
@@ -45,20 +47,65 @@ _PROJECT = ProjectPublic(
     members=[_MEMBER],
 )
 
+# Authenticated project detail fixture — includes e-mails and results_unlocked.
+_PROJECT_DETAIL = ProjectPublic(
+    id=1,
+    title="Test Project",
+    description=None,
+    github_url=None,
+    live_url=None,
+    technologies=[],
+    academic_year=2025,
+    results_unlocked=True,
+    course=CoursePublic(
+        code="PSI",
+        name="PSI Course",
+        syllabus=None,
+        term=CourseTerm.WINTER,
+        project_type=ProjectType.TEAM,
+        min_score=50,
+        peer_bonus_budget=None,
+        evaluation_criteria=[],
+        links=[],
+        lecturers=[LecturerPublic(name="Lect", github_alias=None, email="lect@tul.cz")],
+    ),
+    members=[MemberPublic(id=5, github_alias=None, name="Alice", email="alice@tul.cz")],
+)
+
 
 def _make_service(projects: list[ProjectPublic] | None = None) -> ProjectsService:
     """Return a mock ``ProjectsService`` configured to return ``projects``."""
     service = MagicMock(spec=ProjectsService)
     service.get_projects = AsyncMock(return_value=projects or [])
     service.get_project = AsyncMock(return_value=None)
+    service.get_project_detail = AsyncMock(return_value=None)
     return service
+
+
+def _make_authenticated_user(role: UserRole = UserRole.STUDENT) -> MagicMock:
+    """Return a mock ``User`` object for the given *role*."""
+    from models.user import User
+
+    user = MagicMock(spec=User)
+    user.id = 99
+    user.email = "test@tul.cz"
+    user.name = "Test User"
+    user.role = role
+    return user
 
 
 @pytest.fixture(autouse=True)
 def _clear_dependency_overrides() -> Generator[None, None, None]:
-    """Reset FastAPI dependency overrides after every test to ensure isolation."""
+    """Reset FastAPI dependency overrides after every test to ensure isolation.
+
+    Sets ``get_current_user`` to return ``None`` by default for backward compatibility
+    with existing unauthenticated tests.  Tests that need an authenticated user
+    override ``get_current_user`` explicitly before making their request.
+    """
+    app.dependency_overrides[get_current_user] = lambda: None
     yield
     app.dependency_overrides.pop(get_projects_service, None)
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 # ---------------------------------------------------------------------------
@@ -202,3 +249,65 @@ async def test_get_project_forwards_id_to_service(client: AsyncClient) -> None:
     app.dependency_overrides[get_projects_service] = lambda: mock_service
     await client.get("/api/v1/projects/42")
     mock_service.get_project.assert_called_once_with(42)
+
+
+# ---------------------------------------------------------------------------
+# GET /projects/{project_id} — authenticated endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_get_project_authenticated_calls_get_project_detail(client: AsyncClient) -> None:
+    """Authenticated requests to GET /api/v1/projects/{id} must call ``get_project_detail``."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.get_project_detail = AsyncMock(return_value=_PROJECT_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1")
+
+    assert response.status_code == 200
+    mock_service.get_project_detail.assert_called_once_with(1, user)
+    mock_service.get_project.assert_not_called()
+
+
+async def test_get_project_authenticated_response_includes_emails(client: AsyncClient) -> None:
+    """Authenticated response must include ``results_unlocked``, lecturer e-mail, member e-mail."""
+    user = _make_authenticated_user(UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_project_detail = AsyncMock(return_value=_PROJECT_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1")
+
+    body = response.json()
+    assert body["results_unlocked"] is True
+    assert body["course"]["lecturers"][0]["email"] == "lect@tul.cz"
+    assert body["members"][0]["email"] == "alice@tul.cz"
+
+
+async def test_get_project_authenticated_404_when_not_found(client: AsyncClient) -> None:
+    """Authenticated GET /api/v1/projects/{id} must return 404 when no project exists."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.get_project_detail = AsyncMock(return_value=None)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/999")
+
+    assert response.status_code == 404
+
+
+async def test_get_project_authenticated_500_on_service_error(client: AsyncClient) -> None:
+    """Authenticated GET /api/v1/projects/{id} must return 500 on service exception."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.get_project_detail = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1")
+
+    assert response.status_code == 500
