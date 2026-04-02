@@ -6,7 +6,7 @@ can still be updated; ``True`` means the evaluation has been submitted and
 triggers the automatic project-result unlock check.
 
 Revision ID: b3c4d5e6f7a8
-Revises: a2b3c4d5e6f7
+Revises: b6c7d8e9f0a1
 Create Date: 2026-04-02
 """
 
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "b3c4d5e6f7a8"
-down_revision: Union[str, Sequence[str], None] = "a2b3c4d5e6f7"
+down_revision: Union[str, Sequence[str], None] = "b6c7d8e9f0a1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
