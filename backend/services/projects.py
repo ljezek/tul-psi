@@ -5,27 +5,33 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.auth import create_user as db_create_user
-from db.auth import get_user_by_email
+from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
 from db.courses import get_course_lecturers as db_get_course_lecturers_for_course
 from db.projects import (
     add_project_member,
-    create_project as db_create_project,
-    delete_project as db_delete_project,
     get_course_evaluations,
     get_course_lecturers,
-    get_or_create_user,
     get_peer_feedback_authored,
     get_peer_feedback_received,
-    get_project as db_get_project,
     get_project_evaluations,
     get_project_members,
     get_projects,
     is_course_lecturer,
     is_project_member,
-    unlock_project_results as db_unlock_project_results,
     update_project,
+)
+from db.projects import (
+    create_project as db_create_project,
+)
+from db.projects import (
+    delete_project as db_delete_project,
+)
+from db.projects import (
+    get_project as db_get_project,
+)
+from db.projects import (
+    unlock_project_results as db_unlock_project_results,
 )
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
@@ -46,28 +52,9 @@ from schemas.projects import (
     ProjectPublic,
     ProjectUpdate,
 )
+from services.auth import is_admin_or_course_lecturer
 
 logger = logging.getLogger(__name__)
-
-
-def _can_manage_course_projects(
-    user: User,
-    course_lecturer_ids: set[int],
-) -> bool:
-    """Return ``True`` when *user* may create, update, or delete projects in the course.
-
-    Access is granted to:
-    - Admin users (any course).
-    - Lecturers who are explicitly assigned to this course.
-
-    Students and unauthenticated callers must not reach this check — callers
-    must have already verified that ``user`` is not ``None``.
-    """
-    if user.role == UserRole.ADMIN:
-        return True
-    if user.role == UserRole.LECTURER and user.id in course_lecturer_ids:
-        return True
-    return False
 
 
 def _require_id(user: User) -> int:
@@ -223,6 +210,24 @@ class ProjectsService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def _require_course_manage_access(self, course_id: int, user: User) -> None:
+        """Assert *user* may create, update, or delete projects for *course_id*.
+
+        Admins bypass the lecturer DB query for performance — no DB round-trip
+        is needed for a role with unconditional write access.  For lecturers, the
+        course-lecturer assignment table is queried and the user id must be present.
+        All other roles (students, unauthenticated) raise ``PermissionError``.
+        """
+        if user.role == UserRole.ADMIN:
+            return
+        lecturers_by_course = await db_get_course_lecturers_for_course(self._session, [course_id])
+        lecturer_users = lecturers_by_course.get(course_id, [])
+        lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
+        if not is_admin_or_course_lecturer(user, lecturer_ids):
+            raise PermissionError(
+                f"User {user.id} is not authorised to manage projects for course {course_id}."
+            )
 
     async def get_projects(
         self,
@@ -513,12 +518,7 @@ class ProjectsService:
         if course.id is None:
             raise ValueError(f"Course returned from DB has no id: {course!r}")
 
-        lecturers_by_course = await db_get_course_lecturers_for_course(self._session, [course.id])
-        lecturer_users = lecturers_by_course.get(course.id, [])
-        lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-
-        if not _can_manage_course_projects(requester, lecturer_ids):
-            raise PermissionError("Not authorised to manage projects for this course.")
+        await self._require_course_manage_access(course.id, requester)
 
         project = await db_create_project(
             self._session,
@@ -531,26 +531,24 @@ class ProjectsService:
             academic_year=data.academic_year,
         )
 
-        owner_user: User | None = None
         if data.owner_email is not None:
-            # Find or create the student account and add as initial project member.
-            owner_user = await get_user_by_email(self._session, data.owner_email)
-            if owner_user is None:
-                # Derive a readable default name from the email prefix.
-                # e.g. jan.novak@tul.cz → "Jan Novak", j_doe@tul.cz → "J Doe"
-                prefix = data.owner_email.split("@")[0]
-                name = " ".join(part.capitalize() for part in prefix.replace("_", ".").split("."))
-                owner_user = await db_create_user(
-                    self._session,
-                    email=data.owner_email,
-                    name=name,
-                )
+            # Derive a readable default name from the email prefix.
+            # e.g. jan.novak@tul.cz → "Jan Novak", j_doe@tul.cz → "J Doe"
+            prefix = data.owner_email.split("@")[0]
+            default_name = " ".join(
+                part.capitalize() for part in prefix.replace("_", ".").split(".")
+            )
+            owner_user, _ = await get_or_create_user(
+                self._session,
+                data.owner_email,
+                default_name,
+            )
             if project.id is None:
                 raise ValueError(f"Project returned from DB has no id: {project!r}")
             await add_project_member(
                 self._session,
                 project.id,
-                owner_user.id if owner_user.id is not None else 0,
+                owner_user.id,
                 invited_by=requester.id if requester.id is not None else 0,
             )
             logger.info(
@@ -581,13 +579,7 @@ class ProjectsService:
         if course.id is None:
             raise ValueError(f"Course returned from DB has no id: {course!r}")
 
-        lecturers_by_course = await db_get_course_lecturers_for_course(self._session, [course.id])
-        lecturer_users = lecturers_by_course.get(course.id, [])
-        lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-
-        if not _can_manage_course_projects(requester, lecturer_ids):
-            raise PermissionError("Not authorised to delete this project.")
-
+        await self._require_course_manage_access(course.id, requester)
         await db_delete_project(self._session, project_id)
         await self._session.commit()
 
@@ -607,13 +599,7 @@ class ProjectsService:
         if course.id is None:
             raise ValueError(f"Course returned from DB has no id: {course!r}")
 
-        lecturers_by_course = await db_get_course_lecturers_for_course(self._session, [course.id])
-        lecturer_users = lecturers_by_course.get(course.id, [])
-        lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-
-        if not _can_manage_course_projects(requester, lecturer_ids):
-            raise PermissionError("Not authorised to unlock results for this project.")
-
+        await self._require_course_manage_access(course.id, requester)
         await db_unlock_project_results(self._session, project_id)
         await self._session.commit()
 

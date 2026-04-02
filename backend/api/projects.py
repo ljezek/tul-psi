@@ -226,7 +226,7 @@ async def add_project_member(
 )
 async def unlock_project(
     project_id: int,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> ProjectPublic:
     """Set ``results_unlocked=True`` on the project identified by ``project_id``.
@@ -235,11 +235,6 @@ async def unlock_project(
     Raises HTTP 403 when the caller is not an admin or assigned lecturer.
     Raises HTTP 404 when the project does not exist.
     """
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication is required.",
-        )
     try:
         return await service.unlock_project(project_id, current_user)
     except LookupError:
@@ -268,7 +263,7 @@ async def unlock_project(
 )
 async def delete_project(
     project_id: int,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> Response:
     """Delete the project identified by ``project_id``.
@@ -277,11 +272,6 @@ async def delete_project(
     Raises HTTP 403 when the caller is not an admin or assigned lecturer.
     Raises HTTP 404 when the project does not exist.
     """
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication is required.",
-        )
     try:
         await service.delete_project(project_id, current_user)
     except LookupError:

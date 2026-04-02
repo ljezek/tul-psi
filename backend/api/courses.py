@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_user, get_optional_current_user
+from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
 from models.user import User
 from schemas.courses import CourseDetail, CourseListItem
@@ -98,7 +98,7 @@ async def get_course(
 async def create_course_project(
     course_id: int,
     data: ProjectCreate,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> ProjectPublic:
     """Create a new project for the course identified by ``course_id``.
@@ -107,11 +107,6 @@ async def create_course_project(
     Raises HTTP 403 when the caller is not an admin or assigned lecturer.
     Raises HTTP 404 when the course does not exist.
     """
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication is required.",
-        )
     try:
         return await service.create_project(course_id, data, current_user)
     except LookupError:

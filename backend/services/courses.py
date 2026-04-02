@@ -6,9 +6,10 @@ from db.courses import get_course as db_get_course
 from db.courses import get_course_evaluations, get_course_lecturers, get_course_project_stats
 from db.courses import get_courses as db_get_courses
 from models.course_evaluation import CourseEvaluation
-from models.user import User, UserRole
+from models.user import User
 from schemas.courses import CourseDetail, CourseEvaluationPublic, CourseListItem, CourseStats
 from schemas.projects import LecturerPublic
+from services.auth import is_admin_or_course_lecturer
 
 
 def _require_course_id(course_id: int | None) -> int:
@@ -49,28 +50,6 @@ def _course_evaluation_public(ev: CourseEvaluation) -> CourseEvaluationPublic:
         published=ev.published,
         submitted_at=ev.submitted_at,
     )
-
-
-def _can_view_evaluations(
-    current_user: User | None,
-    course_lecturer_ids: set[int],
-) -> bool:
-    """Return ``True`` when ``current_user`` is allowed to see course evaluations.
-
-    Access is granted to:
-    - Admins (any course).
-    - Lecturers who are assigned to this specific course.
-
-    Returns ``False`` for unauthenticated users, students, and lecturers who
-    are not assigned to the requested course.
-    """
-    if current_user is None:
-        return False
-    if current_user.role == UserRole.ADMIN:
-        return True
-    if current_user.role == UserRole.LECTURER and current_user.id in course_lecturer_ids:
-        return True
-    return False
 
 
 class CoursesService:
@@ -136,7 +115,7 @@ class CoursesService:
 
         include_email = current_user is not None
         lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-        show_evaluations = _can_view_evaluations(current_user, lecturer_ids)
+        show_evaluations = is_admin_or_course_lecturer(current_user, lecturer_ids)
 
         course_evaluations: list[CourseEvaluationPublic] | None = None
         if show_evaluations:

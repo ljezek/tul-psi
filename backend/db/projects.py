@@ -13,7 +13,7 @@ from models.peer_feedback import PeerFeedback
 from models.project import Project
 from models.project_evaluation import ProjectEvaluation
 from models.project_member import ProjectMember
-from models.user import User, UserRole
+from models.user import User
 
 
 def _escape_like(value: str) -> str:
@@ -311,44 +311,6 @@ async def update_project(
     return project
 
 
-async def get_or_create_user(
-    session: AsyncSession,
-    email: str,
-    name: str | None = None,
-    github_alias: str | None = None,
-) -> tuple[User, bool]:
-    """Return the user matching *email*, creating a new STUDENT account if absent.
-
-    Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) so concurrent requests
-    for the same address are handled atomically without a separate SELECT before
-    INSERT.  *name* and *github_alias* are only used when a new row is created;
-    callers are responsible for computing any desired defaults (e.g. deriving
-    a display name from the local part of the e-mail address).
-
-    Returns a ``(user, created)`` tuple where ``created`` is ``True`` when a new
-    row was inserted and ``False`` when an existing row was returned.
-    The caller must commit the session after a successful return.
-    """
-    stmt = (
-        pg_insert(User)
-        .values(
-            email=email,
-            name=name,
-            github_alias=github_alias,
-            role=UserRole.STUDENT,
-            created_at=datetime.now(UTC),
-        )
-        .on_conflict_do_nothing(index_elements=["email"])
-    )
-    result = await session.execute(stmt)
-    created = result.rowcount > 0
-    # Fetch the full ORM object whether just inserted or pre-existing.
-    user = (await session.execute(select(User).where(User.email == email))).scalars().first()
-    if user is None:
-        raise RuntimeError(f"Expected user row for {email!r} after UPSERT.")
-    return user, created
-
-
 async def add_project_member(
     session: AsyncSession,
     project_id: int,
@@ -448,14 +410,15 @@ async def delete_project(session: AsyncSession, project_id: int) -> bool:
     if project is None:
         return False
 
-    # Collect course_evaluation ids so we can delete their peer_feedback rows.
-    eval_ids_stmt = select(CourseEvaluation.id).where(CourseEvaluation.project_id == project_id)
-    eval_ids = list((await session.execute(eval_ids_stmt)).scalars().all())
-
-    if eval_ids:
-        await session.execute(
-            delete(PeerFeedback).where(PeerFeedback.course_evaluation_id.in_(eval_ids))
+    # Use a subselect to atomically find and delete peer_feedback rows that belong
+    # to this project's course evaluations.
+    await session.execute(
+        delete(PeerFeedback).where(
+            PeerFeedback.course_evaluation_id.in_(
+                select(CourseEvaluation.id).where(CourseEvaluation.project_id == project_id)
+            )
         )
+    )
     await session.execute(delete(CourseEvaluation).where(CourseEvaluation.project_id == project_id))
     await session.execute(
         delete(ProjectEvaluation).where(ProjectEvaluation.project_id == project_id)

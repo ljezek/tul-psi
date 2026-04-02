@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import not_, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -16,22 +17,42 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     return result.scalars().first()
 
 
-async def create_user(
+async def get_or_create_user(
     session: AsyncSession,
-    *,
     email: str,
-    name: str,
-    role: UserRole = UserRole.STUDENT,
-) -> User:
-    """Create and persist a new User with the given attributes.
+    name: str | None = None,
+    github_alias: str | None = None,
+) -> tuple[User, bool]:
+    """Return the user matching *email*, creating a new STUDENT account if absent.
 
-    The caller is responsible for committing the session after this call
-    (or relying on an enclosing transaction).
+    Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) so concurrent requests
+    for the same address are handled atomically without a separate SELECT before
+    INSERT.  *name* and *github_alias* are only used when a new row is created;
+    callers are responsible for computing any desired defaults (e.g. deriving
+    a display name from the local part of the e-mail address).
+
+    Returns a ``(user, created)`` tuple where ``created`` is ``True`` when a new
+    row was inserted and ``False`` when an existing row was returned.
+    The caller must commit the session after a successful return.
     """
-    user = User(email=email, name=name, role=role)
-    session.add(user)
-    await session.flush()
-    return user
+    stmt = (
+        pg_insert(User)
+        .values(
+            email=email,
+            name=name,
+            github_alias=github_alias,
+            role=UserRole.STUDENT,
+            created_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing(index_elements=["email"])
+    )
+    result = await session.execute(stmt)
+    created = result.rowcount > 0
+    # Fetch the full ORM object whether just inserted or pre-existing.
+    user = (await session.execute(select(User).where(User.email == email))).scalars().first()
+    if user is None:
+        raise RuntimeError(f"Expected user row for {email!r} after UPSERT.")
+    return user, created
 
 
 async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
