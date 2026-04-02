@@ -11,6 +11,7 @@ from api.auth import router as auth_router
 from api.courses import router as courses_router
 from api.health import router as health_router
 from api.projects import router as projects_router
+from api.users import router as users_router
 
 
 def _configure_logging() -> None:
@@ -49,3 +50,4 @@ app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(courses_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
