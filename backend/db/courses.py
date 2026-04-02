@@ -8,6 +8,7 @@ from models.course_evaluation import CourseEvaluation
 from models.course_lecturer import CourseLecturer
 from models.project import Project
 from models.user import User
+from schemas.courses import CourseCreate, CourseUpdate
 
 
 async def get_courses(session: AsyncSession) -> list[Course]:
@@ -20,6 +21,51 @@ async def get_course(session: AsyncSession, course_id: int) -> Course | None:
     """Return the course with the given ``course_id``, or ``None`` if not found."""
     stmt = select(Course).where(Course.id == course_id)
     return (await session.execute(stmt)).scalars().first()
+
+
+async def get_course_by_code(session: AsyncSession, code: str) -> Course | None:
+    """Return the course with the given ``code``, or ``None`` if not found."""
+    stmt = select(Course).where(Course.code == code)
+    return (await session.execute(stmt)).scalars().first()
+
+
+async def create_course(
+    session: AsyncSession,
+    data: CourseCreate,
+    created_by: int,
+) -> Course:
+    """Insert a new course row and return it with the DB-generated primary key.
+
+    The caller is responsible for committing the session after this call so
+    that the insert and any related operations form a single unit of work.
+    ``session.flush()`` is used to materialise the auto-assigned ``id``
+    without ending the transaction.
+    """
+    course = Course(**data.model_dump(), created_by=created_by)
+    session.add(course)
+    await session.flush()
+    return course
+
+
+async def update_course(
+    session: AsyncSession,
+    course: Course,
+    data: CourseUpdate,
+) -> Course:
+    """Apply ``data`` fields to ``course`` and stage the update.
+
+    Only fields explicitly provided in the request body are written
+    (``model_dump(exclude_unset=True)``).  The caller is responsible for
+    committing the session.  ``session.flush()`` is called to propagate the
+    changes within the current transaction so that a subsequent SELECT sees
+    the updated values.
+    """
+    update_fields = data.model_dump(exclude_unset=True)
+    for field, value in update_fields.items():
+        setattr(course, field, value)
+    session.add(course)
+    await session.flush()
+    return course
 
 
 async def get_course_project_stats(

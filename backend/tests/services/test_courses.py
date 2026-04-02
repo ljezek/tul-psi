@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from models.course import Course, CourseTerm, ProjectType
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
@@ -337,3 +339,229 @@ async def test_admin_receives_course_evaluations() -> None:
     assert result is not None
     assert result.course_evaluations is not None
     assert len(result.course_evaluations) == 1
+
+
+# ---------------------------------------------------------------------------
+# CoursesService.create_course — permission and delegation
+# ---------------------------------------------------------------------------
+
+
+async def test_create_course_raises_permission_error_for_non_admin() -> None:
+    """``create_course`` must raise ``CoursePermissionError`` for non-admin users."""
+    from services.courses import CoursePermissionError
+
+    session = MagicMock()
+    current_user = MagicMock(spec=User)
+    current_user.id = 5
+    current_user.role = UserRole.LECTURER
+
+    with pytest.raises(CoursePermissionError):
+        await CoursesService(session).create_course(
+            MagicMock(),
+            current_user,
+        )
+
+
+async def test_create_course_calls_db_create_and_commits() -> None:
+    """``create_course`` must call the DB create function and commit the session."""
+    from schemas.courses import CourseCreate
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    created_course = _make_course(course_id=10)
+    data = CourseCreate(
+        code="TEST",
+        name="Test Course",
+        term=CourseTerm.WINTER,
+        project_type=ProjectType.TEAM,
+        min_score=50,
+    )
+
+    with (
+        patch(
+            "services.courses.db_create_course",
+            new_callable=AsyncMock,
+            return_value=created_course,
+        ),
+        patch(
+            "services.courses.db_get_course",
+            new_callable=AsyncMock,
+            return_value=created_course,
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: []},
+        ),
+        patch(
+            "services.courses.get_course_evaluations",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+    ):
+        result = await CoursesService(session).create_course(data, current_user)
+
+    session.commit.assert_called_once()
+    assert result is not None
+    assert result.id == 10
+
+
+# ---------------------------------------------------------------------------
+# CoursesService.update_course — permission and delegation
+# ---------------------------------------------------------------------------
+
+
+async def test_update_course_returns_none_when_course_not_found() -> None:
+    """``update_course`` must return ``None`` when no course with the given id exists."""
+    from schemas.courses import CourseUpdate
+
+    session = MagicMock()
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=None):
+        result = await CoursesService(session).update_course(999, CourseUpdate(), current_user)
+
+    assert result is None
+
+
+async def test_update_course_raises_permission_error_for_student() -> None:
+    """``update_course`` must raise ``CoursePermissionError`` for students."""
+    from schemas.courses import CourseUpdate
+    from services.courses import CoursePermissionError
+
+    session = MagicMock()
+    course = _make_course(course_id=1)
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 5
+    current_user.role = UserRole.STUDENT
+
+    with (
+        patch(
+            "services.courses.db_get_course",
+            new_callable=AsyncMock,
+            return_value=course,
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        pytest.raises(CoursePermissionError),
+    ):
+        await CoursesService(session).update_course(1, CourseUpdate(), current_user)
+
+
+async def test_update_course_raises_permission_error_for_non_assigned_lecturer() -> None:
+    """``update_course`` must raise ``CoursePermissionError`` for unassigned lecturers."""
+    from schemas.courses import CourseUpdate
+    from services.courses import CoursePermissionError
+
+    session = MagicMock()
+    course = _make_course(course_id=1)
+    # The course is assigned to lecturer 42, not to the calling user.
+    assigned_lecturer = _make_lecturer(user_id=42)
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 99  # Different id.
+    current_user.role = UserRole.LECTURER
+
+    with (
+        patch(
+            "services.courses.db_get_course",
+            new_callable=AsyncMock,
+            return_value=course,
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: [assigned_lecturer]},
+        ),
+        pytest.raises(CoursePermissionError),
+    ):
+        await CoursesService(session).update_course(1, CourseUpdate(), current_user)
+
+
+async def test_update_course_succeeds_for_assigned_lecturer() -> None:
+    """``update_course`` must succeed for a lecturer who is assigned to the course."""
+    from schemas.courses import CourseUpdate
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+    course = _make_course(course_id=1)
+    assigned_lecturer = _make_lecturer(user_id=42)
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 42
+    current_user.role = UserRole.LECTURER
+
+    with (
+        patch(
+            "services.courses.db_get_course",
+            new_callable=AsyncMock,
+            return_value=course,
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: [assigned_lecturer]},
+        ),
+        patch("services.courses.db_update_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_evaluations",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+    ):
+        result = await CoursesService(session).update_course(
+            1, CourseUpdate(name="Updated"), current_user
+        )
+
+    session.commit.assert_called_once()
+    assert result is not None
+
+
+async def test_update_course_succeeds_for_admin() -> None:
+    """``update_course`` must succeed for an admin even without a lecturer assignment."""
+    from schemas.courses import CourseUpdate
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+    course = _make_course(course_id=1)
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with (
+        patch(
+            "services.courses.db_get_course",
+            new_callable=AsyncMock,
+            return_value=course,
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch("services.courses.db_update_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_evaluations",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+    ):
+        result = await CoursesService(session).update_course(
+            1, CourseUpdate(name="Admin Update"), current_user
+        )
+
+    session.commit.assert_called_once()
+    assert result is not None
