@@ -48,7 +48,7 @@ async def test_get_me(client: AsyncClient, mock_user: User) -> None:
     assert data["id"] == mock_user.id
     assert data["email"] == mock_user.email
     assert data["name"] == mock_user.name
-    assert data["role"] == mock_user.role
+    assert data["role"] == mock_user.role.value
     assert data["github_alias"] == mock_user.github_alias
     assert data["is_active"] is True
 
@@ -165,3 +165,86 @@ async def test_deactivate_user_as_admin(client: AsyncClient) -> None:
     data = response.json()
     assert data["id"] == 1
     assert data["is_active"] is False
+
+
+async def test_get_user_by_id_as_admin(client: AsyncClient) -> None:
+    """GET /api/v1/users/{id} should return the user when called by an admin."""
+    admin_user = User(id=2, email="admin@tul.cz", name="Admin", role=UserRole.ADMIN)
+    app.dependency_overrides[require_current_user] = lambda: admin_user
+
+    with patch("services.users.UsersService.get_user", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = {
+            "id": 1,
+            "email": "test@tul.cz",
+            "name": "Test User",
+            "role": "STUDENT",
+            "github_alias": "testuser",
+            "is_active": True,
+        }
+        response = await client.get("/api/v1/users/1")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == 1
+    assert data["email"] == "test@tul.cz"
+    assert data["is_active"] is True
+
+
+async def test_get_user_by_id_not_found(client: AsyncClient) -> None:
+    """GET /api/v1/users/{id} should return 404 when the user does not exist."""
+    from services.users import UserNotFoundError
+
+    admin_user = User(id=2, email="admin@tul.cz", name="Admin", role=UserRole.ADMIN)
+    app.dependency_overrides[require_current_user] = lambda: admin_user
+
+    with patch("services.users.UsersService.get_user", new_callable=AsyncMock) as mock_get:
+        mock_get.side_effect = UserNotFoundError("User 99 not found.")
+        response = await client.get("/api/v1/users/99")
+
+    assert response.status_code == 404
+
+
+async def test_get_user_by_id_as_non_admin(client: AsyncClient) -> None:
+    """GET /api/v1/users/{id} should return 403 when called by a non-admin."""
+    from services.users import PermissionDeniedError
+
+    with patch("services.users.UsersService.get_user", new_callable=AsyncMock) as mock_get:
+        mock_get.side_effect = PermissionDeniedError("Only admins can view other users.")
+        response = await client.get("/api/v1/users/1")
+
+    assert response.status_code == 403
+
+
+async def test_update_user_by_id_as_admin(client: AsyncClient) -> None:
+    """PATCH /api/v1/users/{id} should allow an admin to update a user's role."""
+    admin_user = User(id=2, email="admin@tul.cz", name="Admin", role=UserRole.ADMIN)
+    app.dependency_overrides[require_current_user] = lambda: admin_user
+
+    with patch("services.users.UsersService.update_user", new_callable=AsyncMock) as mock_update:
+        mock_update.return_value = {
+            "id": 1,
+            "email": "test@tul.cz",
+            "name": "Test User",
+            "role": "LECTURER",
+            "github_alias": "testuser",
+            "is_active": True,
+        }
+        response = await client.patch("/api/v1/users/1", json={"role": "LECTURER"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["role"] == "LECTURER"
+
+
+async def test_update_user_by_id_not_found(client: AsyncClient) -> None:
+    """PATCH /api/v1/users/{id} should return 404 when the user does not exist."""
+    from services.users import UserNotFoundError
+
+    admin_user = User(id=2, email="admin@tul.cz", name="Admin", role=UserRole.ADMIN)
+    app.dependency_overrides[require_current_user] = lambda: admin_user
+
+    with patch("services.users.UsersService.update_user", new_callable=AsyncMock) as mock_update:
+        mock_update.side_effect = UserNotFoundError("User 99 not found.")
+        response = await client.patch("/api/v1/users/99", json={"is_active": False})
+
+    assert response.status_code == 404
