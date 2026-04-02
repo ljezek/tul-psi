@@ -47,13 +47,24 @@ def _require_id(user: User) -> int:
     return user.id
 
 
-def _build_project_public(
+def _build_project(
     p: Project,
     c: Course,
     members: list[User],
     lecturers: list[User],
+    *,
+    authenticated: bool = False,
+    project_evaluations: list[ProjectEvaluationDetail] | None = None,
+    course_evaluations: list[CourseEvaluationDetail] | None = None,
+    received_peer_feedback: list[PeerFeedbackDetail] | None = None,
+    authored_peer_feedback: list[PeerFeedbackDetail] | None = None,
 ) -> ProjectPublic:
-    """Assemble an unauthenticated ``ProjectPublic`` — e-mails and evaluations are omitted.
+    """Assemble a ``ProjectPublic`` response.
+
+    When *authenticated* is ``False`` (the default), private fields — e-mails,
+    ``results_unlocked``, and all evaluation collections — are omitted (``None``).
+    When *authenticated* is ``True``, e-mails and ``results_unlocked`` are included
+    and the optional evaluation parameters are forwarded as-is.
 
     Raises ``ValueError`` if the project or course row has a ``None`` primary key, which
     should never happen for rows fetched from the database.
@@ -70,6 +81,7 @@ def _build_project_public(
         live_url=p.live_url,
         technologies=p.technologies,
         academic_year=p.academic_year,
+        results_unlocked=(p.results_unlocked if authenticated else None),
         course=CoursePublic(
             code=c.code,
             name=c.name,
@@ -80,16 +92,28 @@ def _build_project_public(
             peer_bonus_budget=c.peer_bonus_budget,
             evaluation_criteria=c.evaluation_criteria,
             links=c.links,
-            lecturers=[LecturerPublic(name=u.name, github_alias=u.github_alias) for u in lecturers],
+            lecturers=[
+                LecturerPublic(
+                    name=u.name,
+                    github_alias=u.github_alias,
+                    email=(u.email if authenticated else None),
+                )
+                for u in lecturers
+            ],
         ),
         members=[
             MemberPublic(
                 id=_require_id(m),
                 github_alias=m.github_alias,
                 name=m.name,
+                email=(m.email if authenticated else None),
             )
             for m in members
         ],
+        project_evaluations=(project_evaluations if authenticated else None),
+        course_evaluations=(course_evaluations if authenticated else None),
+        received_peer_feedback=(received_peer_feedback if authenticated else None),
+        authored_peer_feedback=(authored_peer_feedback if authenticated else None),
     )
 
 
@@ -141,64 +165,6 @@ def _to_peer_feedback_detail(feedback: PeerFeedback) -> PeerFeedbackDetail:
     )
 
 
-def _build_project_detail(
-    p: Project,
-    c: Course,
-    members: list[User],
-    lecturers: list[User],
-    project_evaluations: list[ProjectEvaluationDetail] | None,
-    course_evaluations: list[CourseEvaluationDetail] | None,
-    received_peer_feedback: list[PeerFeedbackDetail] | None,
-    authored_peer_feedback: list[PeerFeedbackDetail] | None,
-) -> ProjectPublic:
-    """Assemble an authenticated ``ProjectPublic`` — e-mails and evaluations are included.
-
-    Raises ``ValueError`` if the project or course row has a ``None`` primary key.
-    """
-    if p.id is None:
-        raise ValueError(f"Project returned from DB has no id: {p!r}")
-    if c.id is None:
-        raise ValueError(f"Course returned from DB has no id: {c!r}")
-    return ProjectPublic(
-        id=p.id,
-        title=p.title,
-        description=p.description,
-        github_url=p.github_url,
-        live_url=p.live_url,
-        technologies=p.technologies,
-        academic_year=p.academic_year,
-        results_unlocked=p.results_unlocked,
-        course=CoursePublic(
-            code=c.code,
-            name=c.name,
-            syllabus=c.syllabus,
-            term=c.term,
-            project_type=c.project_type,
-            min_score=c.min_score,
-            peer_bonus_budget=c.peer_bonus_budget,
-            evaluation_criteria=c.evaluation_criteria,
-            links=c.links,
-            lecturers=[
-                LecturerPublic(name=u.name, github_alias=u.github_alias, email=u.email)
-                for u in lecturers
-            ],
-        ),
-        members=[
-            MemberPublic(
-                id=_require_id(m),
-                github_alias=m.github_alias,
-                name=m.name,
-                email=m.email,
-            )
-            for m in members
-        ],
-        project_evaluations=project_evaluations,
-        course_evaluations=course_evaluations,
-        received_peer_feedback=received_peer_feedback,
-        authored_peer_feedback=authored_peer_feedback,
-    )
-
-
 class ProjectsService:
     """Business logic for the projects discovery endpoint.
 
@@ -242,7 +208,7 @@ class ProjectsService:
         lecturers_by_course = await get_course_lecturers(self._session, course_ids)
 
         return [
-            _build_project_public(
+            _build_project(
                 p,
                 c,
                 members_by_project.get(p.id, []) if p.id is not None else [],
@@ -266,7 +232,7 @@ class ProjectsService:
         course_id_list = [c.id] if c.id is not None else []
         members_by_project = await get_project_members(self._session, project_id_list)
         lecturers_by_course = await get_course_lecturers(self._session, course_id_list)
-        return _build_project_public(
+        return _build_project(
             p,
             c,
             members_by_project.get(p.id, []) if p.id is not None else [],
@@ -329,13 +295,14 @@ class ProjectsService:
                     _to_peer_feedback_detail(feedback) for feedback in raw_authored_peer_feedback
                 ]
 
-        return _build_project_detail(
+        return _build_project(
             p,
             c,
             members_by_project.get(p.id, []) if p.id is not None else [],
             lecturers_by_course.get(c.id, []) if c.id is not None else [],
-            project_evaluations,
-            course_evaluations,
-            received_peer_feedback,
-            authored_peer_feedback,
+            authenticated=True,
+            project_evaluations=project_evaluations,
+            course_evaluations=course_evaluations,
+            received_peer_feedback=received_peer_feedback,
+            authored_peer_feedback=authored_peer_feedback,
         )
