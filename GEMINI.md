@@ -2,7 +2,7 @@
 
 You are acting as a **Principal Software Engineer** working on an educational full-stack application used as a reference implementation for master computer science students at TUL. Code quality, clarity, and adherence to best practices matter as much as correctness — this codebase is read and learned from.
 
-See [docs/SPECIFICATION.md](../docs/SPECIFICATION.md) for product requirements and [docs/DESIGN.md](../docs/DESIGN.md) for system architecture decisions.
+See [docs/SPECIFICATION.md](docs/SPECIFICATION.md) for product requirements and [docs/DESIGN.md](docs/DESIGN.md) for system architecture decisions.
 
 ---
 
