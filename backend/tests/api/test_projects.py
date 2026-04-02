@@ -711,12 +711,14 @@ async def test_get_project_evaluation_returns_200(client: AsyncClient) -> None:
 
     evaluation = ProjectEvaluationDetail(
         lecturer_id=99,
-        scores=[EvaluationScoreDetail(
-            criterion_code="code_quality",
-            score=20,
-            strengths="Good",
-            improvements="Add more",
-        )],
+        scores=[
+            EvaluationScoreDetail(
+                criterion_code="code_quality",
+                score=20,
+                strengths="Good",
+                improvements="Add more",
+            )
+        ],
         submitted_at=datetime(2025, 1, 1, tzinfo=UTC),
         submitted=True,
     )
@@ -840,9 +842,7 @@ async def test_submit_project_evaluation_returns_403_on_permission_error(
     """POST /api/v1/projects/{id}/project-evaluation must return HTTP 403 on PermissionError."""
     user = _make_authenticated_user(role=UserRole.STUDENT)
     mock_service = _make_service()
-    mock_service.submit_project_evaluation = AsyncMock(
-        side_effect=PermissionError("not allowed")
-    )
+    mock_service.submit_project_evaluation = AsyncMock(side_effect=PermissionError("not allowed"))
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 

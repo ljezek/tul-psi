@@ -296,9 +296,7 @@ async def get_project_evaluation(
             detail="Not authorised to access evaluation for this project.",
         ) from None
     except Exception:
-        logger.exception(
-            "Failed to retrieve project evaluation", extra={"project_id": project_id}
-        )
+        logger.exception("Failed to retrieve project evaluation", extra={"project_id": project_id})
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 
@@ -355,9 +353,7 @@ async def submit_project_evaluation(
             detail=str(exc),
         ) from None
     except Exception:
-        logger.exception(
-            "Failed to submit project evaluation", extra={"project_id": project_id}
-        )
+        logger.exception("Failed to submit project evaluation", extra={"project_id": project_id})
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 
