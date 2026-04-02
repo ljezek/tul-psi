@@ -1245,7 +1245,7 @@ async def test_service_create_project_with_owner_raises_email_delivery_error() -
     new_member = MagicMock(spec=ProjectMember)
 
     mock_sender_instance = MagicMock()
-    mock_sender_instance.send.side_effect = NotImplementedError("No SMTP configured")
+    mock_sender_instance.send.side_effect = EmailDeliveryNotImplementedError("No SMTP configured")
 
     with (
         patch("services.projects.db_get_course", new_callable=AsyncMock, return_value=course),
@@ -1275,6 +1275,9 @@ async def test_service_create_project_with_owner_raises_email_delivery_error() -
 
     # Project and member rows must be committed before the error is surfaced.
     session.commit.assert_called_once()
+
+
+async def test_add_member_raises_email_delivery_error_on_send_failure() -> None:
     """``add_member`` must raise ``EmailDeliveryNotImplementedError`` when the sender fails.
 
     The DB commit must happen *before* the error is raised — the membership row
@@ -1310,7 +1313,7 @@ async def test_service_create_project_with_owner_raises_email_delivery_error() -
     user.role = UserRole.STUDENT
 
     mock_sender_instance = MagicMock()
-    mock_sender_instance.send.side_effect = NotImplementedError("No SMTP configured")
+    mock_sender_instance.send.side_effect = EmailDeliveryNotImplementedError("No SMTP configured")
 
     with (
         patch(

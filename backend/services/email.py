@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import sys
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data model
@@ -163,6 +166,15 @@ class EmailTemplate:
 
 
 # ---------------------------------------------------------------------------
+# Delivery error
+# ---------------------------------------------------------------------------
+
+
+class EmailDeliveryNotImplementedError(Exception):
+    """Raised when email delivery is not implemented in the current environment."""
+
+
+# ---------------------------------------------------------------------------
 # Sender (fake / dev implementation)
 # ---------------------------------------------------------------------------
 
@@ -203,7 +215,11 @@ class EmailSender:
             NotImplementedError: When the environment is not ``local``.
         """
         if self._app_env != "local":
-            raise NotImplementedError(
+            logger.error(
+                "Email delivery is not configured for this environment; message not sent.",
+                extra={"to": message.to, "subject": message.subject, "app_env": self._app_env},
+            )
+            raise EmailDeliveryNotImplementedError(
                 f"Real SMTP delivery is not yet implemented. "
                 f"EmailSender cannot be used in the '{self._app_env}' environment."
             )
@@ -217,7 +233,3 @@ class EmailSender:
             f"{'=' * 60}\n",
             file=sys.stderr,
         )
-
-
-class EmailDeliveryNotImplementedError(Exception):
-    """Raised when email delivery is not implemented in the current environment."""

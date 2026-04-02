@@ -52,7 +52,7 @@ from schemas.projects import (
     ProjectUpdate,
 )
 from services.auth import require_course_manage_access
-from services.email import EmailDeliveryNotImplementedError, EmailSender, EmailTemplate
+from services.email import EmailSender, EmailTemplate
 from settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -456,24 +456,14 @@ class ProjectsService:
         await self._session.commit()
 
         _settings = get_settings()
-        try:
-            EmailSender(app_env=_settings.app_env).send(
-                EmailTemplate.project_invite(
-                    to=body.email,
-                    project_name=project.title,
-                    course_name=course.name,
-                    portal_url=_settings.frontend_url,
-                )
+        EmailSender(app_env=_settings.app_env).send(
+            EmailTemplate.project_invite(
+                to=body.email,
+                project_name=project.title,
+                course_name=course.name,
+                portal_url=_settings.frontend_url,
             )
-        except NotImplementedError as exc:
-            logger.error(
-                "Email sending is not implemented in the current environment; "
-                "membership persisted but invitation not delivered.",
-                extra={"email": body.email, "project_id": project_id},
-            )
-            raise EmailDeliveryNotImplementedError(
-                "Email delivery is not configured for this environment."
-            ) from exc
+        )
         logger.info(
             "Project invitation email sent.",
             extra={"email": body.email, "project_id": project_id, "new_user": created},
@@ -547,24 +537,14 @@ class ProjectsService:
 
         if data.owner_email is not None:
             _settings = get_settings()
-            try:
-                EmailSender(app_env=_settings.app_env).send(
-                    EmailTemplate.project_invite(
-                        to=data.owner_email,
-                        project_name=project.title,
-                        course_name=course.name,
-                        portal_url=_settings.frontend_url,
-                    )
+            EmailSender(app_env=_settings.app_env).send(
+                EmailTemplate.project_invite(
+                    to=data.owner_email,
+                    project_name=project.title,
+                    course_name=course.name,
+                    portal_url=_settings.frontend_url,
                 )
-            except NotImplementedError as exc:
-                logger.error(
-                    "Email sending is not implemented in the current environment; "
-                    "project created but owner invite not delivered.",
-                    extra={"email": data.owner_email, "project_id": project.id},
-                )
-                raise EmailDeliveryNotImplementedError(
-                    "Email delivery is not configured for this environment."
-                ) from exc
+            )
             logger.info(
                 "Project invite email sent.",
                 extra={"recipient_email": data.owner_email, "project_id": project.id},

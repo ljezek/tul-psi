@@ -29,7 +29,7 @@ from schemas.courses import (
 )
 from schemas.projects import AddUserBody, LecturerPublic
 from services.auth import is_admin_or_course_lecturer, require_course_manage_access
-from services.email import EmailDeliveryNotImplementedError, EmailSender, EmailTemplate
+from services.email import EmailSender, EmailTemplate
 from settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -287,23 +287,13 @@ class CoursesService:
         await self._session.commit()
 
         _settings = get_settings()
-        try:
-            EmailSender(app_env=_settings.app_env).send(
-                EmailTemplate.course_invite(
-                    to=target_user.email,
-                    course_name=course.name,
-                    portal_url=_settings.frontend_url,
-                )
+        EmailSender(app_env=_settings.app_env).send(
+            EmailTemplate.course_invite(
+                to=target_user.email,
+                course_name=course.name,
+                portal_url=_settings.frontend_url,
             )
-        except NotImplementedError as exc:
-            logger.error(
-                "Email sending is not implemented in the current environment; "
-                "lecturer assigned but invite email not delivered.",
-                extra={"email": target_user.email, "course_id": course_id},
-            )
-            raise EmailDeliveryNotImplementedError(
-                "Email delivery is not configured for this environment."
-            ) from exc
+        )
         logger.info(
             "Course invite email sent.",
             extra={"email": target_user.email, "course_id": course_id, "new_user": created},

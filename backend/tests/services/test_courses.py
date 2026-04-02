@@ -725,7 +725,7 @@ async def test_add_lecturer_raises_email_delivery_error_on_send_failure() -> Non
     current_user.role = UserRole.ADMIN
 
     mock_sender_instance = MagicMock()
-    mock_sender_instance.send.side_effect = NotImplementedError("No SMTP configured")
+    mock_sender_instance.send.side_effect = EmailDeliveryNotImplementedError("No SMTP configured")
 
     with (
         patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),

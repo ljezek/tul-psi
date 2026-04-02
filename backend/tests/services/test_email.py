@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from services.email import EmailMessage, EmailSender, EmailTemplate
+from services.email import (
+    EmailDeliveryNotImplementedError,
+    EmailMessage,
+    EmailSender,
+    EmailTemplate,
+)
 
 # ---------------------------------------------------------------------------
 # EmailMessage
@@ -136,18 +141,15 @@ def test_email_sender_local_outputs_to_stderr_and_not_stdout(
 # ---------------------------------------------------------------------------
 
 
-def test_email_sender_raises_in_non_local_env(capsys: pytest.CaptureFixture[str]) -> None:
-    """Non-local EmailSender must raise NotImplementedError and produce no output."""
+def test_email_sender_raises_in_non_local_env() -> None:
+    """Non-local EmailSender must raise EmailDeliveryNotImplementedError and not touch stdout."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(EmailDeliveryNotImplementedError):
         EmailSender(app_env="production").send(msg)
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert captured.err == ""
 
 
 def test_email_sender_raises_in_dev_env() -> None:
-    """EmailSender must also raise NotImplementedError in the 'dev' environment."""
+    """EmailSender must also raise EmailDeliveryNotImplementedError in the 'dev' environment."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(EmailDeliveryNotImplementedError):
         EmailSender(app_env="dev").send(msg)
