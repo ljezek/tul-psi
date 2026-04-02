@@ -846,9 +846,7 @@ class ProjectsService:
         user_id = _require_id(user)
 
         if user.role != UserRole.STUDENT:
-            raise PermissionDeniedError(
-                "Only students may access the course evaluation form."
-            )
+            raise PermissionDeniedError("Only students may access the course evaluation form.")
 
         if not await is_project_member(self._session, project_id, user_id):
             raise PermissionDeniedError(f"User {user_id} is not a member of project {project_id}.")
@@ -918,9 +916,7 @@ class ProjectsService:
         user_id = _require_id(user)
 
         if user.role != UserRole.STUDENT:
-            raise PermissionDeniedError(
-                "Only students may submit a course evaluation."
-            )
+            raise PermissionDeniedError("Only students may submit a course evaluation.")
 
         if not await is_project_member(self._session, project_id, user_id):
             raise PermissionDeniedError(f"User {user_id} is not a member of project {project_id}.")
