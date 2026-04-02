@@ -161,9 +161,10 @@ async def test_endpoint_returns_401_for_tampered_cookie(client: AsyncClient) -> 
     """A tampered ``session`` cookie must result in HTTP 401 on any protected endpoint."""
     # Override get_session so the DB is not required for this test.
     app.dependency_overrides[get_session] = _mock_get_session
+    client.cookies.set("session", "eyJ.tampered.jwt")
     with patch("api.deps.get_settings") as mock_settings:
         mock_settings.return_value.jwt_secret = _JWT_SECRET
-        response = await client.get("/api/v1/projects/1", cookies={"session": "eyJ.tampered.jwt"})
+        response = await client.get("/api/v1/projects/1")
     assert response.status_code == 401
 
 
