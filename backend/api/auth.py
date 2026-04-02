@@ -70,7 +70,7 @@ async def request_otp(
 
     Domain validation is enforced at the Pydantic model level (422 for non-@tul.cz).
     Delegates to :func:`auth_service.request_otp` which generates the OTP, hashes it,
-    persists it, and logs the plaintext value in lieu of SMTP.
+    persists it, and sends it to the user via email (depending on environment).
     """
     await auth_service.request_otp(body.email, session)
 

@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     # Used by the FastAPI application at runtime.
     database_url: str
 
-    # When True, the plaintext OTP is printed to stderr after generation.
-    # Enable only in non-production environments as a stand-in for SMTP delivery.
-    show_otp_dev_only: bool = False
+    # Public base URL of the frontend SPA (e.g. https://spc.tul.cz in production).
+    # Included in outgoing email bodies so recipients can navigate to the portal.
+    frontend_url: str = "http://localhost:5173"
 
     # Secret key used to sign JWT session cookies.
     # Must be a long, random string; override in production via the JWT_SECRET env var.
