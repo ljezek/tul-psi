@@ -580,7 +580,7 @@ async def test_update_course_succeeds_for_admin() -> None:
 
 async def test_add_lecturer_raises_not_found_when_course_missing() -> None:
     """``add_lecturer`` must raise ``CourseNotFoundError`` when the course does not exist."""
-    from schemas.courses import AddLecturerBody
+    from schemas.projects import AddUserBody
 
     session = MagicMock()
     current_user = MagicMock(spec=User)
@@ -590,13 +590,13 @@ async def test_add_lecturer_raises_not_found_when_course_missing() -> None:
     with patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=None):
         with pytest.raises(CourseNotFoundError):
             await CoursesService(session).add_lecturer(
-                999, AddLecturerBody(email="new@tul.cz"), current_user
+                999, AddUserBody(email="new@tul.cz"), current_user
             )
 
 
 async def test_add_lecturer_raises_permission_error_for_student() -> None:
     """``add_lecturer`` must raise ``CoursePermissionError`` for a student caller."""
-    from schemas.courses import AddLecturerBody
+    from schemas.projects import AddUserBody
 
     session = MagicMock()
     course = _make_course(course_id=1)
@@ -614,13 +614,13 @@ async def test_add_lecturer_raises_permission_error_for_student() -> None:
     ):
         with pytest.raises(CoursePermissionError):
             await CoursesService(session).add_lecturer(
-                1, AddLecturerBody(email="new@tul.cz"), current_user
+                1, AddUserBody(email="new@tul.cz"), current_user
             )
 
 
 async def test_add_lecturer_raises_already_assigned_error_on_duplicate() -> None:
     """``add_lecturer`` must raise ``CourseLecturerAlreadyAssignedError`` when already assigned."""
-    from schemas.courses import AddLecturerBody
+    from schemas.projects import AddUserBody
 
     session = MagicMock()
     session.commit = AsyncMock()
@@ -646,18 +646,18 @@ async def test_add_lecturer_raises_already_assigned_error_on_duplicate() -> None
         patch(
             "services.courses.add_course_lecturer",
             new_callable=AsyncMock,
-            return_value=(MagicMock(), False),
+            return_value=False,
         ),
     ):
         with pytest.raises(CourseLecturerAlreadyAssignedError):
             await CoursesService(session).add_lecturer(
-                1, AddLecturerBody(email="existing@tul.cz"), current_user
+                1, AddUserBody(email="existing@tul.cz"), current_user
             )
 
 
 async def test_add_lecturer_succeeds_for_admin_and_creates_new_user() -> None:
     """``add_lecturer`` must succeed for an admin and return the new lecturer's public data."""
-    from schemas.courses import AddLecturerBody
+    from schemas.projects import AddUserBody
 
     session = MagicMock()
     session.commit = AsyncMock()
@@ -683,11 +683,11 @@ async def test_add_lecturer_succeeds_for_admin_and_creates_new_user() -> None:
         patch(
             "services.courses.add_course_lecturer",
             new_callable=AsyncMock,
-            return_value=(MagicMock(), True),
+            return_value=True,
         ),
     ):
         result = await CoursesService(session).add_lecturer(
-            1, AddLecturerBody(email="new.lecturer@tul.cz"), current_user
+            1, AddUserBody(email="new.lecturer@tul.cz"), current_user
         )
 
     session.commit.assert_called_once()

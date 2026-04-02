@@ -19,7 +19,6 @@ from db.projects import get_or_create_user
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
 from schemas.courses import (
-    AddLecturerBody,
     CourseCreate,
     CourseDetail,
     CourseEvaluationPublic,
@@ -28,7 +27,7 @@ from schemas.courses import (
     CourseStats,
     CourseUpdate,
 )
-from schemas.projects import LecturerPublic
+from schemas.projects import AddUserBody, LecturerPublic
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +280,7 @@ class CoursesService:
     async def add_lecturer(
         self,
         course_id: int,
-        body: AddLecturerBody,
+        body: AddUserBody,
         current_user: User,
     ) -> CourseLecturerPublic:
         """Assign the user identified by *body.email* as a lecturer on *course_id*.
@@ -334,7 +333,7 @@ class CoursesService:
         if target_user.id is None:
             raise ValueError(f"User returned from DB has no id after flush: {target_user!r}")
 
-        _row, added = await add_course_lecturer(self._session, course_id, target_user.id)
+        added = await add_course_lecturer(self._session, course_id, target_user.id)
         if not added:
             raise CourseLecturerAlreadyAssignedError(
                 f"User {target_user.email} is already a lecturer on course {course_id}."

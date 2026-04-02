@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectType
 from schemas.projects import LecturerPublic
-from validators import validate_tul_email
 
 
 class CourseStats(BaseModel):
@@ -127,26 +126,6 @@ class CourseUpdate(BaseModel):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"'{field}' may not be null; provide a list or omit the field.")
         return self
-
-
-class AddLecturerBody(BaseModel):
-    """Request body for ``POST /courses/{id}/lecturers``.
-
-    ``name`` and ``github_alias`` are propagated to a newly-created user account
-    when no existing user matches the given *email*.  When omitted, ``github_alias``
-    defaults to ``None`` and ``name`` defaults to the local part of the e-mail
-    address (the portion before the ``@`` sign).
-    """
-
-    email: EmailStr
-    name: str | None = None
-    github_alias: str | None = None
-
-    @field_validator("email")
-    @classmethod
-    def email_must_be_tul_domain(cls, v: str) -> str:
-        """Reject any address whose domain is not @tul.cz."""
-        return validate_tul_email(v)
 
 
 class CourseLecturerPublic(BaseModel):

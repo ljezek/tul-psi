@@ -11,13 +11,13 @@ from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
 from models.user import User, UserRole
 from schemas.courses import (
-    AddLecturerBody,
     CourseCreate,
     CourseDetail,
     CourseLecturerPublic,
     CourseListItem,
     CourseUpdate,
 )
+from schemas.projects import AddUserBody
 from services.courses import (
     CourseLecturerAlreadyAssignedError,
     CourseLecturerNotAssignedError,
@@ -200,7 +200,7 @@ async def get_course(
 )
 async def add_course_lecturer(
     course_id: int,
-    body: AddLecturerBody,
+    body: AddUserBody,
     current_user: User = Depends(require_current_user),
     service: CoursesService = Depends(get_courses_service),
 ) -> CourseLecturerPublic:
