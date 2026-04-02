@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -396,3 +396,90 @@ async def add_project_member(
             f"Expected member row for user {user_id} in project {project_id} after UPSERT."
         )
     return member, created
+
+
+async def create_project(
+    session: AsyncSession,
+    *,
+    course_id: int,
+    title: str,
+    description: str | None,
+    github_url: str | None,
+    live_url: str | None,
+    technologies: list[str],
+    academic_year: int,
+) -> Project:
+    """Insert a new ``Project`` row and return it with the generated primary key.
+
+    The caller is responsible for committing the session after this call.
+    ``session.flush()`` is used to obtain the generated primary key without
+    a full commit, allowing the caller to stage further related changes (e.g.
+    ``ProjectMember``) in the same transaction.
+    """
+    project = Project(
+        title=title,
+        description=description,
+        github_url=github_url,
+        live_url=live_url,
+        technologies=technologies,
+        academic_year=academic_year,
+        course_id=course_id,
+    )
+    session.add(project)
+    await session.flush()
+    return project
+
+
+async def delete_project(session: AsyncSession, project_id: int) -> bool:
+    """Delete the project with *project_id* and all its dependent rows.
+
+    Rows are removed in dependency order to satisfy foreign-key constraints:
+    1. ``peer_feedback`` rows linked via ``course_evaluation``
+    2. ``course_evaluation`` rows for the project
+    3. ``project_evaluation`` rows for the project
+    4. ``project_member`` rows for the project
+    5. The ``project`` row itself
+
+    Returns ``True`` when a row was found and deleted, ``False`` when no such
+    project exists.  The caller is responsible for committing the session.
+    """
+    project = (
+        (await session.execute(select(Project).where(Project.id == project_id))).scalars().first()
+    )
+    if project is None:
+        return False
+
+    # Use a subselect to atomically find and delete peer_feedback rows that belong
+    # to this project's course evaluations.
+    await session.execute(
+        delete(PeerFeedback).where(
+            PeerFeedback.course_evaluation_id.in_(
+                select(CourseEvaluation.id).where(CourseEvaluation.project_id == project_id)
+            )
+        )
+    )
+    await session.execute(delete(CourseEvaluation).where(CourseEvaluation.project_id == project_id))
+    await session.execute(
+        delete(ProjectEvaluation).where(ProjectEvaluation.project_id == project_id)
+    )
+    await session.execute(delete(ProjectMember).where(ProjectMember.project_id == project_id))
+    await session.execute(delete(Project).where(Project.id == project_id))
+    await session.flush()
+    return True
+
+
+async def unlock_project_results(session: AsyncSession, project_id: int) -> Project | None:
+    """Set ``results_unlocked=True`` on the project identified by *project_id*.
+
+    Returns the updated ``Project`` row, or ``None`` when no such project exists.
+    The caller is responsible for committing the session after this call.
+    """
+    project = (
+        (await session.execute(select(Project).where(Project.id == project_id))).scalars().first()
+    )
+    if project is None:
+        return None
+    project.results_unlocked = True
+    session.add(project)
+    await session.flush()
+    return project

@@ -17,7 +17,7 @@ from schemas.courses import (
     CourseListItem,
     CourseUpdate,
 )
-from schemas.projects import AddUserBody
+from schemas.projects import AddUserBody, ProjectCreate, ProjectPublic
 from services.courses import (
     CourseLecturerAlreadyAssignedError,
     CourseLecturerNotAssignedError,
@@ -25,6 +25,7 @@ from services.courses import (
     CoursePermissionError,
     CoursesService,
 )
+from services.projects import ProjectsService
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,11 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 def get_courses_service(session: AsyncSession = Depends(get_session)) -> CoursesService:
     """Provide a ``CoursesService`` instance wired to the current DB session."""
     return CoursesService(session)
+
+
+def get_projects_service(session: AsyncSession = Depends(get_session)) -> ProjectsService:
+    """Provide a ``ProjectsService`` instance wired to the current DB session."""
+    return ProjectsService(session)
 
 
 @router.get(
@@ -183,6 +189,50 @@ async def get_course(
     if course is None:
         raise HTTPException(status_code=404, detail=f"Course {course_id} not found.")
     return course
+
+
+@router.post(
+    "/{course_id}/projects",
+    response_model=ProjectPublic,
+    status_code=status.HTTP_201_CREATED,
+    summary="Seed a project",
+    description=(
+        "Creates a new project for the specified course. "
+        "Only accessible to admin users or lecturers assigned to the course. "
+        "When ``owner_email`` is provided, the system looks up (or creates) the student "
+        "account, seeds an initial project member, and simulates sending an invite email."
+    ),
+)
+async def create_course_project(
+    course_id: int,
+    data: ProjectCreate,
+    current_user: User = Depends(require_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> ProjectPublic:
+    """Create a new project for the course identified by ``course_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 404 when the course does not exist.
+    """
+    try:
+        return await service.create_project(course_id, data, current_user)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Course {course_id} not found.",
+        ) from None
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorised to manage projects for this course.",
+        ) from None
+    except Exception:
+        logger.exception(
+            "Failed to create project",
+            extra={"course_id": course_id},
+        )
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 
 @router.post(

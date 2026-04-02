@@ -221,7 +221,7 @@ async def test_service_get_project_raises_when_project_id_is_none() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_project_and_course() -> tuple:
+def _make_project_and_course() -> tuple[MagicMock, MagicMock]:
     """Return shared mock project and course objects for service unit tests."""
     from models.course import Course
     from models.course import ProjectType as PT
@@ -250,6 +250,44 @@ def _make_project_and_course() -> tuple:
     project.results_unlocked = False
 
     return project, course
+
+
+def _make_seeding_project_and_course() -> tuple[MagicMock, MagicMock]:
+    """Return minimal mock project and course objects for seeding/management tests.
+
+    Uses ``id=1`` for the course and ``id=5`` for the project, distinct from
+    the values used by ``_make_project_and_course`` to avoid cross-test interference.
+    """
+    from models.course import Course
+    from models.project import Project
+
+    course = MagicMock(spec=Course)
+    course.id = 1
+
+    project = MagicMock(spec=Project)
+    project.id = 5
+
+    return project, course
+
+
+def _make_admin_user() -> MagicMock:
+    """Return a mock ADMIN user with id=1."""
+    from models.user import User
+
+    user = MagicMock(spec=User)
+    user.id = 1
+    user.role = UserRole.ADMIN
+    return user
+
+
+def _make_lecturer_user(user_id: int = 7) -> MagicMock:
+    """Return a mock LECTURER user with the specified id."""
+    from models.user import User
+
+    user = MagicMock(spec=User)
+    user.id = user_id
+    user.role = UserRole.LECTURER
+    return user
 
 
 async def test_service_get_project_detail_returns_none_when_not_found() -> None:
@@ -484,6 +522,209 @@ async def test_service_get_project_detail_student_sees_peer_feedback_not_course_
 
 
 # ---------------------------------------------------------------------------
+# ProjectsService.create_project unit tests
+# ---------------------------------------------------------------------------
+
+
+async def test_service_create_project_raises_lookup_error_when_course_not_found() -> None:
+    """``create_project`` must raise ``LookupError`` when the course does not exist."""
+    from schemas.projects import ProjectCreate
+
+    session = MagicMock()
+    user = _make_admin_user()
+    data = ProjectCreate(title="Test", academic_year=2025)
+
+    with (
+        patch("services.projects.db_get_course", new_callable=AsyncMock, return_value=None),
+        pytest.raises(LookupError),
+    ):
+        await ProjectsService(session).create_project(99, data, user)
+
+
+async def test_service_create_project_raises_permission_error_for_unassigned_lecturer() -> None:
+    """``create_project`` must raise ``PermissionError`` when lecturer is not assigned."""
+    from schemas.projects import ProjectCreate
+
+    _project, course = _make_seeding_project_and_course()
+    session = MagicMock()
+    user = _make_lecturer_user(user_id=5)
+    data = ProjectCreate(title="Test", academic_year=2025)
+
+    with (
+        patch("services.projects.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        pytest.raises(PermissionError),
+    ):
+        await ProjectsService(session).create_project(1, data, user)
+
+
+async def test_service_create_project_succeeds_for_admin() -> None:
+    """``create_project`` must create a project when called by an admin."""
+    from schemas.projects import ProjectCreate
+
+    project, course = _make_project_and_course()
+    project.id = 10
+    project.title = "Test"
+    session = MagicMock()
+    user = _make_admin_user()
+    data = ProjectCreate(title="Test", academic_year=2025)
+
+    with (
+        patch("services.projects.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.projects.db_create_project",
+            new_callable=AsyncMock,
+            return_value=project,
+        ),
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch.object(session, "commit", new_callable=AsyncMock),
+        patch.object(session, "refresh", new_callable=AsyncMock),
+    ):
+        result = await ProjectsService(session).create_project(1, data, user)
+
+    assert result is not None
+    assert result.id == 10
+
+
+# ---------------------------------------------------------------------------
+# ProjectsService.delete_project unit tests
+# ---------------------------------------------------------------------------
+
+
+async def test_service_delete_project_raises_lookup_error_when_not_found() -> None:
+    """``delete_project`` must raise ``LookupError`` when the project does not exist."""
+    session = MagicMock()
+    user = _make_admin_user()
+
+    with (
+        patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None),
+        pytest.raises(LookupError),
+    ):
+        await ProjectsService(session).delete_project(99, user)
+
+
+async def test_service_delete_project_raises_permission_error_for_unassigned_lecturer() -> None:
+    """``delete_project`` must raise ``PermissionError`` when lecturer is not assigned."""
+    project, course = _make_seeding_project_and_course()
+    session = MagicMock()
+    user = _make_lecturer_user()
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        pytest.raises(PermissionError),
+    ):
+        await ProjectsService(session).delete_project(5, user)
+
+
+async def test_service_delete_project_succeeds_for_admin() -> None:
+    """``delete_project`` must delete the project when called by an admin."""
+    project, course = _make_seeding_project_and_course()
+    session = MagicMock()
+    user = _make_admin_user()
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.db_delete_project", new_callable=AsyncMock, return_value=True),
+        patch.object(session, "commit", new_callable=AsyncMock),
+    ):
+        await ProjectsService(session).delete_project(5, user)
+
+
+# ---------------------------------------------------------------------------
+# ProjectsService.unlock_project unit tests
+# ---------------------------------------------------------------------------
+
+
+async def test_service_unlock_project_raises_lookup_error_when_not_found() -> None:
+    """``unlock_project`` must raise ``LookupError`` when the project does not exist."""
+    session = MagicMock()
+    user = _make_admin_user()
+
+    with (
+        patch("services.projects.db_get_project", new_callable=AsyncMock, return_value=None),
+        pytest.raises(LookupError),
+    ):
+        await ProjectsService(session).unlock_project(99, user)
+
+
+async def test_service_unlock_project_raises_permission_error_for_unassigned_lecturer() -> None:
+    """``unlock_project`` must raise ``PermissionError`` when lecturer is not assigned."""
+    project, course = _make_seeding_project_and_course()
+    session = MagicMock()
+    user = _make_lecturer_user()
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        pytest.raises(PermissionError),
+    ):
+        await ProjectsService(session).unlock_project(5, user)
+
+
+async def test_service_unlock_project_sets_results_unlocked() -> None:
+    """``unlock_project`` must set ``results_unlocked=True`` and return the project."""
+    project, course = _make_project_and_course()
+    project.id = 5
+    project.results_unlocked = True  # Value returned after the unlock.
+    session = MagicMock()
+    user = _make_admin_user()
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.db_unlock_project_results",
+            new_callable=AsyncMock,
+            return_value=project,
+        ),
+        patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
+        patch("services.projects.get_course_evaluations", new_callable=AsyncMock, return_value=[]),
+        patch.object(session, "commit", new_callable=AsyncMock),
+    ):
+        result = await ProjectsService(session).unlock_project(5, user)
+
+    assert result is not None
+    assert result.id == 5
+    assert result.results_unlocked is True
+
+
+# ---------------------------------------------------------------------------
 # ProjectsService.patch_project unit tests
 # ---------------------------------------------------------------------------
 
@@ -691,6 +932,80 @@ async def test_patch_project_lecturer_can_update_without_membership() -> None:
     assert result.title == "Lecturer Update"
 
 
+async def test_patch_project_grants_admin_write_access() -> None:
+    """``patch_project`` must grant write access to ADMIN users unconditionally.
+
+    An ADMIN who is neither a project member nor a course lecturer must still
+    be able to update the project — admins have blanket superuser access.
+    """
+    from models.course import Course, ProjectType
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "PSI"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    project = MagicMock(spec=Project)
+    project.id = 1
+    project.title = "Admin Update"
+    project.description = None
+    project.github_url = None
+    project.live_url = None
+    project.technologies = []
+    project.academic_year = 2025
+    project.results_unlocked = False
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+
+    user = MagicMock(spec=User)
+    user.id = 3
+    user.role = UserRole.ADMIN
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        # is_course_lecturer must NOT be called for admins — they have unconditional access.
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ) as mock_is_lecturer,
+        patch("services.projects.update_project", new_callable=AsyncMock, return_value=project),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: []},
+        ),
+    ):
+        from schemas.projects import ProjectUpdate
+
+        result = await ProjectsService(session).patch_project(
+            1, ProjectUpdate(title="Admin Update"), user
+        )
+
+    assert result is not None
+    assert result.title == "Admin Update"
+    mock_is_lecturer.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # ProjectsService.add_member unit tests
 # ---------------------------------------------------------------------------
@@ -840,77 +1155,3 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
     assert result.id == 20
     assert result.email == "new@tul.cz"
     session.commit.assert_called_once()
-
-
-async def test_patch_project_grants_admin_write_access() -> None:
-    """``patch_project`` must grant write access to ADMIN users unconditionally.
-
-    An ADMIN who is neither a project member nor a course lecturer must still
-    be able to update the project — admins have blanket superuser access.
-    """
-    from models.course import Course, ProjectType
-    from models.project import Project
-    from models.user import User
-
-    course = MagicMock(spec=Course)
-    course.id = 10
-    course.code = "PSI"
-    course.name = "PSI"
-    course.syllabus = None
-    course.term = CourseTerm.WINTER
-    course.project_type = ProjectType.TEAM
-    course.min_score = 50
-    course.peer_bonus_budget = None
-    course.evaluation_criteria = []
-    course.links = []
-
-    project = MagicMock(spec=Project)
-    project.id = 1
-    project.title = "Admin Update"
-    project.description = None
-    project.github_url = None
-    project.live_url = None
-    project.technologies = []
-    project.academic_year = 2025
-    project.results_unlocked = False
-
-    session = MagicMock()
-    session.commit = AsyncMock()
-
-    user = MagicMock(spec=User)
-    user.id = 3
-    user.role = UserRole.ADMIN
-
-    with (
-        patch(
-            "services.projects.db_get_project",
-            new_callable=AsyncMock,
-            return_value=(project, course),
-        ),
-        # is_course_lecturer must NOT be called for admins — they have unconditional access.
-        patch(
-            "services.projects.is_course_lecturer",
-            new_callable=AsyncMock,
-            return_value=False,
-        ) as mock_is_lecturer,
-        patch("services.projects.update_project", new_callable=AsyncMock, return_value=project),
-        patch(
-            "services.projects.get_project_members",
-            new_callable=AsyncMock,
-            return_value={1: []},
-        ),
-        patch(
-            "services.projects.get_course_lecturers",
-            new_callable=AsyncMock,
-            return_value={10: []},
-        ),
-    ):
-        from schemas.projects import ProjectUpdate
-
-        result = await ProjectsService(session).patch_project(
-            1, ProjectUpdate(title="Admin Update"), user
-        )
-
-    assert result is not None
-    assert result.title == "Admin Update"
-    mock_is_lecturer.assert_not_called()
