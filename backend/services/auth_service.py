@@ -91,9 +91,21 @@ async def request_otp(email: str, session: AsyncSession) -> None:
     await session.commit()
 
     logger.info("OTP token generated.", extra={"email": email})
-    EmailSender().send(EmailTemplate.otp(to=email, otp_code=otp))
+    try:
+        EmailSender().send(EmailTemplate.otp(to=email, otp_code=otp))
+    except NotImplementedError as exc:
+        logger.error(
+            "Email sending is not implemented in the current environment; "
+            "OTP token persisted but not delivered.",
+            extra={"email": email},
+        )
+        raise EmailDeliveryNotImplementedError(
+            "Email delivery is not configured for this environment."
+        ) from exc
 
 
+class EmailDeliveryNotImplementedError(Exception):
+    """Raised when email delivery is not implemented in the current environment."""
 class IncorrectOtpError(Exception):
     """Raised when the supplied OTP value does not match the stored token hash."""
 
