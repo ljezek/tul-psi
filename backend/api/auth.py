@@ -9,29 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_session
 from services import auth_service
 from settings import get_settings
+from validators import validate_tul_email
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_TUL_DOMAIN = "tul.cz"
-
 # JWT session cookie lifetime — derived from auth_service to avoid configuration drift.
 _COOKIE_MAX_AGE_SECONDS = int(auth_service._JWT_TTL_HOURS * 3600)
-
-
-def _validate_tul_email(v: str) -> str:
-    """Normalise and validate that *v* is a @tul.cz e-mail address.
-
-    Strips whitespace and lowercases the address so that subsequent
-    case-sensitive DB lookups behave consistently.  Raises ``ValueError``
-    (which Pydantic converts to a 422 response) for any other domain.
-    """
-    v = v.strip().lower()
-    domain = v.split("@", 1)[-1]
-    if domain != _TUL_DOMAIN:
-        raise ValueError(f"Only @{_TUL_DOMAIN} email addresses are accepted.")
-    return v
 
 
 class OtpRequestBody(BaseModel):
@@ -43,7 +28,7 @@ class OtpRequestBody(BaseModel):
     @classmethod
     def email_must_be_tul_domain(cls, v: str) -> str:
         """Reject any address whose domain is not @tul.cz."""
-        return _validate_tul_email(v)
+        return validate_tul_email(v)
 
 
 class OtpRequestResponse(BaseModel):
@@ -64,7 +49,7 @@ class OtpVerifyBody(BaseModel):
     @classmethod
     def email_must_be_tul_domain(cls, v: str) -> str:
         """Reject any address whose domain is not @tul.cz."""
-        return _validate_tul_email(v)
+        return validate_tul_email(v)
 
 
 @router.post(
