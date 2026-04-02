@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_user
+from api.deps import get_optional_current_user
 from db.session import get_session
 from models.user import User
 from schemas.courses import CourseDetail, CourseListItem
@@ -32,15 +32,15 @@ def get_courses_service(session: AsyncSession = Depends(get_session)) -> Courses
 )
 async def list_courses(
     service: CoursesService = Depends(get_courses_service),
-    current_user: User | None = Depends(get_current_user),
 ) -> list[CourseListItem]:
     """Return all courses with aggregated stats.
 
     Each item includes the course code, name, syllabus, sorted lecturer names,
     and a ``stats`` object with the total project count and distinct academic years.
+    Authentication is not required.
     """
     try:
-        return await service.get_courses(current_user=current_user)
+        return await service.get_courses()
     except Exception:
         logger.exception("Failed to retrieve courses")
         raise HTTPException(status_code=500, detail="Internal server error.") from None
@@ -59,7 +59,7 @@ async def list_courses(
 async def get_course(
     course_id: int,
     service: CoursesService = Depends(get_courses_service),
-    current_user: User | None = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ) -> CourseDetail:
     """Return the course identified by ``course_id``.
 

@@ -84,7 +84,7 @@ class CoursesService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_courses(self, current_user: User | None = None) -> list[CourseListItem]:
+    async def get_courses(self) -> list[CourseListItem]:
         """Return all courses with aggregated stats for the list endpoint."""
         courses = await db_get_courses(self._session)
 

@@ -14,6 +14,35 @@ from settings import get_settings
 logger = logging.getLogger(__name__)
 
 
+async def get_optional_current_user(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> User | None:
+    """Resolve the authenticated user from the ``session`` cookie, returning ``None`` on any error.
+
+    Unlike ``get_current_user``, this dependency **never raises HTTP 401**.  A
+    present-but-invalid or expired JWT is silently treated as unauthenticated,
+    making this safe to use on publicly accessible endpoints where callers with
+    stale cookies should still receive the public response rather than a 401.
+    """
+    token = request.cookies.get("session")
+    if token is None:
+        return None
+
+    settings = get_settings()
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError:
+        logger.debug("Optional auth: invalid or expired JWT; treating request as unauthenticated.")
+        return None
+
+    user_id = payload.get("user_id")
+    if not isinstance(user_id, int):
+        return None
+
+    return await get_user_by_id(session, user_id)
+
+
 async def get_current_user(
     request: Request,
     session: AsyncSession = Depends(get_session),

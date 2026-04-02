@@ -8,7 +8,7 @@ import pytest
 from httpx import AsyncClient
 
 from api.courses import get_courses_service
-from api.deps import get_current_user
+from api.deps import get_current_user, get_optional_current_user
 from main import app
 from models.course import CourseTerm, ProjectType
 from models.user import UserRole
@@ -108,12 +108,17 @@ def _make_user(role: UserRole = UserRole.ADMIN) -> MagicMock:
 def _clear_dependency_overrides() -> Generator[None, None, None]:
     """Reset FastAPI dependency overrides after every test to ensure isolation.
 
-    ``get_current_user`` defaults to returning ``None`` (unauthenticated) so that
-    tests that do not exercise auth behaviour do not need to override it manually.
+    ``get_optional_current_user`` defaults to returning ``None`` (unauthenticated)
+    so that tests that do not exercise auth behaviour do not need to override it
+    manually.  ``get_current_user`` is also pre-set to ``None`` to keep any tests
+    that still reference the strict variant from accidentally hitting the real
+    dependency.
     """
+    app.dependency_overrides[get_optional_current_user] = lambda: None
     app.dependency_overrides[get_current_user] = lambda: None
     yield
     app.dependency_overrides.pop(get_courses_service, None)
+    app.dependency_overrides.pop(get_optional_current_user, None)
     app.dependency_overrides.pop(get_current_user, None)
 
 
@@ -238,7 +243,7 @@ async def test_get_course_passes_current_user_to_service(client: AsyncClient) ->
     mock_user = _make_user(UserRole.ADMIN)
     mock_service = _make_service(detail=_COURSE_DETAIL_WITH_EVALUATIONS)
     app.dependency_overrides[get_courses_service] = lambda: mock_service
-    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_optional_current_user] = lambda: mock_user
     await client.get("/api/v1/courses/1")
     mock_service.get_course.assert_called_once_with(1, current_user=mock_user)
 
@@ -249,7 +254,7 @@ async def test_get_course_returns_evaluations_for_admin(client: AsyncClient) -> 
     app.dependency_overrides[get_courses_service] = lambda: _make_service(
         detail=_COURSE_DETAIL_WITH_EVALUATIONS
     )
-    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_optional_current_user] = lambda: mock_user
     response = await client.get("/api/v1/courses/1")
     assert response.json()["course_evaluations"] is not None
     assert len(response.json()["course_evaluations"]) == 1
@@ -258,6 +263,6 @@ async def test_get_course_returns_evaluations_for_admin(client: AsyncClient) -> 
 async def test_get_course_evaluations_null_for_unauthenticated(client: AsyncClient) -> None:
     """GET /api/v1/courses/{id} without a session must return course_evaluations as null."""
     app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_optional_current_user] = lambda: None
     response = await client.get("/api/v1/courses/1")
     assert response.json()["course_evaluations"] is None

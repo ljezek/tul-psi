@@ -153,3 +153,187 @@ async def test_student_does_not_receive_course_evaluations() -> None:
     assert result.course_evaluations is None
     # The DB query must not be called for an unauthorised user.
     mock_get_evals.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# CoursesService.get_courses — list assembly
+# ---------------------------------------------------------------------------
+
+
+async def test_get_courses_returns_empty_list_when_no_rows() -> None:
+    """``get_courses`` must return an empty list when the DB has no courses."""
+    session = MagicMock()
+    with (
+        patch("services.courses.db_get_courses", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "services.courses.get_course_project_stats",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+    ):
+        result = await CoursesService(session).get_courses()
+
+    assert result == []
+
+
+async def test_get_courses_assembles_list_item() -> None:
+    """``get_courses`` must build a ``CourseListItem`` with stats and sorted lecturer names."""
+    course = _make_course(course_id=1)
+    lecturer_a = _make_lecturer(user_id=10)
+    lecturer_a.name = "Zuzana Nováková"
+    lecturer_b = _make_lecturer(user_id=11)
+    lecturer_b.name = "Adam Dvořák"
+
+    session = MagicMock()
+    with (
+        patch(
+            "services.courses.db_get_courses",
+            new_callable=AsyncMock,
+            return_value=[course],
+        ),
+        patch(
+            "services.courses.get_course_project_stats",
+            new_callable=AsyncMock,
+            return_value={1: (5, [2023, 2024])},
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: [lecturer_a, lecturer_b]},
+        ),
+    ):
+        result = await CoursesService(session).get_courses()
+
+    assert len(result) == 1
+    item = result[0]
+    assert item.id == 1
+    assert item.code == "PSI"
+    # Lecturer names must be sorted alphabetically.
+    assert item.lecturer_names == ["Adam Dvořák", "Zuzana Nováková"]
+    assert item.stats.project_count == 5
+    assert item.stats.academic_years == [2023, 2024]
+
+
+async def test_get_courses_defaults_stats_for_course_with_no_projects() -> None:
+    """``get_courses`` must use default (0, []) stats for courses absent from the stats map."""
+    course = _make_course(course_id=7)
+
+    session = MagicMock()
+    with (
+        patch(
+            "services.courses.db_get_courses",
+            new_callable=AsyncMock,
+            return_value=[course],
+        ),
+        patch(
+            "services.courses.get_course_project_stats",
+            new_callable=AsyncMock,
+            return_value={},  # No entry for course id 7.
+        ),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+    ):
+        result = await CoursesService(session).get_courses()
+
+    assert len(result) == 1
+    assert result[0].stats.project_count == 0
+    assert result[0].stats.academic_years == []
+
+
+# ---------------------------------------------------------------------------
+# CoursesService.get_course — lecturer email gating
+# ---------------------------------------------------------------------------
+
+
+async def test_authenticated_caller_receives_lecturer_email() -> None:
+    """Any authenticated caller must receive lecturer e-mail addresses."""
+    course = _make_course(course_id=1)
+    lecturer = _make_lecturer(user_id=42, email="jan.novak@tul.cz")
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 5
+    current_user.role = UserRole.STUDENT
+
+    session = MagicMock()
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: [lecturer]},
+        ),
+        patch("services.courses.get_course_evaluations", new_callable=AsyncMock, return_value=[]),
+    ):
+        result = await CoursesService(session).get_course(1, current_user=current_user)
+
+    assert result is not None
+    assert len(result.lecturers) == 1
+    assert result.lecturers[0].email == "jan.novak@tul.cz"
+
+
+async def test_unauthenticated_caller_receives_null_lecturer_email() -> None:
+    """Unauthenticated callers must receive ``null`` for lecturer e-mail addresses."""
+    course = _make_course(course_id=1)
+    lecturer = _make_lecturer(user_id=42, email="jan.novak@tul.cz")
+
+    session = MagicMock()
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: [lecturer]},
+        ),
+    ):
+        result = await CoursesService(session).get_course(1, current_user=None)
+
+    assert result is not None
+    assert len(result.lecturers) == 1
+    assert result.lecturers[0].email is None
+
+
+async def test_get_course_returns_none_when_not_found() -> None:
+    """``get_course`` must return ``None`` when the DB has no matching row."""
+    session = MagicMock()
+    with patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=None):
+        result = await CoursesService(session).get_course(99, current_user=None)
+
+    assert result is None
+
+
+async def test_admin_receives_course_evaluations() -> None:
+    """An admin caller must always receive ``course_evaluations``."""
+    course = _make_course(course_id=1)
+    evaluation = _make_evaluation()
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    session = MagicMock()
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.courses.get_course_evaluations",
+            new_callable=AsyncMock,
+            return_value=[evaluation],
+        ),
+    ):
+        result = await CoursesService(session).get_course(1, current_user=current_user)
+
+    assert result is not None
+    assert result.course_evaluations is not None
+    assert len(result.course_evaluations) == 1

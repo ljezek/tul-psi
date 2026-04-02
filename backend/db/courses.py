@@ -66,6 +66,7 @@ async def get_course_lecturers(
         select(CourseLecturer.course_id, User)
         .join(User, CourseLecturer.user_id == User.id)
         .where(CourseLecturer.course_id.in_(course_ids))
+        .order_by(User.name)
     )
 
     result: dict[int, list[User]] = {}
