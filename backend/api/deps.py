@@ -83,3 +83,25 @@ async def require_current_user(
             detail="Authentication is required.",
         )
     return current_user
+  
+
+async def get_optional_current_user(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> User | None:
+    """Resolve the authenticated user, returning ``None`` on any auth failure.
+
+    A thin wrapper around ``get_current_user`` that catches HTTP 401 responses
+    and returns ``None`` instead of propagating them.  This makes it safe to use
+    on publicly accessible endpoints: callers with stale or tampered cookies
+    still receive the public response rather than a 401.
+    """
+    try:
+        return await get_current_user(request, session)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            # Auth failures on public endpoints are expected; treat as unauthenticated.
+            logger.debug("Optional auth: %s; treating request as unauthenticated.", exc.detail)
+            return None
+        # Non-401 HTTP exceptions (e.g., 500) are not auth errors and must propagate.
+        raise
