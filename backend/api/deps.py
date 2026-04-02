@@ -14,35 +14,6 @@ from settings import get_settings
 logger = logging.getLogger(__name__)
 
 
-async def get_optional_current_user(
-    request: Request,
-    session: AsyncSession = Depends(get_session),
-) -> User | None:
-    """Resolve the authenticated user from the ``session`` cookie, returning ``None`` on any error.
-
-    Unlike ``get_current_user``, this dependency **never raises HTTP 401**.  A
-    present-but-invalid or expired JWT is silently treated as unauthenticated,
-    making this safe to use on publicly accessible endpoints where callers with
-    stale cookies should still receive the public response rather than a 401.
-    """
-    token = request.cookies.get("session")
-    if token is None:
-        return None
-
-    settings = get_settings()
-    try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except jwt.PyJWTError:
-        logger.debug("Optional auth: invalid or expired JWT; treating request as unauthenticated.")
-        return None
-
-    user_id = payload.get("user_id")
-    if not isinstance(user_id, int):
-        return None
-
-    return await get_user_by_id(session, user_id)
-
-
 async def get_current_user(
     request: Request,
     session: AsyncSession = Depends(get_session),
@@ -96,3 +67,25 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_optional_current_user(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> User | None:
+    """Resolve the authenticated user, returning ``None`` on any auth failure.
+
+    A thin wrapper around ``get_current_user`` that catches HTTP 401 responses
+    and returns ``None`` instead of propagating them.  This makes it safe to use
+    on publicly accessible endpoints: callers with stale or tampered cookies
+    still receive the public response rather than a 401.
+    """
+    try:
+        return await get_current_user(request, session)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            # Auth failures on public endpoints are expected; treat as unauthenticated.
+            logger.debug("Optional auth: %s; treating request as unauthenticated.", exc.detail)
+            return None
+        # Non-401 HTTP exceptions (e.g., 500) are not auth errors and must propagate.
+        raise
