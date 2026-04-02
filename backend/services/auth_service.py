@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import auth as db_auth
 from models import OtpToken, User
-from services.email import EmailSender, EmailTemplate
+from services.email import EmailDeliveryNotImplementedError, EmailSender, EmailTemplate
 from settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -105,10 +105,6 @@ async def request_otp(email: str, session: AsyncSession) -> None:
         raise EmailDeliveryNotImplementedError(
             "Email delivery is not configured for this environment."
         ) from exc
-
-
-class EmailDeliveryNotImplementedError(Exception):
-    """Raised when email delivery is not implemented in the current environment."""
 
 
 class IncorrectOtpError(Exception):

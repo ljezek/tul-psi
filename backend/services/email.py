@@ -227,3 +227,7 @@ class EmailSender:
             f"{'=' * 60}\n",
             file=sys.stderr,
         )
+
+
+class EmailDeliveryNotImplementedError(Exception):
+    """Raised when email delivery is not implemented in the current environment."""

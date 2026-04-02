@@ -1145,6 +1145,7 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
             "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
         ),
+        patch("services.projects.EmailSender"),  # Prevent real email side-effects.
     ):
         from schemas.projects import AddMemberBody
 
@@ -1154,4 +1155,84 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
 
     assert result.id == 20
     assert result.email == "new@tul.cz"
+    session.commit.assert_called_once()
+
+
+async def test_add_member_raises_email_delivery_error_on_send_failure() -> None:
+    """``add_member`` must raise ``EmailDeliveryNotImplementedError`` when the sender fails.
+
+    The DB commit must happen *before* the error is raised — the membership row
+    must be durable even when email delivery is not available in the environment.
+    """
+    from models.course import Course
+    from models.project import Project
+    from models.project_member import ProjectMember
+    from models.user import User
+
+    from services.email import EmailDeliveryNotImplementedError
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.name = "PSI"
+    project = MagicMock(spec=Project)
+    project.id = 1
+    project.title = "My Project"
+
+    new_user = MagicMock(spec=User)
+    new_user.id = 20
+    new_user.email = "new@tul.cz"
+    new_user.name = "new@tul.cz"
+    new_user.github_alias = None
+
+    new_member = MagicMock(spec=ProjectMember)
+    new_member.id = 100
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+
+    user = MagicMock(spec=User)
+    user.id = 5
+    user.role = UserRole.STUDENT
+
+    mock_sender_instance = MagicMock()
+    mock_sender_instance.send.side_effect = NotImplementedError("No SMTP configured")
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.is_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "services.projects.is_project_member",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "services.projects.get_or_create_user",
+            new_callable=AsyncMock,
+            return_value=(new_user, True),
+        ),
+        patch(
+            "services.projects.add_project_member",
+            new_callable=AsyncMock,
+            return_value=(new_member, True),
+        ),
+        patch(
+            "services.projects.get_settings",
+            return_value=MagicMock(frontend_url="http://localhost:5173", app_env="production"),
+        ),
+        patch("services.projects.EmailSender", return_value=mock_sender_instance),
+        pytest.raises(EmailDeliveryNotImplementedError),
+    ):
+        from schemas.projects import AddMemberBody
+
+        await ProjectsService(session).add_member(1, AddMemberBody(email="new@tul.cz"), user)
+
+    # The member row must be committed to the DB before the error is surfaced.
     session.commit.assert_called_once()
