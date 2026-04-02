@@ -21,13 +21,15 @@ async def get_current_user(
     """Resolve the authenticated user from the ``session`` HttpOnly JWT cookie.
 
     Returns the ``User`` record when a valid JWT is present, or ``None`` when
-    the request is unauthenticated (no cookie or missing/invalid token).
-    Raises HTTP 401 only when a token *is* present but is invalid or refers to
-    a user that no longer exists — callers that require authentication should
-    check for ``None`` and raise their own 401/403 as needed.
+    the request is unauthenticated (no ``session`` cookie).
+
+    Raises HTTP 401 when a token is present but invalid or expired, when the JWT
+    payload is malformed, or when it refers to a user that no longer exists.
+    Callers that require authentication should treat a ``None`` return value as
+    unauthenticated and respond with an appropriate 401/403 themselves.
 
     CSRF note: per the Double Submit Cookie spec, state-changing requests should
-    also carry an ``X-XSRF-Token`` header.  That validation is intentionally
+    also carry an ``X-XSRF-Token`` header. That validation is intentionally
     deferred (mocked) here while SMTP / frontend integration is still in
     progress.
 
