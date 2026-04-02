@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
 import pytest
+from fastapi import HTTPException, Request
 from httpx import AsyncClient
 
-from api.deps import get_current_user
+from api.deps import get_current_user, get_optional_current_user
 from db.session import get_session
 from main import app
 from models.user import User, UserRole
@@ -34,8 +36,6 @@ def _make_token(payload: dict, secret: str = _JWT_SECRET) -> str:
 
 async def test_get_current_user_returns_none_without_cookie() -> None:
     """``get_current_user`` must return ``None`` when no ``session`` cookie is present."""
-    from fastapi import Request
-
     request = MagicMock(spec=Request)
     request.cookies = {}
     session = AsyncMock()
@@ -47,8 +47,6 @@ async def test_get_current_user_returns_none_without_cookie() -> None:
 
 async def test_get_current_user_returns_user_for_valid_token() -> None:
     """``get_current_user`` must return the matching ``User`` for a valid JWT."""
-    from fastapi import Request
-
     user = _make_user(user_id=7)
     token = _make_token({"user_id": 7, "role": "STUDENT"})
 
@@ -69,8 +67,6 @@ async def test_get_current_user_returns_user_for_valid_token() -> None:
 
 async def test_get_current_user_raises_401_for_invalid_token() -> None:
     """``get_current_user`` must raise HTTP 401 when the JWT signature is invalid."""
-    from fastapi import HTTPException, Request
-
     request = MagicMock(spec=Request)
     request.cookies = {"session": "not-a-valid-jwt"}
     session = AsyncMock()
@@ -88,8 +84,6 @@ async def test_get_current_user_raises_401_for_invalid_token() -> None:
 
 async def test_get_current_user_raises_401_for_missing_user_id_in_payload() -> None:
     """``get_current_user`` must raise HTTP 401 when the JWT payload lacks ``user_id``."""
-    from fastapi import HTTPException, Request
-
     token = _make_token({"role": "STUDENT"})  # No user_id field.
 
     request = MagicMock(spec=Request)
@@ -109,8 +103,6 @@ async def test_get_current_user_raises_401_for_missing_user_id_in_payload() -> N
 
 async def test_get_current_user_raises_401_when_user_not_in_db() -> None:
     """``get_current_user`` must raise HTTP 401 when the JWT user_id has no DB record."""
-    from fastapi import HTTPException, Request
-
     token = _make_token({"user_id": 999, "role": "STUDENT"})
 
     request = MagicMock(spec=Request)
@@ -131,8 +123,6 @@ async def test_get_current_user_raises_401_when_user_not_in_db() -> None:
 
 async def test_get_current_user_raises_401_for_non_integer_user_id() -> None:
     """``get_current_user`` must raise HTTP 401 when ``user_id`` in the payload is not an int."""
-    from fastapi import HTTPException, Request
-
     token = _make_token({"user_id": "not-an-int", "role": "STUDENT"})
 
     request = MagicMock(spec=Request)
@@ -175,3 +165,73 @@ async def test_endpoint_returns_401_for_tampered_cookie(client: AsyncClient) -> 
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         response = await client.get("/api/v1/projects/1", cookies={"session": "eyJ.tampered.jwt"})
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for the get_optional_current_user dependency
+# ---------------------------------------------------------------------------
+
+
+async def test_get_optional_current_user_returns_none_for_expired_token() -> None:
+    """``get_optional_current_user`` must return ``None`` for an expired JWT, not raise."""
+    expired_token = jwt.encode(
+        {"user_id": 1, "exp": datetime.now(UTC) - timedelta(days=1)},
+        _JWT_SECRET,
+        algorithm="HS256",
+    )
+
+    request = MagicMock(spec=Request)
+    request.cookies = {"session": expired_token}
+    session = AsyncMock()
+
+    with patch("api.deps.get_settings") as mock_settings:
+        mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
+        result = await get_optional_current_user(request, session)
+
+    assert result is None
+
+
+async def test_get_optional_current_user_returns_none_for_invalid_token() -> None:
+    """``get_optional_current_user`` must return ``None`` for a tampered JWT, not raise."""
+    request = MagicMock(spec=Request)
+    request.cookies = {"session": "not-a-valid-jwt"}
+    session = AsyncMock()
+
+    with patch("api.deps.get_settings") as mock_settings:
+        mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
+        result = await get_optional_current_user(request, session)
+
+    assert result is None
+
+
+async def test_get_optional_current_user_returns_none_without_cookie() -> None:
+    """``get_optional_current_user`` must return ``None`` when no ``session`` cookie is present."""
+    request = MagicMock(spec=Request)
+    request.cookies = {}
+    session = AsyncMock()
+
+    result = await get_optional_current_user(request, session)
+
+    assert result is None
+
+
+async def test_get_optional_current_user_returns_user_for_valid_token() -> None:
+    """``get_optional_current_user`` must return the matching ``User`` for a valid JWT."""
+    user = _make_user(user_id=3)
+    token = _make_token({"user_id": 3, "role": "STUDENT"})
+
+    request = MagicMock(spec=Request)
+    request.cookies = {"session": token}
+    session = AsyncMock()
+
+    with (
+        patch("api.deps.get_settings") as mock_settings,
+        patch("api.deps.get_user_by_id", new_callable=AsyncMock, return_value=user),
+    ):
+        mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.jwt_algorithm = "HS256"
+        result = await get_optional_current_user(request, session)
+
+    assert result is user
