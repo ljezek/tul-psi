@@ -1168,7 +1168,6 @@ async def test_add_member_raises_email_delivery_error_on_send_failure() -> None:
     from models.project import Project
     from models.project_member import ProjectMember
     from models.user import User
-
     from services.email import EmailDeliveryNotImplementedError
 
     course = MagicMock(spec=Course)
