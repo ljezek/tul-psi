@@ -127,7 +127,7 @@ async def get_project(
         "Updates the editable fields of an existing project. "
         "Only the fields included in the request body are modified; "
         "omitted fields are left unchanged. "
-        "Requires authentication as a project member (STUDENT) "
+        "Requires authentication as an ADMIN, a project member (STUDENT), "
         "or a lecturer on the project's course."
     ),
 )
@@ -171,7 +171,8 @@ async def patch_project(
     description=(
         "Adds a member to the project by e-mail address. "
         "Creates a new STUDENT account if no user with that address exists. "
-        "A notification e-mail with a login link is sent to the invited user. "
+        "A notification with a login link is logged for the invited user "
+        "(e-mail delivery is not yet implemented). "
         "Requires authentication as a project member (STUDENT) "
         "or a lecturer on the project's course."
     ),

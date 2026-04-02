@@ -99,8 +99,8 @@ class PeerFeedbackDetail(BaseModel):
 class ProjectUpdate(BaseModel):
     """Request body for ``PATCH /projects/{id}``.
 
-    All fields are optional — only the supplied fields will be updated.
-    Passing ``None`` explicitly clears the optional text fields.
+    All fields are optional. Only fields provided with a non-null value will be updated.
+    Passing ``None`` is currently equivalent to omitting the field and does not clear it.
     """
 
     title: str | None = None
