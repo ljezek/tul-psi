@@ -77,24 +77,6 @@ def test_course_invite_template() -> None:
     assert "http://localhost:5173" in msg.body
 
 
-def test_course_invite_template_peer_feedback_mentioned_when_enabled() -> None:
-    """EmailTemplate.course_invite body must mention peer feedback when the flag is True."""
-    msg_with = EmailTemplate.course_invite(
-        to="lecturer@tul.cz",
-        course_name="PSI",
-        portal_url="http://localhost:5173",
-        peer_feedback_enabled=True,
-    )
-    msg_without = EmailTemplate.course_invite(
-        to="lecturer@tul.cz",
-        course_name="PSI",
-        portal_url="http://localhost:5173",
-        peer_feedback_enabled=False,
-    )
-    assert "peer feedback" in msg_with.body.lower()
-    assert "peer feedback" not in msg_without.body.lower()
-
-
 # ---------------------------------------------------------------------------
 # EmailTemplate — results unlocked
 # ---------------------------------------------------------------------------

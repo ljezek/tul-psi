@@ -690,6 +690,11 @@ async def test_add_lecturer_succeeds_for_admin_and_creates_new_user() -> None:
             new_callable=AsyncMock,
             return_value=True,
         ),
+        patch(
+            "services.courses.get_settings",
+            return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
+        ),
+        patch("services.courses.EmailSender"),  # Prevent real email side-effects.
     ):
         result = await CoursesService(session).add_lecturer(
             1, AddUserBody(email="new.lecturer@tul.cz"), current_user
@@ -699,6 +704,59 @@ async def test_add_lecturer_succeeds_for_admin_and_creates_new_user() -> None:
     assert result is not None
     assert result.id == 99
     assert result.email == "new.lecturer@tul.cz"
+
+
+async def test_add_lecturer_raises_email_delivery_error_on_send_failure() -> None:
+    """``add_lecturer`` must raise ``EmailDeliveryNotImplementedError`` when the sender fails.
+
+    The DB commit must happen *before* the error is raised — the lecturer assignment
+    must be durable even when email delivery is not available in the environment.
+    """
+    from schemas.projects import AddUserBody
+    from services.email import EmailDeliveryNotImplementedError
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+    course = _make_course(course_id=1)
+    new_user = _make_lecturer(user_id=99, email="new.lecturer@tul.cz")
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    mock_sender_instance = MagicMock()
+    mock_sender_instance.send.side_effect = NotImplementedError("No SMTP configured")
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.courses.get_or_create_user",
+            new_callable=AsyncMock,
+            return_value=(new_user, True),
+        ),
+        patch(
+            "services.courses.add_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "services.courses.get_settings",
+            return_value=MagicMock(frontend_url="http://localhost:5173", app_env="production"),
+        ),
+        patch("services.courses.EmailSender", return_value=mock_sender_instance),
+        pytest.raises(EmailDeliveryNotImplementedError),
+    ):
+        await CoursesService(session).add_lecturer(
+            1, AddUserBody(email="new.lecturer@tul.cz"), current_user
+        )
+
+    # The lecturer assignment must be committed to the DB before the error is surfaced.
+    session.commit.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

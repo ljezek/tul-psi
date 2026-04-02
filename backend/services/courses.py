@@ -29,6 +29,8 @@ from schemas.courses import (
 )
 from schemas.projects import AddUserBody, LecturerPublic
 from services.auth import is_admin_or_course_lecturer, require_course_manage_access
+from services.email import EmailDeliveryNotImplementedError, EmailSender, EmailTemplate
+from settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -245,8 +247,7 @@ class CoursesService:
         """Assign the user identified by *body.email* as a lecturer on *course_id*.
 
         If no account exists for that e-mail address a new LECTURER account is
-        created.  A login-link notification is logged (in lieu of real SMTP
-        delivery while that integration is pending).
+        created.  A login-link notification is sent to the user via email.
 
         Raises ``CourseNotFoundError`` when no course with the given id exists,
         ``CoursePermissionError`` when *current_user* is not an admin or
@@ -281,21 +282,33 @@ class CoursesService:
                 f"User {target_user.email} is already a lecturer on course {course_id}."
             )
 
-        if created:
-            # TODO(#72): Send login-link notification email to the new user via SMTP.
-            # Log in lieu of real email delivery while that integration is pending.
-            logger.info(
-                "New lecturer account created via course invite; send login link.",
-                extra={"email": body.email, "course_id": course_id},
-            )
-        else:
-            # TODO(#72): Send invitation notification email to the existing user via SMTP.
-            logger.info(
-                "Existing user invited as lecturer; send notification.",
-                extra={"email": body.email, "course_id": course_id},
-            )
-
+        # Commit first so the lecturer assignment is durable before attempting delivery.
+        # Email send failures should not roll back a successful assignment.
         await self._session.commit()
+
+        _settings = get_settings()
+        try:
+            EmailSender(app_env=_settings.app_env).send(
+                EmailTemplate.course_invite(
+                    to=target_user.email,
+                    course_name=course.name,
+                    portal_url=_settings.frontend_url,
+                )
+            )
+        except NotImplementedError as exc:
+            logger.error(
+                "Email sending is not implemented in the current environment; "
+                "lecturer assigned but invite email not delivered.",
+                extra={"email": target_user.email, "course_id": course_id},
+            )
+            raise EmailDeliveryNotImplementedError(
+                "Email delivery is not configured for this environment."
+            ) from exc
+        logger.info(
+            "Course invite email sent.",
+            extra={"email": target_user.email, "course_id": course_id, "new_user": created},
+        )
+
         return CourseLecturerPublic(
             id=target_user.id,
             name=target_user.name,

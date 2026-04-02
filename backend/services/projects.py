@@ -539,17 +539,36 @@ class ProjectsService:
                 owner_user.id,
                 invited_by=_require_id(requester),
             )
-            logger.info(
-                "Invite email (simulated): project owner assigned.",
-                extra={
-                    "recipient_email": data.owner_email,
-                    "project_id": project.id,
-                    "course_id": course.id,
-                },
-            )
 
+        # Commit the project and member rows before attempting email delivery.
+        # A send failure must not roll back a successfully created project.
         await self._session.commit()
         await self._session.refresh(project)
+
+        if data.owner_email is not None:
+            _settings = get_settings()
+            try:
+                EmailSender(app_env=_settings.app_env).send(
+                    EmailTemplate.project_invite(
+                        to=data.owner_email,
+                        project_name=project.title,
+                        course_name=course.name,
+                        portal_url=_settings.frontend_url,
+                    )
+                )
+            except NotImplementedError as exc:
+                logger.error(
+                    "Email sending is not implemented in the current environment; "
+                    "project created but owner invite not delivered.",
+                    extra={"email": data.owner_email, "project_id": project.id},
+                )
+                raise EmailDeliveryNotImplementedError(
+                    "Email delivery is not configured for this environment."
+                ) from exc
+            logger.info(
+                "Project invite email sent.",
+                extra={"recipient_email": data.owner_email, "project_id": project.id},
+            )
 
         if project.id is None:
             raise ValueError(f"Project returned from DB has no id after commit: {project!r}")

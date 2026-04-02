@@ -97,7 +97,6 @@ class EmailTemplate:
         course_name: str,
         *,
         portal_url: str,
-        peer_feedback_enabled: bool = False,
     ) -> EmailMessage:
         """Return a course-invitation email addressed to a lecturer.
 
@@ -105,15 +104,7 @@ class EmailTemplate:
             to: Recipient e-mail address.
             course_name: Human-readable name of the course the lecturer is invited to.
             portal_url: Absolute URL of the frontend portal to embed in the body.
-            peer_feedback_enabled: When ``True``, the body mentions that the course
-                uses peer feedback assessment.
         """
-        peer_feedback_note = (
-            "\nThis course uses peer feedback assessment. "
-            "Students will be asked to review each other's contributions.\n"
-            if peer_feedback_enabled
-            else ""
-        )
         return EmailMessage(
             to=to,
             subject=(
@@ -124,8 +115,7 @@ class EmailTemplate:
                 f'You have been invited as a lecturer to the course "{course_name}" '
                 f"in the TUL Student Projects Catalogue.\n\n"
                 f"Please log in to manage the course details, add other lecturers, "
-                f"create student projects and evaluate existing ones."
-                f"{peer_feedback_note}\n\n"
+                f"create student projects and evaluate existing ones.\n\n"
                 f"Visit the portal: {portal_url}\n\n"
                 f"{_SIGN_OFF}"
             ),
