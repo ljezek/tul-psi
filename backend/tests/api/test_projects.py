@@ -719,7 +719,7 @@ async def test_get_project_evaluation_returns_200(client: AsyncClient) -> None:
                 improvements="Add more",
             )
         ],
-        submitted_at=datetime(2025, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2025, 1, 1, tzinfo=UTC),
         submitted=True,
     )
 
@@ -805,7 +805,7 @@ async def test_submit_project_evaluation_returns_201(client: AsyncClient) -> Non
     evaluation = ProjectEvaluationDetail(
         lecturer_id=99,
         scores=[],
-        submitted_at=datetime(2025, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2025, 1, 1, tzinfo=UTC),
         submitted=False,
     )
 

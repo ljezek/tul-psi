@@ -9,7 +9,7 @@ from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
 from db.projects import (
     add_project_member,
-    count_published_course_evaluations,
+    count_submitted_course_evaluations,
     count_submitted_project_evaluations,
     get_course_evaluations,
     get_course_lecturers,
@@ -166,7 +166,7 @@ def _to_project_evaluation_detail(ev: ProjectEvaluation) -> ProjectEvaluationDet
     return ProjectEvaluationDetail(
         lecturer_id=ev.lecturer_id,
         scores=_to_evaluation_score_detail(ev.scores),
-        submitted_at=ev.submitted_at,
+        updated_at=ev.updated_at,
         submitted=ev.submitted,
     )
 
@@ -181,8 +181,8 @@ def _to_course_evaluation_detail(ev: CourseEvaluation) -> CourseEvaluationDetail
         rating=ev.rating,
         strengths=ev.strengths,
         improvements=ev.improvements,
-        published=ev.published,
-        submitted_at=ev.submitted_at,
+        submitted=ev.submitted,
+        updated_at=ev.updated_at,
     )
 
 
@@ -236,7 +236,7 @@ async def _check_and_auto_unlock_project(
 
     * Every lecturer currently assigned to the project's course has submitted a
       ``ProjectEvaluation`` (``submitted=True``).
-    * Every project member has published a ``CourseEvaluation`` (``published=True``).
+    * Every project member has submitted a ``CourseEvaluation`` (``submitted=True``).
 
     Counts are restricted to the currently assigned lecturer IDs to prevent stale
     rows from former or unrelated lecturers from satisfying the condition.  If
@@ -271,9 +271,9 @@ async def _check_and_auto_unlock_project(
     submitted_count = await count_submitted_project_evaluations(
         session, project_id, assigned_lecturer_ids
     )
-    published_count = await count_published_course_evaluations(session, project_id)
+    submitted_ce_count = await count_submitted_course_evaluations(session, project_id)
 
-    if submitted_count == lecturer_count and published_count == member_count:
+    if submitted_count == lecturer_count and submitted_ce_count == member_count:
         await db_unlock_project_results(session, project_id)
 
 

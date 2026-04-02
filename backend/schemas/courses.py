@@ -48,8 +48,8 @@ class CourseEvaluationPublic(BaseModel):
     rating: int
     strengths: str | None
     improvements: str | None
-    published: bool
-    submitted_at: datetime
+    submitted: bool
+    updated_at: datetime
 
 
 class CourseDetail(BaseModel):

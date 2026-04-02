@@ -57,8 +57,8 @@ def _make_evaluation(ev_id: int = 1) -> MagicMock:
     ev.rating = 4
     ev.strengths = "Good."
     ev.improvements = "Better."
-    ev.published = True
-    ev.submitted_at = datetime(2025, 1, 15, 12, 0, tzinfo=UTC)
+    ev.submitted = True
+    ev.updated_at = datetime(2025, 1, 15, 12, 0, tzinfo=UTC)
     return ev
 
 

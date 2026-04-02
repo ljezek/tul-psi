@@ -76,12 +76,12 @@ def test_project_evaluation_scores_rejects_extra_keys() -> None:
         )
 
 
-def test_project_evaluation_submitted_at_defaults_to_now() -> None:
-    """submitted_at must be set to the current UTC time on instantiation."""
+def test_project_evaluation_updated_at_defaults_to_now() -> None:
+    """updated_at must be set to the current UTC time on instantiation."""
     before = datetime.now(UTC)
     evaluation = ProjectEvaluation(project_id=1, lecturer_id=2)
     after = datetime.now(UTC)
-    assert before <= evaluation.submitted_at <= after
+    assert before <= evaluation.updated_at <= after
 
 
 def test_project_evaluation_is_registered_in_metadata() -> None:

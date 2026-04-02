@@ -52,7 +52,7 @@ class ProjectEvaluation(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSONB, nullable=False),
     )
-    submitted_at: datetime = Field(
+    updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(SADateTime(timezone=True), nullable=False),
     )

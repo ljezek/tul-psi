@@ -406,7 +406,7 @@ async def test_service_get_project_detail_lecturer_sees_all_evaluations() -> Non
     proj_eval = MagicMock(spec=ProjectEvaluation)
     proj_eval.lecturer_id = 10
     proj_eval.scores = []
-    proj_eval.submitted_at = datetime(2025, 1, 1, tzinfo=UTC)
+    proj_eval.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
 
     course_eval = MagicMock(spec=CourseEvaluation)
     course_eval.id = 1
@@ -414,8 +414,8 @@ async def test_service_get_project_detail_lecturer_sees_all_evaluations() -> Non
     course_eval.rating = 4
     course_eval.strengths = "Good"
     course_eval.improvements = "Better"
-    course_eval.published = True
-    course_eval.submitted_at = datetime(2025, 1, 2, tzinfo=UTC)
+    course_eval.submitted = True
+    course_eval.updated_at = datetime(2025, 1, 2, tzinfo=UTC)
 
     session = MagicMock()
     with (
@@ -469,7 +469,7 @@ async def test_service_get_project_detail_student_sees_peer_feedback_not_course_
     proj_eval = MagicMock(spec=ProjectEvaluation)
     proj_eval.lecturer_id = 10
     proj_eval.scores = []
-    proj_eval.submitted_at = datetime(2025, 1, 1, tzinfo=UTC)
+    proj_eval.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
 
     received_fb = MagicMock(spec=PeerFeedback)
     received_fb.course_evaluation_id = 1
@@ -1431,7 +1431,7 @@ async def test_service_get_project_evaluation_returns_detail() -> None:
     evaluation = MagicMock(spec=ProjectEvaluation)
     evaluation.lecturer_id = 1
     evaluation.scores = []
-    evaluation.submitted_at = datetime(2025, 1, 1, tzinfo=UTC)
+    evaluation.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
     evaluation.submitted = True
 
     with (
@@ -1619,7 +1619,7 @@ async def test_submit_project_evaluation_creates_draft_without_unlock_check() ->
             "improvements": "Add more",
         }
     ]
-    evaluation.submitted_at = datetime(2025, 1, 1, tzinfo=UTC)
+    evaluation.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
     evaluation.submitted = False
 
     body = ProjectEvaluationCreate(
@@ -1674,7 +1674,7 @@ async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_c
     evaluation = MagicMock(spec=ProjectEvaluation)
     evaluation.lecturer_id = 1
     evaluation.scores = []
-    evaluation.submitted_at = datetime(2025, 1, 1, tzinfo=UTC)
+    evaluation.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
     evaluation.submitted = True
 
     body = ProjectEvaluationCreate(
@@ -1745,9 +1745,9 @@ async def test_auto_unlock_fires_when_all_submitted_and_published() -> None:
             return_value=1,  # 1 submitted == 1 lecturer
         ),
         patch(
-            "services.projects.count_published_course_evaluations",
+            "services.projects.count_submitted_course_evaluations",
             new_callable=AsyncMock,
-            return_value=1,  # 1 published == 1 member
+            return_value=1,  # 1 submitted == 1 member
         ),
         patch(
             "services.projects.db_unlock_project_results",
@@ -1788,7 +1788,7 @@ async def test_auto_unlock_does_not_fire_when_not_all_lecturers_submitted() -> N
             return_value=1,  # Only 1 of 2 lecturers submitted.
         ),
         patch(
-            "services.projects.count_published_course_evaluations",
+            "services.projects.count_submitted_course_evaluations",
             new_callable=AsyncMock,
             return_value=1,
         ),

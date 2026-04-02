@@ -22,8 +22,8 @@ class CourseEvaluation(SQLModel, table=True):
 
     A student submits one evaluation per project; the pair
     ``(project_id, student_id)`` is therefore unique.  The evaluation can be
-    saved as a draft (``published=False``) any number of times before being
-    locked by setting ``published=True``.  Peer feedback rows are children of
+    saved as a draft (``submitted=False``) any number of times before being
+    locked by setting ``submitted=True``.  Peer feedback rows are children of
     this record via ``course_evaluation_id``.
     """
 
@@ -52,9 +52,9 @@ class CourseEvaluation(SQLModel, table=True):
     # Null means the student has not yet filled in the free-text sections (draft).
     strengths: str | None = Field(default=None)
     improvements: str | None = Field(default=None)
-    # Once published the evaluation is locked and cannot be edited further.
-    published: bool = Field(default=False)
-    submitted_at: datetime = Field(
+    # Once submitted the evaluation is locked and cannot be edited further.
+    submitted: bool = Field(default=False)
+    updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(SADateTime(timezone=True), nullable=False),
     )

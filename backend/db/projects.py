@@ -159,13 +159,13 @@ async def get_project_evaluations(
 ) -> list[ProjectEvaluation]:
     """Return all lecturer evaluations submitted for *project_id*.
 
-    Results are ordered by ``submitted_at`` ascending so that the earliest
+    Results are ordered by ``updated_at`` ascending so that the earliest
     submission appears first — useful for deterministic display order.
     """
     stmt = (
         select(ProjectEvaluation)
         .where(ProjectEvaluation.project_id == project_id)
-        .order_by(ProjectEvaluation.submitted_at)
+        .order_by(ProjectEvaluation.updated_at)
     )
     return list((await session.execute(stmt)).scalars().all())
 
@@ -182,13 +182,13 @@ async def get_course_evaluations(
     Optionally narrows results to a specific *academic_year* when provided, which
     is useful for showing only the current cohort's evaluations on a course page.
 
-    Results are ordered by ``submitted_at`` ascending.
+    Results are ordered by ``updated_at`` ascending.
     """
     stmt = (
         select(CourseEvaluation)
         .join(Project, CourseEvaluation.project_id == Project.id)
         .where(Project.course_id == course_id)
-        .order_by(CourseEvaluation.submitted_at)
+        .order_by(CourseEvaluation.updated_at)
     )
     if academic_year is not None:
         stmt = stmt.where(Project.academic_year == academic_year)
@@ -506,14 +506,14 @@ async def create_project_evaluation(
             lecturer_id=lecturer_id,
             scores=scores,
             submitted=submitted,
-            submitted_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         .on_conflict_do_update(
             index_elements=["project_id", "lecturer_id"],
             set_={
                 "scores": scores,
                 "submitted": submitted,
-                "submitted_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
             },
         )
     )
@@ -561,14 +561,14 @@ async def count_submitted_project_evaluations(
     return (await session.execute(stmt)).scalar_one()
 
 
-async def count_published_course_evaluations(
+async def count_submitted_course_evaluations(
     session: AsyncSession,
     project_id: int,
 ) -> int:
-    """Return the number of published (``published=True``) course evaluations for *project_id*."""
+    """Return the number of submitted (``submitted=True``) course evaluations for *project_id*."""
     stmt = select(func.count()).where(
         CourseEvaluation.project_id == project_id,
-        CourseEvaluation.published.is_(True),
+        CourseEvaluation.submitted.is_(True),
     )
     return (await session.execute(stmt)).scalar_one()
 

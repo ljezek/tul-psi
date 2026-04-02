@@ -64,8 +64,8 @@ _EVALUATION = CourseEvaluationPublic(
     rating=4,
     strengths="Great course.",
     improvements="More exercises.",
-    published=True,
-    submitted_at=_NOW,
+    submitted=True,
+    updated_at=_NOW,
 )
 
 _COURSE_DETAIL = CourseDetail(

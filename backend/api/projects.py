@@ -309,7 +309,7 @@ async def get_project_evaluation(
         "Creates or updates the calling lecturer's evaluation for the specified project. "
         "Set ``submitted=False`` (default) to save a draft that can be updated later. "
         "Set ``submitted=True`` to finalise the evaluation; once all lecturers have submitted "
-        "and all students have published their course evaluations, the project results are "
+        "and all students have submitted their course evaluations, the project results are "
         "unlocked automatically. "
         "Editing is blocked (HTTP 409) once the project results have been unlocked. "
         "Only accessible to admin users or lecturers assigned to the project's course."

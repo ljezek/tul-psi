@@ -67,7 +67,7 @@ class ProjectEvaluationDetail(BaseModel):
 
     lecturer_id: int
     scores: list[EvaluationScoreDetail]
-    submitted_at: datetime
+    updated_at: datetime
     submitted: bool
 
 
@@ -79,8 +79,8 @@ class CourseEvaluationDetail(BaseModel):
     rating: int
     strengths: str | None
     improvements: str | None
-    published: bool
-    submitted_at: datetime
+    submitted: bool
+    updated_at: datetime
 
 
 class PeerFeedbackDetail(BaseModel):
