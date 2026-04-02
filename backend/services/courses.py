@@ -86,8 +86,8 @@ def _course_evaluation_public(ev: CourseEvaluation) -> CourseEvaluationPublic:
         rating=ev.rating,
         strengths=ev.strengths,
         improvements=ev.improvements,
-        published=ev.published,
-        submitted_at=ev.submitted_at,
+        submitted=ev.submitted,
+        updated_at=ev.updated_at,
     )
 
 

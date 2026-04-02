@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -160,13 +160,13 @@ async def get_project_evaluations(
 ) -> list[ProjectEvaluation]:
     """Return all lecturer evaluations submitted for *project_id*.
 
-    Results are ordered by ``submitted_at`` ascending so that the earliest
+    Results are ordered by ``updated_at`` ascending so that the earliest
     submission appears first — useful for deterministic display order.
     """
     stmt = (
         select(ProjectEvaluation)
         .where(ProjectEvaluation.project_id == project_id)
-        .order_by(ProjectEvaluation.submitted_at)
+        .order_by(ProjectEvaluation.updated_at)
     )
     return list((await session.execute(stmt)).scalars().all())
 
@@ -183,13 +183,13 @@ async def get_course_evaluations(
     Optionally narrows results to a specific *academic_year* when provided, which
     is useful for showing only the current cohort's evaluations on a course page.
 
-    Results are ordered by ``submitted_at`` ascending.
+    Results are ordered by ``updated_at`` ascending.
     """
     stmt = (
         select(CourseEvaluation)
         .join(Project, CourseEvaluation.project_id == Project.id)
         .where(Project.course_id == course_id)
-        .order_by(CourseEvaluation.submitted_at)
+        .order_by(CourseEvaluation.updated_at)
     )
     if academic_year is not None:
         stmt = stmt.where(Project.academic_year == academic_year)
@@ -428,6 +428,137 @@ async def delete_project(session: AsyncSession, project_id: int) -> bool:
     await session.execute(delete(Project).where(Project.id == project_id))
     await session.flush()
     return True
+
+
+async def get_project_evaluation_by_lecturer(
+    session: AsyncSession,
+    project_id: int,
+    lecturer_id: int,
+) -> ProjectEvaluation | None:
+    """Return the evaluation submitted by *lecturer_id* for *project_id*, or ``None``.
+
+    Used by the GET endpoint so that a lecturer can retrieve only their own row
+    before results are unlocked.
+    """
+    stmt = select(ProjectEvaluation).where(
+        ProjectEvaluation.project_id == project_id,
+        ProjectEvaluation.lecturer_id == lecturer_id,
+    )
+    return (await session.execute(stmt)).scalars().first()
+
+
+async def upsert_project_evaluation(
+    session: AsyncSession,
+    project_id: int,
+    lecturer_id: int,
+    scores: list[dict[str, object]],
+    *,
+    submitted: bool,
+) -> ProjectEvaluation:
+    """Insert or update the evaluation row for *(project_id, lecturer_id)*.
+
+    Uses an UPSERT so that the lecturer can save a draft (``submitted=False``)
+    and later update or finalise it (``submitted=True``) without conflicts.
+    The caller is responsible for committing the session after this call.
+    """
+    stmt = (
+        pg_insert(ProjectEvaluation)
+        .values(
+            project_id=project_id,
+            lecturer_id=lecturer_id,
+            scores=scores,
+            submitted=submitted,
+            updated_at=datetime.now(UTC),
+        )
+        .on_conflict_do_update(
+            index_elements=["project_id", "lecturer_id"],
+            set_={
+                "scores": scores,
+                "submitted": submitted,
+                "updated_at": datetime.now(UTC),
+            },
+        )
+    )
+    await session.execute(stmt)
+    await session.flush()
+    # Fetch the full ORM object after upsert to return consistent data.
+    evaluation = (
+        (
+            await session.execute(
+                select(ProjectEvaluation).where(
+                    ProjectEvaluation.project_id == project_id,
+                    ProjectEvaluation.lecturer_id == lecturer_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if evaluation is None:
+        raise RuntimeError(
+            f"Expected project_evaluation row for lecturer {lecturer_id}"
+            f" in project {project_id} after UPSERT."
+        )
+    return evaluation
+
+
+async def get_lecturer_evaluation_statuses(
+    session: AsyncSession,
+    project_id: int,
+    course_id: int,
+) -> list[tuple[User, bool]]:
+    """Return all lecturers assigned to *course_id* with their project-evaluation status.
+
+    Each entry is ``(user, submitted)`` where ``submitted`` is ``True`` when the
+    lecturer has a ``ProjectEvaluation`` row for *project_id* with ``submitted=True``,
+    and ``False`` otherwise (no row or draft).  Uses a LEFT JOIN so that lecturers
+    who have not yet saved any evaluation are still included.
+    """
+    submitted_flag = func.coalesce(ProjectEvaluation.submitted, False).label("submitted")
+    stmt = (
+        select(User, submitted_flag)
+        .select_from(CourseLecturer)
+        .join(User, User.id == CourseLecturer.user_id)
+        .outerjoin(
+            ProjectEvaluation,
+            and_(
+                ProjectEvaluation.project_id == project_id,
+                ProjectEvaluation.lecturer_id == CourseLecturer.user_id,
+            ),
+        )
+        .where(CourseLecturer.course_id == course_id)
+    )
+    rows = (await session.execute(stmt)).all()
+    return [(user, bool(submitted)) for user, submitted in rows]
+
+
+async def get_member_evaluation_statuses(
+    session: AsyncSession,
+    project_id: int,
+) -> list[tuple[User, bool]]:
+    """Return all members of *project_id* with their course-evaluation status.
+
+    Each entry is ``(user, submitted)`` where ``submitted`` is ``True`` when the
+    member has a ``CourseEvaluation`` row for *project_id* with ``submitted=True``,
+    and ``False`` otherwise.  Uses a LEFT JOIN so that members who have not yet
+    saved any evaluation are still included.
+    """
+    submitted_flag = func.coalesce(CourseEvaluation.submitted, False).label("submitted")
+    stmt = (
+        select(User, submitted_flag)
+        .select_from(ProjectMember)
+        .join(User, User.id == ProjectMember.user_id)
+        .outerjoin(
+            CourseEvaluation,
+            and_(
+                CourseEvaluation.project_id == project_id,
+                CourseEvaluation.student_id == ProjectMember.user_id,
+            ),
+        )
+        .where(ProjectMember.project_id == project_id)
+    )
+    rows = (await session.execute(stmt)).all()
+    return [(user, bool(submitted)) for user, submitted in rows]
 
 
 async def unlock_project_results(session: AsyncSession, project_id: int) -> Project | None:

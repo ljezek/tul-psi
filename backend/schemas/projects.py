@@ -67,7 +67,8 @@ class ProjectEvaluationDetail(BaseModel):
 
     lecturer_id: int
     scores: list[EvaluationScoreDetail]
-    submitted_at: datetime
+    updated_at: datetime
+    submitted: bool
 
 
 class CourseEvaluationDetail(BaseModel):
@@ -78,8 +79,8 @@ class CourseEvaluationDetail(BaseModel):
     rating: int
     strengths: str | None
     improvements: str | None
-    published: bool
-    submitted_at: datetime
+    submitted: bool
+    updated_at: datetime
 
 
 class PeerFeedbackDetail(BaseModel):
@@ -94,6 +95,23 @@ class PeerFeedbackDetail(BaseModel):
     strengths: str | None
     improvements: str | None
     bonus_points: int
+
+
+class ProjectEvaluationCreate(BaseModel):
+    """Request body for ``POST /projects/{id}/project-evaluation``.
+
+    ``submitted=False`` saves the evaluation as a draft that can be updated later.
+    ``submitted=True`` marks the evaluation as final and triggers the automatic
+    project-result unlock check once all lecturers and students have submitted.
+
+    ``EvaluationScoreDetail`` is reused for the per-criterion entries because the
+    fields needed when creating a score are identical to those returned in the detail
+    response (criterion_code, score, strengths, improvements).
+    """
+
+    scores: list[EvaluationScoreDetail]
+    # False means save as draft; True means finalise and trigger auto-unlock.
+    submitted: bool = False
 
 
 class ProjectCreate(BaseModel):

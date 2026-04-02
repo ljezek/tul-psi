@@ -132,7 +132,7 @@ async def get_course_evaluations(
 
     Only projects whose ``results_unlocked`` flag is ``True`` are considered,
     ensuring that the data is aligned with the student-facing results visibility.
-    Both draft and published evaluations are returned so that admin and lecturer
+    Both draft and submitted evaluations are returned so that admin and lecturer
     users have full visibility.
     """
     stmt = (

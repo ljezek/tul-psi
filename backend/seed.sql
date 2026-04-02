@@ -12,7 +12,7 @@
 --   * Invited student who has not yet accepted (joined_at IS NULL).
 --   * Stub project: no description, no technologies, no GitHub URL.
 --   * results_unlocked = TRUE (completed) vs FALSE (in-progress).
---   * Published vs draft CourseEvaluation (published = FALSE).
+--   * Submitted vs draft CourseEvaluation (submitted = FALSE).
 --   * Team projects with peer feedback and bonus points.
 --   * Individual projects without peer feedback.
 --   * Course with peer_bonus_budget vs NULL.
@@ -261,12 +261,12 @@ ON CONFLICT (project_id, lecturer_id) DO NOTHING;
 -- ============================================================================
 -- course_evaluation
 -- ============================================================================
--- PSI-2025 (ids 1–7): all published, rating = 4.
--- KDP-2025 (ids 8–9): all published, rating = 5.
--- PSI-2026 (id 10):   draft (published = FALSE, strengths/improvements NULL).
+-- PSI-2025 (ids 1–7): all submitted, rating = 4.
+-- KDP-2025 (ids 8–9): all submitted, rating = 5.
+-- PSI-2026 (id 10):   draft (submitted = FALSE, strengths/improvements NULL).
 
 INSERT INTO course_evaluation (id, project_id, student_id, rating,
-                                strengths, improvements, published, submitted_at)
+                                strengths, improvements, submitted, updated_at)
 OVERRIDING SYSTEM VALUE
 VALUES
     -- PSI-2025 project 1 (TUL Event Planner): Alice + Bob

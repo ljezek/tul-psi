@@ -32,12 +32,12 @@ def test_course_evaluation_create_minimal(
 def test_course_evaluation_default_fields(
     sample_course_evaluation: CourseEvaluation,
 ) -> None:
-    """published, strengths, and improvements must default correctly.
+    """submitted, strengths, and improvements must default correctly.
 
     id must be None before the record is persisted to the database.
     """
     assert sample_course_evaluation.id is None
-    assert sample_course_evaluation.published is False
+    assert sample_course_evaluation.submitted is False
     assert sample_course_evaluation.strengths is None
     assert sample_course_evaluation.improvements is None
 
@@ -58,12 +58,12 @@ def test_course_evaluation_rating_rejects_out_of_range() -> None:
         CourseEvaluation(project_id=1, student_id=1, rating=6)
 
 
-def test_course_evaluation_submitted_at_defaults_to_now() -> None:
-    """submitted_at must be set to the current UTC time on instantiation."""
+def test_course_evaluation_updated_at_defaults_to_now() -> None:
+    """updated_at must be set to the current UTC time on instantiation."""
     before = datetime.now(UTC)
     evaluation = CourseEvaluation(project_id=1, student_id=1, rating=3)
     after = datetime.now(UTC)
-    assert before <= evaluation.submitted_at <= after
+    assert before <= evaluation.updated_at <= after
 
 
 def test_course_evaluation_is_registered_in_metadata() -> None:
