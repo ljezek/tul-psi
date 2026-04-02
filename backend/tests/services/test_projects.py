@@ -1718,7 +1718,7 @@ async def test_submit_project_evaluation_final_submission_triggers_auto_unlock_c
 # ---------------------------------------------------------------------------
 
 
-async def test_auto_unlock_fires_when_all_submitted_and_published() -> None:
+async def test_auto_unlock_fires_when_all_submitted() -> None:
     """Auto-unlock must call ``db_unlock_project_results`` when all evaluations are complete."""
     project, course = _make_project_and_course()
     session = MagicMock()

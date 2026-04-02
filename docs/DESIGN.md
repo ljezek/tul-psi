@@ -97,6 +97,7 @@ erDiagram
         int project_id FK
         int lecturer_id FK
         json scores
+        bool submitted        
         timestamp submitted_at
     }
     COURSE_EVALUATION {
@@ -106,8 +107,8 @@ erDiagram
         int rating "1-5"
         text strengths
         text improvements
-        bool published
-        timestamp submitted_at
+        bool submitted
+        timestamp updated_at
     }
     PEER_FEEDBACK {
         int id PK
@@ -206,35 +207,35 @@ sequenceDiagram
     Student->>Frontend: Open Student Zone → Evaluation tab
     Frontend->>API: GET /api/v1/projects/{id}/course-evaluation
     API->>DB: Fetch project, course config (project_type, peer_bonus_budget), teammates
-    DB-->>API: Project data + draft (if any) + published flag
-    API-->>Frontend: {project, teammates, draft, published}
+    DB-->>API: Project data + draft (if any) + submitted flag
+    API-->>Frontend: {project, teammates, draft, submitted}
 
-    alt published (evaluation already submitted)
-        Frontend-->>Student: Show submitted evaluation (read-only)
+    alt submitted (evaluation already saved)
+        Frontend-->>Student: Show saved evaluation (read-only)
     else draft or not yet started
         Frontend-->>Student: Render editable form (course section + per-teammate sections)
         Note over Frontend,Student: Student can save a draft and return to edit at any time before publishing
         Student->>Frontend: Fill course rating (1–5), strengths, improvements
         Student->>Frontend: Fill per-teammate: strengths, improvements, bonus_points
         Student->>Frontend: Click Publish
-        Frontend->>API: PUT /api/v1/projects/{id}/course-evaluation {published: true, ...}
-        API->>DB: Validate: student is member AND has not yet published
+        Frontend->>API: PUT /api/v1/projects/{id}/course-evaluation {submitted: true, ...}
+        API->>DB: Validate: student is member AND has not yet submitted
         alt validation fails
             API-->>Frontend: 422 / 409
             Frontend-->>Student: Show error
         else validation passes
-            API->>DB: UPSERT course_evaluation + peer_feedback rows (published = true)
-            API->>DB: Count published evaluations vs total project members
-            alt all members published AND all assigned lecturers have submitted project_evaluation
+            API->>DB: UPSERT course_evaluation + peer_feedback rows (submitted = true)
+            API->>DB: Count submitted evaluations vs total project members
+            alt all members submitted AND all assigned lecturers have submitted project_evaluation
                 API->>DB: SET project.results_unlocked = true
             end
             API-->>Frontend: 200 OK
-            Frontend-->>Student: Evaluation published successfully
+            Frontend-->>Student: Evaluation submitted successfully
         end
     end
 ```
 
-Results become visible to each student once **both** conditions are met: **all** assigned lecturers have submitted a project evaluation **and** every team member has published their course evaluation. Any assigned lecturer can also trigger an early unlock via `POST /projects/{id}/unlock` to unblock results in cases where a student is absent or a lecturer cannot submit (preventing a deadlock). Peer feedback sections are only included in the form for **TEAM** projects; `peer_bonus_budget` on the course controls whether bonus-point distribution is shown (null = disabled). A student passes if their final score (sum of average lecturer criterion scores + average received peer bonus points) meets `COURSE.min_score`.
+Results become visible to each student once **both** conditions are met: **all** assigned lecturers have submitted a project evaluation **and** every team member has submitted their course evaluation. Any assigned lecturer can also trigger an early unlock via `POST /projects/{id}/unlock` to unblock results in cases where a student is absent or a lecturer cannot submit (preventing a deadlock). Peer feedback sections are only included in the form for **TEAM** projects; `peer_bonus_budget` on the course controls whether bonus-point distribution is shown (null = disabled). A student passes if their final score (sum of average lecturer criterion scores + average received peer bonus points) meets `COURSE.min_score`.
 
 ## API & Interface Specification
 
@@ -338,7 +339,7 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/projects/{id}/course-evaluation` | STUDENT (member) | Get form data: teammates, course config, current draft, published status |
+| `GET` | `/projects/{id}/course-evaluation` | STUDENT (member) | Get form data: teammates, course config, current draft, submitted status |
 | `PUT` | `/projects/{id}/course-evaluation` | STUDENT (member) | Save draft or publish course evaluation & peer feedback |
 | `GET` | `/projects/{id}/project-evaluation` | LECTURER | Get submitted project evaluation |
 | `POST` | `/projects/{id}/project-evaluation` | LECTURER | Submit project evaluation |
@@ -347,9 +348,9 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 
 ```json
 // PUT /projects/{id}/course-evaluation — request body
-// Set published=false to save a draft; true to lock and publish
+// Set submitted=false to save a draft; true to lock and publish
 {
-  "published": true,
+  "submitted": true,
   "rating": 4,
   "strengths": "...",
   "improvements": "...",

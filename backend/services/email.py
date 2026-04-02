@@ -156,7 +156,7 @@ class EmailTemplate:
             body=(
                 f"Hello,\n\n"
                 f'The evaluation results for your project "{project_name}" '
-                f"have been published and are now available in the "
+                f"have been submitted and are now available in the "
                 f"TUL Student Projects Catalogue.\n\n"
                 f"Log in to view your results.{peer_feedback_note}\n\n"
                 f"Visit the portal: {portal_url}\n\n"
