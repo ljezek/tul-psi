@@ -316,14 +316,15 @@ async def get_or_create_user(
     email: str,
     name: str | None = None,
     github_alias: str | None = None,
+    role: UserRole = UserRole.STUDENT,
 ) -> tuple[User, bool]:
-    """Return the user matching *email*, creating a new STUDENT account if absent.
+    """Return the user matching *email*, creating a new account if absent.
 
     Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) so concurrent requests
     for the same address are handled atomically without a separate SELECT before
-    INSERT.  *name* and *github_alias* are only used when a new row is created;
-    callers are responsible for computing any desired defaults (e.g. deriving
-    a display name from the local part of the e-mail address).
+    INSERT.  *name*, *github_alias*, and *role* are only used when a new row is
+    created; callers are responsible for computing any desired defaults (e.g.
+    deriving a display name from the local part of the e-mail address).
 
     Returns a ``(user, created)`` tuple where ``created`` is ``True`` when a new
     row was inserted and ``False`` when an existing row was returned.
@@ -335,7 +336,7 @@ async def get_or_create_user(
             email=email,
             name=name,
             github_alias=github_alias,
-            role=UserRole.STUDENT,
+            role=role,
             created_at=datetime.now(UTC),
         )
         .on_conflict_do_nothing(index_elements=["email"])

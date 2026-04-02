@@ -110,8 +110,8 @@ class ProjectUpdate(BaseModel):
     technologies: list[str] | None = None
 
 
-class AddMemberBody(BaseModel):
-    """Request body for ``POST /projects/{id}/members``.
+class AddUserBody(BaseModel):
+    """Request body for adding a user (student or lecturer) to a resource.
 
     ``name`` and ``github_alias`` are propagated to a newly-created user account
     when no existing user matches the given *email*.  When omitted, ``github_alias``
@@ -128,6 +128,10 @@ class AddMemberBody(BaseModel):
     def email_must_be_tul_domain(cls, v: str) -> str:
         """Reject any address whose domain is not @tul.cz."""
         return validate_tul_email(v)
+
+
+# Backward-compatible alias used in project-member endpoints.
+AddMemberBody = AddUserBody
 
 
 class ProjectPublic(BaseModel):
