@@ -5,6 +5,7 @@ Revises: a2b3c4d5e6f7
 Create Date: 2026-04-02
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union
@@ -23,8 +24,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.add_column(
-        "user",
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true")
+        "user", sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true")
     )
 
 

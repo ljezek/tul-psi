@@ -83,7 +83,9 @@ async def create_user(
     except UserAlreadyExistsError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except Exception:
-        logger.exception("Failed to create user", extra={"caller_id": current_user.id, "email": body.email})
+        logger.exception(
+            "Failed to create user", extra={"caller_id": current_user.id, "email": body.email}
+        )
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 
@@ -111,7 +113,10 @@ async def list_users(
     "/{user_id}",
     response_model=UserPublic,
     summary="Get user by ID",
-    description="Returns the profile details of a user identified by its integer ID. Restricted to ADMIN users.",
+    description=(
+        "Returns the profile details of a user identified by its integer ID. Restricted "
+        "to ADMIN users."
+    ),
 )
 async def get_user_by_id(
     user_id: int,
@@ -126,7 +131,9 @@ async def get_user_by_id(
     except PermissionDeniedError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except Exception:
-        logger.exception("Failed to retrieve user", extra={"user_id": user_id, "caller_id": current_user.id})
+        logger.exception(
+            "Failed to retrieve user", extra={"user_id": user_id, "caller_id": current_user.id}
+        )
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 
@@ -134,7 +141,10 @@ async def get_user_by_id(
     "/{user_id}",
     response_model=UserPublic,
     summary="Update user by ID",
-    description="Updates the profile details of a user identified by its integer ID. Restricted to ADMIN users.",
+    description=(
+        "Updates the profile details of a user identified by its integer ID. Restricted "
+        "to ADMIN users."
+    ),
 )
 async def update_user_by_id(
     user_id: int,
@@ -150,5 +160,7 @@ async def update_user_by_id(
     except PermissionDeniedError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except Exception:
-        logger.exception("Failed to update user", extra={"user_id": user_id, "caller_id": current_user.id})
+        logger.exception(
+            "Failed to update user", extra={"user_id": user_id, "caller_id": current_user.id}
+        )
         raise HTTPException(status_code=500, detail="Internal server error.") from None

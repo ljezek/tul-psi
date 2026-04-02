@@ -4,9 +4,9 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.projects import get_or_create_user as db_get_or_create_user
 from db.users import get_user as db_get_user
 from db.users import get_users as db_get_users
-from db.projects import get_or_create_user as db_get_or_create_user
 from models.user import User, UserRole
 from schemas.users import AdminUserUpdate, UserCreate, UserPublic, UserUpdate
 

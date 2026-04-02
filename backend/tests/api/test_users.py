@@ -88,8 +88,22 @@ async def test_list_users_as_admin(client: AsyncClient) -> None:
     app.dependency_overrides[require_current_user] = lambda: admin_user
 
     mock_users = [
-        {"id": 1, "email": "u1@tul.cz", "name": "U1", "role": "STUDENT", "github_alias": None, "is_active": True},
-        {"id": 2, "email": "admin@tul.cz", "name": "Admin", "role": "ADMIN", "github_alias": None, "is_active": True},
+        {
+            "id": 1,
+            "email": "u1@tul.cz",
+            "name": "U1",
+            "role": "STUDENT",
+            "github_alias": None,
+            "is_active": True,
+        },
+        {
+            "id": 2,
+            "email": "admin@tul.cz",
+            "name": "Admin",
+            "role": "ADMIN",
+            "github_alias": None,
+            "is_active": True,
+        },
     ]
 
     with patch("services.users.UsersService.get_users", new_callable=AsyncMock) as mock_get_users:
