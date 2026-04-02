@@ -51,17 +51,11 @@ async def enrich_project_info(
 
         if random.random() < error_rate:
             error_msg = "Cannot load student profile"
-            attrs = {
-                "service": SERVICE_NAME,
-                "operation": "enrich_project",
-                "status": "error",
-            }
+            attrs = {"service": SERVICE_NAME, "operation": "enrich_project", "status": "error"}
             if app_metrics.outbound_http_requests_total:
                 app_metrics.outbound_http_requests_total.add(1, attributes=attrs)
             if app_metrics.outbound_http_latency_ms:
-                app_metrics.outbound_http_latency_ms.record(
-                    elapsed_ms, attributes=attrs
-                )
+                app_metrics.outbound_http_latency_ms.record(elapsed_ms, attributes=attrs)
             span.set_attribute("http.status_code", 500)
             span.set_attribute("http.duration_ms", elapsed_ms)
             span.set_status(StatusCode.ERROR, error_msg)
@@ -69,11 +63,7 @@ async def enrich_project_info(
             span.record_exception(exc)
             logger.error(
                 "enrich_project_info_failed",
-                extra={
-                    "project_name": project_name,
-                    "status_code": 500,
-                    "error": error_msg,
-                },
+                extra={"project_name": project_name, "status_code": 500, "error": error_msg},
             )
             raise exc
 

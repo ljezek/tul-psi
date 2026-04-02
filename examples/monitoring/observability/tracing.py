@@ -24,3 +24,4 @@ def setup_tracing(settings: Settings) -> None:
     )
     provider.add_span_processor(BatchSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
+

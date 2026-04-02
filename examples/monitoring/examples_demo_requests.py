@@ -9,13 +9,8 @@ async def main() -> None:
     async with httpx.AsyncClient(timeout=5.0) as client:
         reqs = [
             client.get(f"{base}/projects", headers={"X-Client-Type": "android"}),
-            client.get(
-                f"{base}/projects?subject=PSI", headers={"X-Client-Type": "web"}
-            ),
-            client.get(
-                f"{base}/projects?academic_year=2024/25",
-                headers={"X-Client-Type": "ios"},
-            ),
+            client.get(f"{base}/projects?subject=PSI", headers={"X-Client-Type": "web"}),
+            client.get(f"{base}/projects?academic_year=2024/25", headers={"X-Client-Type": "ios"}),
             client.get(f"{base}/health", headers={"X-Client-Type": "api"}),
         ]
         responses = await asyncio.gather(*reqs, return_exceptions=True)

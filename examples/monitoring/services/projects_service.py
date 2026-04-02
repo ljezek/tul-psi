@@ -23,9 +23,7 @@ class ProjectsService:
         subject: str | None,
         client_type: str,
     ) -> list[Project]:
-        with self._tracer.start_as_current_span(
-            "projects_service.get_projects"
-        ) as span:
+        with self._tracer.start_as_current_span("projects_service.get_projects") as span:
             span.set_attribute("client.type", client_type)
             span.set_attribute("filters.academic_year", academic_year or "")
             span.set_attribute("filters.subject", subject or "")
