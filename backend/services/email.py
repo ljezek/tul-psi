@@ -33,15 +33,6 @@ _SUBJECT_PREFIX = "TUL Student Projects: "
 _SIGN_OFF = "Regards,\nTUL Student Projects Catalogue"
 
 
-def _optional_note(text: str, *, enabled: bool) -> str:
-    """Return *text* when *enabled* is ``True``, otherwise an empty string.
-
-    Used by template factory methods to conditionally include an extra sentence
-    in the email body when an optional feature (e.g., peer feedback) is active.
-    """
-    return text if enabled else ""
-
-
 class EmailTemplate:
     """Factory that constructs :class:`EmailMessage` instances for common emails.
 
@@ -115,10 +106,11 @@ class EmailTemplate:
                 uses peer feedback assessment.
         """
         portal_url = get_settings().frontend_url
-        peer_feedback_note = _optional_note(
+        peer_feedback_note = (
             "\nThis course uses peer feedback assessment. "
-            "Students will be asked to review each other's contributions.\n",
-            enabled=peer_feedback_enabled,
+            "Students will be asked to review each other's contributions.\n"
+            if peer_feedback_enabled
+            else ""
         )
         return EmailMessage(
             to=to,
@@ -157,9 +149,10 @@ class EmailTemplate:
                 results are also available.
         """
         portal_url = get_settings().frontend_url
-        peer_feedback_note = _optional_note(
-            " Peer feedback contributions for this project are also visible.",
-            enabled=peer_feedback_enabled,
+        peer_feedback_note = (
+            " Peer feedback contributions for this project are also visible."
+            if peer_feedback_enabled
+            else ""
         )
         return EmailMessage(
             to=to,

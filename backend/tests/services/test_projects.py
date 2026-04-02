@@ -826,6 +826,10 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
             new_callable=AsyncMock,
             return_value=(new_member, True),
         ),
+        patch(
+            "services.email.get_settings",
+            return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
+        ),
     ):
         from schemas.projects import AddMemberBody
 
