@@ -9,20 +9,28 @@ from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
 from db.projects import (
     add_project_member,
-    create_project as db_create_project,
-    delete_project as db_delete_project,
     get_course_evaluations,
     get_course_lecturers,
     get_peer_feedback_authored,
     get_peer_feedback_received,
-    get_project as db_get_project,
     get_project_evaluations,
     get_project_members,
     get_projects,
     is_course_lecturer,
     is_project_member,
-    unlock_project_results as db_unlock_project_results,
     update_project,
+)
+from db.projects import (
+    create_project as db_create_project,
+)
+from db.projects import (
+    delete_project as db_delete_project,
+)
+from db.projects import (
+    get_project as db_get_project,
+)
+from db.projects import (
+    unlock_project_results as db_unlock_project_results,
 )
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
@@ -491,7 +499,7 @@ class ProjectsService:
         if course.id is None:
             raise ValueError(f"Course returned from DB has no id: {course!r}")
 
-        await self._require_course_manage_access(course.id, requester)
+        await require_course_manage_access(self._session, course.id, requester)
 
         project = await db_create_project(
             self._session,
@@ -505,24 +513,20 @@ class ProjectsService:
         )
 
         if data.owner_email is not None:
-            # Derive a readable default name from the email prefix.
-            # e.g. jan.novak@tul.cz → "Jan Novak", j_doe@tul.cz → "J Doe"
-            prefix = data.owner_email.split("@")[0]
-            default_name = " ".join(
-                part.capitalize() for part in prefix.replace("_", ".").split(".")
-            )
+            # Name derivation is handled inside get_or_create_user when name is None.
             owner_user, _ = await get_or_create_user(
                 self._session,
                 data.owner_email,
-                default_name,
             )
             if project.id is None:
                 raise ValueError(f"Project returned from DB has no id: {project!r}")
+            if owner_user.id is None:
+                raise ValueError(f"Owner user returned from DB has no id: {owner_user!r}")
             await add_project_member(
                 self._session,
                 project.id,
                 owner_user.id,
-                invited_by=requester.id if requester.id is not None else 0,
+                invited_by=_require_id(requester),
             )
             logger.info(
                 "Invite email (simulated): project owner assigned.",
@@ -536,7 +540,15 @@ class ProjectsService:
         await self._session.commit()
         await self._session.refresh(project)
 
-        return await self.get_project_detail(project.id, requester)  # type: ignore[arg-type]
+        if project.id is None:
+            raise ValueError(f"Project returned from DB has no id after commit: {project!r}")
+        detail = await self.get_project_detail(project.id, requester)
+        if detail is None:
+            raise RuntimeError(
+                "get_project_detail unexpectedly returned None for newly created"
+                f" project {project.id}."
+            )
+        return detail
 
     async def delete_project(self, project_id: int, requester: User) -> None:
         """Delete the project identified by *project_id*.
@@ -552,7 +564,7 @@ class ProjectsService:
         if course.id is None:
             raise ValueError(f"Course returned from DB has no id: {course!r}")
 
-        await self._require_course_manage_access(course.id, requester)
+        await require_course_manage_access(self._session, course.id, requester)
         await db_delete_project(self._session, project_id)
         await self._session.commit()
 
@@ -572,7 +584,7 @@ class ProjectsService:
         if course.id is None:
             raise ValueError(f"Course returned from DB has no id: {course!r}")
 
-        await self._require_course_manage_access(course.id, requester)
+        await require_course_manage_access(self._session, course.id, requester)
         await db_unlock_project_results(self._session, project_id)
         await self._session.commit()
 

@@ -18,7 +18,7 @@ from schemas.courses import (
     CourseUpdate,
 )
 from schemas.projects import LecturerPublic
-from services.auth import is_admin_or_course_lecturer
+from services.auth import is_admin_or_course_lecturer, require_course_manage_access
 
 
 class CoursePermissionError(Exception):
@@ -63,43 +63,6 @@ def _course_evaluation_public(ev: CourseEvaluation) -> CourseEvaluationPublic:
         published=ev.published,
         submitted_at=ev.submitted_at,
     )
-
-
-def _can_modify_course(
-    current_user: User,
-    course_lecturer_ids: set[int],
-) -> bool:
-    """Return ``True`` when ``current_user`` is allowed to modify a course.
-
-    Access is granted to:
-    - Admins (any course).
-    - Lecturers who are assigned to this specific course.
-
-    Returns ``False`` for students and for lecturers not assigned to the course.
-    """
-    if current_user.role == UserRole.ADMIN:
-        return True
-    if current_user.role == UserRole.LECTURER and current_user.id in course_lecturer_ids:
-        return True
-    return False
-
-
-def _can_view_evaluations(
-    current_user: User | None,
-    course_lecturer_ids: set[int],
-) -> bool:
-    """Return ``True`` when ``current_user`` is allowed to see course evaluations.
-
-    Access is granted to:
-    - Admins (any course).
-    - Lecturers who are assigned to this specific course.
-
-    Returns ``False`` for unauthenticated users, students, and lecturers who
-    are not assigned to the requested course.
-    """
-    if current_user is None:
-        return False
-    return _can_modify_course(current_user, course_lecturer_ids)
 
 
 class CoursesService:
@@ -236,15 +199,10 @@ class CoursesService:
         if course is None:
             return None
 
-        # Lecturers are fetched here both for the permission check and,
-        # indirectly, for assembling the response via get_course below.
-        lecturers_by_course = await get_course_lecturers(self._session, [course_id])
-        lecturer_ids = {u.id for u in lecturers_by_course.get(course_id, []) if u.id is not None}
-
-        if not _can_modify_course(current_user, lecturer_ids):
-            raise CoursePermissionError(
-                "Only admins and assigned lecturers can update this course."
-            )
+        try:
+            await require_course_manage_access(self._session, course_id, current_user)
+        except PermissionError as exc:
+            raise CoursePermissionError(str(exc)) from exc
 
         await db_update_course(self._session, course, data)
         await self._session.commit()

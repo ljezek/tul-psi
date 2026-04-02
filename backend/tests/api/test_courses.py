@@ -412,6 +412,8 @@ async def test_create_course_project_forwards_data_to_service(client: AsyncClien
     assert call_args.args[1].title == "My Project"
     assert call_args.args[1].owner_email == "alice@tul.cz"
     assert call_args.args[2] is mock_user
+
+
 # POST /api/v1/courses — create course
 # ---------------------------------------------------------------------------
 

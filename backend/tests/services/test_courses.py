@@ -451,7 +451,7 @@ async def test_update_course_raises_permission_error_for_student() -> None:
             return_value=course,
         ),
         patch(
-            "services.courses.get_course_lecturers",
+            "services.auth.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={1: []},
         ),
@@ -481,7 +481,7 @@ async def test_update_course_raises_permission_error_for_non_assigned_lecturer()
             return_value=course,
         ),
         patch(
-            "services.courses.get_course_lecturers",
+            "services.auth.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={1: [assigned_lecturer]},
         ),
@@ -508,6 +508,11 @@ async def test_update_course_succeeds_for_assigned_lecturer() -> None:
             "services.courses.db_get_course",
             new_callable=AsyncMock,
             return_value=course,
+        ),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: [assigned_lecturer]},
         ),
         patch(
             "services.courses.get_course_lecturers",

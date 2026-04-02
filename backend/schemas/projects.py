@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectType
 from validators import validate_tul_email
@@ -107,10 +107,18 @@ class ProjectCreate(BaseModel):
     description: str | None = None
     github_url: str | None = None
     live_url: str | None = None
-    technologies: list[str] = []
+    technologies: list[str] = Field(default_factory=list)
     academic_year: int
     # Optional email of the student who owns this project.
-    owner_email: str | None = None
+    owner_email: EmailStr | None = None
+
+    @field_validator("owner_email")
+    @classmethod
+    def owner_email_must_be_tul_domain(cls, v: str | None) -> str | None:
+        """Reject any address whose domain is not @tul.cz."""
+        if v is None:
+            return v
+        return validate_tul_email(v)
 
 
 class ProjectUpdate(BaseModel):

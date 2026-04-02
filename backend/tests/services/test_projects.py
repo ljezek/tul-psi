@@ -553,7 +553,7 @@ async def test_service_create_project_raises_permission_error_for_unassigned_lec
     with (
         patch("services.projects.db_get_course", new_callable=AsyncMock, return_value=course),
         patch(
-            "services.projects.db_get_course_lecturers_for_course",
+            "services.auth.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={1: []},
         ),
@@ -626,7 +626,7 @@ async def test_service_delete_project_raises_permission_error_for_unassigned_lec
             return_value=(project, course),
         ),
         patch(
-            "services.projects.db_get_course_lecturers_for_course",
+            "services.auth.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={1: []},
         ),
@@ -683,7 +683,7 @@ async def test_service_unlock_project_raises_permission_error_for_unassigned_lec
             return_value=(project, course),
         ),
         patch(
-            "services.projects.db_get_course_lecturers_for_course",
+            "services.auth.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={1: []},
         ),
