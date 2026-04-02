@@ -149,11 +149,16 @@ class CriterionScoreSummary(BaseModel):
 
 
 class StudentBonusSummary(BaseModel):
-    """Total peer bonus points received by a single student within a project."""
+    """Average peer bonus points received by a single student within a project.
+
+    Computed as the mean of bonus points awarded by each teammate.  When only
+    a subset of teammates have submitted feedback, only the submitted rows are
+    included in the average.
+    """
 
     student_id: int
     student_name: str
-    total_bonus_points: int
+    avg_bonus_points: float
 
 
 class ProjectOverviewItem(BaseModel):
@@ -162,7 +167,8 @@ class ProjectOverviewItem(BaseModel):
     ``avg_criterion_scores`` is empty when no lecturers have submitted evaluations.
     ``avg_course_rating`` is ``None`` when no students have submitted course evaluations.
     ``student_bonus_points`` is empty when the course has no peer-bonus scheme or no
-    peer feedback has been submitted.
+    peer feedback has been submitted.  Each entry shows the **average** bonus points
+    the student received from their teammates (not the sum).
     """
 
     project_id: int

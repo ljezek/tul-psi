@@ -932,20 +932,32 @@ class ProjectsService:
                 " Only project teammates may receive peer feedback."
             )
 
-        # Validate that no bonus points are negative.
+        # Validate that no bonus points are negative or exceed twice the per-teammate budget.
         for fb in body.peer_feedback:
             if fb.bonus_points < 0:
                 raise InvalidEvaluationDataError(
                     f"Bonus points must be non-negative, got {fb.bonus_points}."
                 )
+            if (
+                course.peer_bonus_budget is not None
+                and fb.bonus_points > 2 * course.peer_bonus_budget
+            ):
+                raise InvalidEvaluationDataError(
+                    f"Bonus points for a single teammate must not exceed"
+                    f" 2 × peer_bonus_budget ({2 * course.peer_bonus_budget}),"
+                    f" got {fb.bonus_points}."
+                )
 
-        # On a final submission, validate the bonus-points budget is exactly met.
+        # On a final submission, the total distributed bonus must equal
+        # peer_bonus_budget × number_of_teammates (each teammate is worth one budget unit).
         if body.submitted and course.peer_bonus_budget is not None:
             total_bonus = sum(fb.bonus_points for fb in body.peer_feedback)
-            if total_bonus != course.peer_bonus_budget:
+            expected_total = len(teammate_ids) * course.peer_bonus_budget
+            if total_bonus != expected_total:
                 raise InvalidEvaluationDataError(
-                    f"Total peer bonus points must equal the course budget"
-                    f" ({course.peer_bonus_budget}), got {total_bonus}."
+                    f"Total peer bonus points must equal peer_bonus_budget × teammates"
+                    f" ({course.peer_bonus_budget} × {len(teammate_ids)} = {expected_total}),"
+                    f" got {total_bonus}."
                 )
 
         evaluation = await upsert_course_evaluation(

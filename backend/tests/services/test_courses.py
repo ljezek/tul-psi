@@ -1095,4 +1095,4 @@ async def test_get_evaluation_overview_aggregates_peer_bonus_points() -> None:
     assert len(bonuses) == 1
     assert bonuses[0].student_id == 5
     assert bonuses[0].student_name == "Alice"
-    assert bonuses[0].total_bonus_points == 5
+    assert bonuses[0].avg_bonus_points == 2.5

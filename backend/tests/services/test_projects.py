@@ -2142,6 +2142,45 @@ async def test_save_course_evaluation_raises_invalid_data_for_unknown_recipient(
         await ProjectsService(session).save_course_evaluation(1, body, user)
 
 
+async def test_save_course_evaluation_raises_when_per_recipient_bonus_too_high() -> None:
+    """``save_course_evaluation`` must raise ``InvalidEvaluationDataError`` for over-cap bonus."""
+    from models.user import User
+    from schemas.projects import CourseEvaluationUpsert, PeerFeedbackInput
+    from services.projects import InvalidEvaluationDataError
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    course.peer_bonus_budget = 10
+    session = MagicMock()
+    user = _make_student_user(user_id=5)
+
+    teammate = MagicMock(spec=User)
+    teammate.id = 7
+
+    # 25 > 2 × 10 = 20 — must be rejected.
+    body = CourseEvaluationUpsert(
+        rating=4,
+        submitted=False,
+        peer_feedback=[PeerFeedbackInput(receiving_student_id=7, bonus_points=25)],
+    )
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [teammate]},
+        ),
+        pytest.raises(InvalidEvaluationDataError, match="2 × peer_bonus_budget"),
+    ):
+        await ProjectsService(session).save_course_evaluation(1, body, user)
+
+
 async def test_save_course_evaluation_raises_invalid_data_when_bonus_budget_not_met() -> None:
     """``save_course_evaluation`` must raise ``InvalidEvaluationDataError`` on wrong bonus total."""
     from models.user import User

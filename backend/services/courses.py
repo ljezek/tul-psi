@@ -421,21 +421,24 @@ class CoursesService:
                     submitted_course_evals
                 )
 
-            # Aggregate peer bonus points per receiving student.
+            # Aggregate average peer bonus points per receiving student.
+            # Each student's score is the mean of bonus points awarded by their teammates.
             peer_fb_entries = peer_feedback_by_project.get(pid, [])
-            bonus_by_student: dict[int, tuple[str, int]] = {}
+            bonus_by_student: dict[int, tuple[str, list[int]]] = {}
             for feedback, receiving_user in peer_fb_entries:
                 sid = feedback.receiving_student_id
-                current_total = bonus_by_student.get(sid, (receiving_user.name, 0))[1]
-                bonus_by_student[sid] = (receiving_user.name, current_total + feedback.bonus_points)
+                existing_name, existing_points = bonus_by_student.get(
+                    sid, (receiving_user.name, [])
+                )
+                bonus_by_student[sid] = (existing_name, existing_points + [feedback.bonus_points])
 
             student_bonus_points = [
                 StudentBonusSummary(
                     student_id=sid,
                     student_name=name,
-                    total_bonus_points=total,
+                    avg_bonus_points=sum(points) / len(points) if points else 0.0,
                 )
-                for sid, (name, total) in sorted(bonus_by_student.items(), key=lambda kv: kv[1][0])
+                for sid, (name, points) in sorted(bonus_by_student.items(), key=lambda kv: kv[1][0])
             ]
 
             items.append(

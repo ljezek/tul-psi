@@ -856,7 +856,7 @@ _OVERVIEW = EvaluationOverviewResponse(
             ],
             avg_course_rating=4.0,
             student_bonus_points=[
-                StudentBonusSummary(student_id=5, student_name="Alice", total_bonus_points=3)
+                StudentBonusSummary(student_id=5, student_name="Alice", avg_bonus_points=3.0)
             ],
         )
     ]
