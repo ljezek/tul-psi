@@ -696,3 +696,243 @@ async def test_add_member_forwards_name_and_alias_to_service(client: AsyncClient
     call_args = mock_service.add_member.call_args
     body = call_args.args[1]
     assert body == AddMemberBody(email="bob@tul.cz", name="Bob Smith", github_alias="bobsmith")
+
+
+# ---------------------------------------------------------------------------
+# GET /projects/{id}/project-evaluation
+# ---------------------------------------------------------------------------
+
+
+async def test_get_project_evaluation_returns_200(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id}/project-evaluation must return HTTP 200."""
+    from datetime import UTC, datetime
+
+    from schemas.projects import EvaluationScoreDetail, ProjectEvaluationDetail
+
+    evaluation = ProjectEvaluationDetail(
+        lecturer_id=99,
+        scores=[EvaluationScoreDetail(
+            criterion_code="code_quality",
+            score=20,
+            strengths="Good",
+            improvements="Add more",
+        )],
+        submitted_at=datetime(2025, 1, 1, tzinfo=UTC),
+        submitted=True,
+    )
+
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.get_project_evaluation = AsyncMock(return_value=evaluation)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/project-evaluation")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["lecturer_id"] == 99
+    assert data["submitted"] is True
+
+
+async def test_get_project_evaluation_returns_401_when_unauthenticated(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/projects/{id}/project-evaluation must return HTTP 401 for unauthenticated."""
+    response = await client.get("/api/v1/projects/1/project-evaluation")
+
+    assert response.status_code == 401
+
+
+async def test_get_project_evaluation_returns_403_on_permission_error(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/projects/{id}/project-evaluation must return HTTP 403 on PermissionError."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_project_evaluation = AsyncMock(side_effect=PermissionError("not allowed"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/project-evaluation")
+
+    assert response.status_code == 403
+
+
+async def test_get_project_evaluation_returns_404_when_not_found(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/projects/{id}/project-evaluation must return HTTP 404 when no row exists."""
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.get_project_evaluation = AsyncMock(side_effect=LookupError("not found"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/project-evaluation")
+
+    assert response.status_code == 404
+
+
+async def test_get_project_evaluation_returns_500_on_unexpected_error(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/projects/{id}/project-evaluation must return HTTP 500 on unexpected error."""
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.get_project_evaluation = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/project-evaluation")
+
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# POST /projects/{id}/project-evaluation
+# ---------------------------------------------------------------------------
+
+
+async def test_submit_project_evaluation_returns_201(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/project-evaluation must return HTTP 201."""
+    from datetime import UTC, datetime
+
+    from schemas.projects import ProjectEvaluationDetail
+
+    evaluation = ProjectEvaluationDetail(
+        lecturer_id=99,
+        scores=[],
+        submitted_at=datetime(2025, 1, 1, tzinfo=UTC),
+        submitted=False,
+    )
+
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.submit_project_evaluation = AsyncMock(return_value=evaluation)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/projects/1/project-evaluation",
+        json={"scores": [], "submitted": False},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["submitted"] is False
+
+
+async def test_submit_project_evaluation_returns_401_when_unauthenticated(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/projects/{id}/project-evaluation must return HTTP 401 for unauthenticated."""
+    response = await client.post(
+        "/api/v1/projects/1/project-evaluation",
+        json={"scores": []},
+    )
+
+    assert response.status_code == 401
+
+
+async def test_submit_project_evaluation_returns_403_on_permission_error(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/projects/{id}/project-evaluation must return HTTP 403 on PermissionError."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.submit_project_evaluation = AsyncMock(
+        side_effect=PermissionError("not allowed")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/projects/1/project-evaluation",
+        json={"scores": []},
+    )
+
+    assert response.status_code == 403
+
+
+async def test_submit_project_evaluation_returns_404_when_project_not_found(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/projects/{id}/project-evaluation must return HTTP 404 when project missing."""
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.submit_project_evaluation = AsyncMock(side_effect=LookupError("not found"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/projects/1/project-evaluation",
+        json={"scores": []},
+    )
+
+    assert response.status_code == 404
+
+
+async def test_submit_project_evaluation_returns_409_when_results_unlocked(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/projects/{id}/project-evaluation must return HTTP 409 when unlocked."""
+    from services.projects import EvaluationConflictError
+
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.submit_project_evaluation = AsyncMock(
+        side_effect=EvaluationConflictError("results unlocked")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/projects/1/project-evaluation",
+        json={"scores": []},
+    )
+
+    assert response.status_code == 409
+
+
+async def test_submit_project_evaluation_returns_422_on_invalid_criterion(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/projects/{id}/project-evaluation must return HTTP 422 for invalid criteria."""
+    from services.projects import InvalidEvaluationDataError
+
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.submit_project_evaluation = AsyncMock(
+        side_effect=InvalidEvaluationDataError("Invalid criterion code(s): ['bad'].")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/projects/1/project-evaluation",
+        json={
+            "scores": [
+                {"criterion_code": "bad", "score": 10, "strengths": "S", "improvements": "I"}
+            ]
+        },
+    )
+
+    assert response.status_code == 422
+
+
+async def test_submit_project_evaluation_returns_500_on_unexpected_error(
+    client: AsyncClient,
+) -> None:
+    """POST /api/v1/projects/{id}/project-evaluation must return HTTP 500 on unexpected error."""
+    user = _make_authenticated_user(role=UserRole.LECTURER)
+    mock_service = _make_service()
+    mock_service.submit_project_evaluation = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post(
+        "/api/v1/projects/1/project-evaluation",
+        json={"scores": []},
+    )
+
+    assert response.status_code == 500

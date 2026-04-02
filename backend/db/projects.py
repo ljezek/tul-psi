@@ -543,11 +543,20 @@ async def create_project_evaluation(
 async def count_submitted_project_evaluations(
     session: AsyncSession,
     project_id: int,
+    lecturer_ids: set[int],
 ) -> int:
-    """Return the number of submitted (``submitted=True``) evaluations for *project_id*."""
+    """Return the number of submitted evaluations for *project_id* from *lecturer_ids*.
+
+    Only counts rows where ``submitted=True`` AND the ``lecturer_id`` is in the
+    supplied set of currently assigned lecturer IDs, preventing stale rows from
+    unassigned lecturers from satisfying the auto-unlock condition.
+    """
+    if not lecturer_ids:
+        return 0
     stmt = select(func.count()).where(
         ProjectEvaluation.project_id == project_id,
         ProjectEvaluation.submitted.is_(True),
+        ProjectEvaluation.lecturer_id.in_(lecturer_ids),
     )
     return (await session.execute(stmt)).scalar_one()
 
@@ -557,8 +566,6 @@ async def count_published_course_evaluations(
     project_id: int,
 ) -> int:
     """Return the number of published (``published=True``) course evaluations for *project_id*."""
-    from models.course_evaluation import CourseEvaluation
-
     stmt = select(func.count()).where(
         CourseEvaluation.project_id == project_id,
         CourseEvaluation.published.is_(True),

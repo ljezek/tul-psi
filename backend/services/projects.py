@@ -217,6 +217,15 @@ class EvaluationConflictError(Exception):
     """
 
 
+class InvalidEvaluationDataError(Exception):
+    """Raised when submitted evaluation data fails domain-level validation.
+
+    Examples: criterion code not found in the course config, or a score value
+    exceeding the configured maximum for that criterion.  Maps to HTTP 422 at
+    the API layer.
+    """
+
+
 async def _check_and_auto_unlock_project(
     session: AsyncSession,
     project_id: int,
@@ -225,11 +234,13 @@ async def _check_and_auto_unlock_project(
 
     The unlock fires when **both** of the following conditions are satisfied:
 
-    * Every lecturer assigned to the project's course has submitted a
+    * Every lecturer currently assigned to the project's course has submitted a
       ``ProjectEvaluation`` (``submitted=True``).
     * Every project member has published a ``CourseEvaluation`` (``published=True``).
 
-    If either count is zero (no lecturers or no members), the condition is not
+    Counts are restricted to the currently assigned lecturer IDs to prevent stale
+    rows from former or unrelated lecturers from satisfying the condition.  If
+    either count is zero (no lecturers or no members), the condition is not
     considered met and the project is left locked.  The caller is responsible
     for committing the session after this call when an unlock occurs.
     """
@@ -241,9 +252,11 @@ async def _check_and_auto_unlock_project(
     if course.id is None:
         return
 
-    # Count lecturers assigned to this course.
+    # Collect the IDs of lecturers currently assigned to this course.
     lecturers_by_course = await get_course_lecturers(session, [course.id])
-    lecturer_count = len(lecturers_by_course.get(course.id, []))
+    assigned_lecturers = lecturers_by_course.get(course.id, [])
+    lecturer_count = len(assigned_lecturers)
+    assigned_lecturer_ids = {u.id for u in assigned_lecturers if u.id is not None}
 
     # Count project members.
     members_by_project = await get_project_members(session, [project_id])
@@ -253,12 +266,14 @@ async def _check_and_auto_unlock_project(
         # Not enough participants to determine completion.
         return
 
-    submitted_count = await count_submitted_project_evaluations(session, project_id)
+    # Only count submissions from currently assigned lecturers to avoid
+    # stale rows from unassigned users satisfying the unlock condition.
+    submitted_count = await count_submitted_project_evaluations(
+        session, project_id, assigned_lecturer_ids
+    )
     published_count = await count_published_course_evaluations(session, project_id)
 
-    if submitted_count >= lecturer_count and published_count >= member_count:
-        # Use >= rather than == to remain correct if counts ever exceed the participant total
-        # (e.g. due to a data inconsistency); the intent is "all required evaluations are in".
+    if submitted_count == lecturer_count and published_count == member_count:
         await db_unlock_project_results(session, project_id)
 
 
@@ -668,8 +683,8 @@ class ProjectsService:
     ) -> ProjectEvaluationDetail:
         """Return the calling lecturer's evaluation for *project_id*.
 
-        Raises ``LookupError`` when the project does not exist or the calling
-        lecturer has not yet submitted an evaluation for this project.
+        Raises ``LookupError`` when the project does not exist or no evaluation
+        row exists for the calling lecturer on this project.
         Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
         """
         row = await db_get_project(self._session, project_id)
@@ -682,15 +697,14 @@ class ProjectsService:
 
         await require_course_manage_access(self._session, course.id, requester)
 
-        if requester.id is None:
-            raise ValueError(f"Requester returned from DB has no id: {requester!r}")
+        requester_id = _require_id(requester)
 
         evaluation = await get_project_evaluation_by_lecturer(
-            self._session, project_id, requester.id
+            self._session, project_id, requester_id
         )
         if evaluation is None:
             raise LookupError(
-                f"No evaluation found for lecturer {requester.id} on project {project_id}."
+                f"No evaluation found for lecturer {requester_id} on project {project_id}."
             )
         return _to_project_evaluation_detail(evaluation)
 
@@ -712,8 +726,9 @@ class ProjectsService:
         Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
         Raises ``EvaluationConflictError`` when the project results are already
         unlocked (editing is no longer permitted after unlock).
-        Raises ``ValueError`` when any ``criterion_code`` in the submitted scores
-        does not appear in the course's ``evaluation_criteria`` list.
+        Raises ``InvalidEvaluationDataError`` when any ``criterion_code`` is not
+        configured for the course or any ``score`` exceeds the criterion's
+        ``max_score``.
         """
         row = await db_get_project(self._session, project_id)
         if row is None:
@@ -730,17 +745,24 @@ class ProjectsService:
                 f"Project {project_id} results are already unlocked; evaluation cannot be edited."
             )
 
-        # Validate that every submitted criterion code exists on the course.
-        valid_codes = {c["code"] for c in course.evaluation_criteria}
+        # Validate criterion codes and score ranges against the course configuration.
+        criterion_max_scores = {c["code"]: c["max_score"] for c in course.evaluation_criteria}
         submitted_codes = {s.criterion_code for s in body.scores}
-        invalid_codes = submitted_codes - valid_codes
+        invalid_codes = submitted_codes - set(criterion_max_scores)
         if invalid_codes:
-            raise ValueError(
+            raise InvalidEvaluationDataError(
                 f"Invalid criterion code(s) for course {course.code}: {sorted(invalid_codes)}."
             )
+        for submitted_score in body.scores:
+            max_score = criterion_max_scores[submitted_score.criterion_code]
+            if submitted_score.score < 0 or submitted_score.score > max_score:
+                raise InvalidEvaluationDataError(
+                    f"Invalid score for criterion {submitted_score.criterion_code!r}"
+                    f" in course {course.code}: {submitted_score.score}."
+                    f" Allowed range is 0 to {max_score}."
+                )
 
-        if requester.id is None:
-            raise ValueError(f"Requester returned from DB has no id: {requester!r}")
+        requester_id = _require_id(requester)
 
         scores_dicts = [
             {
@@ -755,7 +777,7 @@ class ProjectsService:
         evaluation = await db_create_project_evaluation(
             self._session,
             project_id,
-            requester.id,
+            requester_id,
             scores_dicts,
             submitted=body.submitted,
         )

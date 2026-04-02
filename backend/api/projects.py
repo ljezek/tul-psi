@@ -20,6 +20,7 @@ from schemas.projects import (
 from services.projects import (
     AlreadyMemberError,
     EvaluationConflictError,
+    InvalidEvaluationDataError,
     PermissionDeniedError,
     ProjectNotFoundError,
     ProjectsService,
@@ -265,8 +266,8 @@ async def unlock_project(
     response_model=ProjectEvaluationDetail,
     summary="Get project evaluation",
     description=(
-        "Returns the calling lecturer's submitted evaluation for the specified project. "
-        "Returns HTTP 404 when the lecturer has not yet submitted an evaluation. "
+        "Returns the calling lecturer's evaluation (draft or submitted) for the specified project. "
+        "Returns HTTP 404 when no evaluation row exists for the lecturer. "
         "Only accessible to admin users or lecturers assigned to the project's course."
     ),
 )
@@ -275,12 +276,12 @@ async def get_project_evaluation(
     current_user: User = Depends(require_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> ProjectEvaluationDetail:
-    """Return the evaluation submitted by the calling lecturer for ``project_id``.
+    """Return the evaluation row for the calling lecturer for ``project_id``.
 
     Raises HTTP 401 when the caller is not authenticated.
     Raises HTTP 403 when the caller is not an admin or assigned lecturer.
-    Raises HTTP 404 when the project does not exist or the lecturer has not
-    yet submitted an evaluation.
+    Raises HTTP 404 when the project does not exist or no evaluation row exists
+    for this lecturer.
     """
     try:
         return await service.get_project_evaluation(project_id, current_user)
@@ -328,7 +329,8 @@ async def submit_project_evaluation(
     Raises HTTP 403 when the caller is not an admin or assigned lecturer.
     Raises HTTP 404 when the project does not exist.
     Raises HTTP 409 when the project results are already unlocked.
-    Raises HTTP 422 when a ``criterion_code`` in the scores is not valid for the course.
+    Raises HTTP 422 when a criterion code is not configured for the course or
+    a score value is outside the allowed range.
     """
     try:
         return await service.submit_project_evaluation(project_id, body, current_user)
@@ -347,7 +349,7 @@ async def submit_project_evaluation(
             status_code=status.HTTP_409_CONFLICT,
             detail="Project results are already unlocked; evaluation cannot be edited.",
         ) from None
-    except ValueError as exc:
+    except InvalidEvaluationDataError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),

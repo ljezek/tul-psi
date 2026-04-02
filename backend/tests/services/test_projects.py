@@ -8,6 +8,7 @@ from models.course import CourseTerm
 from models.user import UserRole
 from services.projects import (
     AlreadyMemberError,
+    InvalidEvaluationDataError,
     PermissionDeniedError,
     ProjectNotFoundError,
     ProjectsService,
@@ -1521,8 +1522,8 @@ async def test_submit_project_evaluation_raises_conflict_when_results_unlocked()
         )
 
 
-async def test_submit_project_evaluation_raises_value_error_for_invalid_criterion() -> None:
-    """``submit_project_evaluation`` must raise ``ValueError`` for unknown criterion codes."""
+async def test_submit_project_evaluation_raises_for_invalid_criterion_code() -> None:
+    """``submit_project_evaluation`` raises ``InvalidEvaluationDataError`` for unknown codes."""
     from models.course import EvaluationCriterion
     from schemas.projects import EvaluationScoreCreate, ProjectEvaluationCreate
 
@@ -1551,7 +1552,42 @@ async def test_submit_project_evaluation_raises_value_error_for_invalid_criterio
             new_callable=AsyncMock,
             return_value=(project, course),
         ),
-        pytest.raises(ValueError, match="nonexistent"),
+        pytest.raises(InvalidEvaluationDataError, match="nonexistent"),
+    ):
+        await ProjectsService(session).submit_project_evaluation(1, body, user)
+
+
+async def test_submit_project_evaluation_raises_for_score_exceeding_max() -> None:
+    """``submit_project_evaluation`` raises ``InvalidEvaluationDataError`` when score > max."""
+    from models.course import EvaluationCriterion
+    from schemas.projects import EvaluationScoreCreate, ProjectEvaluationCreate
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    course.evaluation_criteria = [
+        EvaluationCriterion(code="code_quality", description="Code Quality", max_score=25)
+    ]
+    session = MagicMock()
+    user = _make_admin_user()
+
+    body = ProjectEvaluationCreate(
+        scores=[
+            EvaluationScoreCreate(
+                criterion_code="code_quality",
+                score=30,  # Exceeds max_score of 25.
+                strengths="Good",
+                improvements="Bad",
+            )
+        ]
+    )
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        pytest.raises(InvalidEvaluationDataError, match="30"),
     ):
         await ProjectsService(session).submit_project_evaluation(1, body, user)
 
