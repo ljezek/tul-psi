@@ -426,7 +426,7 @@ class CoursesService:
             bonus_by_student: dict[int, tuple[str, int]] = {}
             for feedback, receiving_user in peer_fb_entries:
                 sid = feedback.receiving_student_id
-                _, current_total = bonus_by_student.get(sid, (receiving_user.name, 0))
+                current_total = bonus_by_student.get(sid, (receiving_user.name, 0))[1]
                 bonus_by_student[sid] = (receiving_user.name, current_total + feedback.bonus_points)
 
             student_bonus_points = [
