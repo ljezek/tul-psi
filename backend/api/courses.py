@@ -3,14 +3,28 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
 from models.user import User, UserRole
-from schemas.courses import CourseCreate, CourseDetail, CourseListItem, CourseUpdate
-from services.courses import CoursePermissionError, CoursesService
+from schemas.courses import (
+    AddLecturerBody,
+    CourseCreate,
+    CourseDetail,
+    CourseLecturerPublic,
+    CourseListItem,
+    CourseUpdate,
+)
+from services.courses import (
+    CourseLecturerAlreadyAssignedError,
+    CourseLecturerNotAssignedError,
+    CourseNotFoundError,
+    CoursePermissionError,
+    CoursesService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -169,3 +183,88 @@ async def get_course(
     if course is None:
         raise HTTPException(status_code=404, detail=f"Course {course_id} not found.")
     return course
+
+
+@router.post(
+    "/{course_id}/lecturers",
+    response_model=CourseLecturerPublic,
+    status_code=status.HTTP_201_CREATED,
+    summary="Assign a lecturer to a course",
+    description=(
+        "Assigns a lecturer to the course by e-mail address.  "
+        "Creates a new LECTURER account if no user with that address exists.  "
+        "A notification with a login link is logged for the invited user "
+        "(e-mail delivery is not yet implemented).  "
+        "Requires authentication as an ADMIN or a lecturer already assigned to this course."
+    ),
+)
+async def add_course_lecturer(
+    course_id: int,
+    body: AddLecturerBody,
+    current_user: User = Depends(require_current_user),
+    service: CoursesService = Depends(get_courses_service),
+) -> CourseLecturerPublic:
+    """Assign the user identified by ``body.email`` as a lecturer on the course.
+
+    Raises HTTP 401 when unauthenticated, HTTP 403 when the caller lacks write
+    access, HTTP 404 when the course does not exist, and HTTP 409 when the
+    target user is already a lecturer on this course.
+    """
+    try:
+        result = await service.add_lecturer(course_id, body, current_user)
+    except CourseNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Course {course_id} not found.",
+        ) from None
+    except CoursePermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except CourseLecturerAlreadyAssignedError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except Exception:
+        logger.exception("Failed to add course lecturer", extra={"course_id": course_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+    return result
+
+
+@router.delete(
+    "/{course_id}/lecturers/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+    summary="Unassign a lecturer from a course",
+    description=(
+        "Removes the lecturer assignment for the given user from the course.  "
+        "The user account is not deleted from the system.  "
+        "Requires authentication as an ADMIN or a lecturer already assigned to this course."
+    ),
+)
+async def remove_course_lecturer(
+    course_id: int,
+    user_id: int,
+    current_user: User = Depends(require_current_user),
+    service: CoursesService = Depends(get_courses_service),
+) -> None:
+    """Remove the lecturer assignment for ``user_id`` from the course.
+
+    Raises HTTP 401 when unauthenticated, HTTP 403 when the caller lacks write
+    access, HTTP 404 when the course or the assignment does not exist.
+    """
+    try:
+        await service.remove_lecturer(course_id, user_id, current_user)
+    except CourseNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Course {course_id} not found.",
+        ) from None
+    except CoursePermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except CourseLecturerNotAssignedError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} is not a lecturer on course {course_id}.",
+        ) from None
+    except Exception:
+        logger.exception("Failed to remove course lecturer", extra={"course_id": course_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None

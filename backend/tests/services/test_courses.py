@@ -8,7 +8,13 @@ import pytest
 from models.course import Course, CourseTerm, ProjectType
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
-from services.courses import CoursesService
+from services.courses import (
+    CourseLecturerAlreadyAssignedError,
+    CourseLecturerNotAssignedError,
+    CourseNotFoundError,
+    CoursePermissionError,
+    CoursesService,
+)
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -565,3 +571,218 @@ async def test_update_course_succeeds_for_admin() -> None:
 
     session.commit.assert_called_once()
     assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# CoursesService.add_lecturer
+# ---------------------------------------------------------------------------
+
+
+async def test_add_lecturer_raises_not_found_when_course_missing() -> None:
+    """``add_lecturer`` must raise ``CourseNotFoundError`` when the course does not exist."""
+    from schemas.courses import AddLecturerBody
+
+    session = MagicMock()
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=None):
+        with pytest.raises(CourseNotFoundError):
+            await CoursesService(session).add_lecturer(
+                999, AddLecturerBody(email="new@tul.cz"), current_user
+            )
+
+
+async def test_add_lecturer_raises_permission_error_for_student() -> None:
+    """``add_lecturer`` must raise ``CoursePermissionError`` for a student caller."""
+    from schemas.courses import AddLecturerBody
+
+    session = MagicMock()
+    course = _make_course(course_id=1)
+    current_user = MagicMock(spec=User)
+    current_user.id = 5
+    current_user.role = UserRole.STUDENT
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+    ):
+        with pytest.raises(CoursePermissionError):
+            await CoursesService(session).add_lecturer(
+                1, AddLecturerBody(email="new@tul.cz"), current_user
+            )
+
+
+async def test_add_lecturer_raises_already_assigned_error_on_duplicate() -> None:
+    """``add_lecturer`` must raise ``CourseLecturerAlreadyAssignedError`` when already assigned."""
+    from schemas.courses import AddLecturerBody
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+    course = _make_course(course_id=1)
+    existing_user = _make_lecturer(user_id=42, email="existing@tul.cz")
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.courses.get_or_create_user",
+            new_callable=AsyncMock,
+            return_value=(existing_user, False),
+        ),
+        patch(
+            "services.courses.add_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=(MagicMock(), False),
+        ),
+    ):
+        with pytest.raises(CourseLecturerAlreadyAssignedError):
+            await CoursesService(session).add_lecturer(
+                1, AddLecturerBody(email="existing@tul.cz"), current_user
+            )
+
+
+async def test_add_lecturer_succeeds_for_admin_and_creates_new_user() -> None:
+    """``add_lecturer`` must succeed for an admin and return the new lecturer's public data."""
+    from schemas.courses import AddLecturerBody
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+    course = _make_course(course_id=1)
+    new_user = _make_lecturer(user_id=99, email="new.lecturer@tul.cz")
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.courses.get_or_create_user",
+            new_callable=AsyncMock,
+            return_value=(new_user, True),
+        ),
+        patch(
+            "services.courses.add_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=(MagicMock(), True),
+        ),
+    ):
+        result = await CoursesService(session).add_lecturer(
+            1, AddLecturerBody(email="new.lecturer@tul.cz"), current_user
+        )
+
+    session.commit.assert_called_once()
+    assert result is not None
+    assert result.id == 99
+    assert result.email == "new.lecturer@tul.cz"
+
+
+# ---------------------------------------------------------------------------
+# CoursesService.remove_lecturer
+# ---------------------------------------------------------------------------
+
+
+async def test_remove_lecturer_raises_not_found_when_course_missing() -> None:
+    """``remove_lecturer`` must raise ``CourseNotFoundError`` when the course does not exist."""
+    session = MagicMock()
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=None):
+        with pytest.raises(CourseNotFoundError):
+            await CoursesService(session).remove_lecturer(999, 42, current_user)
+
+
+async def test_remove_lecturer_raises_permission_error_for_unassigned_lecturer() -> None:
+    """``remove_lecturer`` must raise ``CoursePermissionError`` for a non-owning lecturer."""
+    session = MagicMock()
+    course = _make_course(course_id=1)
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 77
+    current_user.role = UserRole.LECTURER
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+    ):
+        with pytest.raises(CoursePermissionError):
+            await CoursesService(session).remove_lecturer(1, 42, current_user)
+
+
+async def test_remove_lecturer_raises_not_assigned_error_when_missing() -> None:
+    """``remove_lecturer`` must raise ``CourseLecturerNotAssignedError`` when not assigned."""
+    session = MagicMock()
+    course = _make_course(course_id=1)
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.courses.remove_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+    ):
+        with pytest.raises(CourseLecturerNotAssignedError):
+            await CoursesService(session).remove_lecturer(1, 99, current_user)
+
+
+async def test_remove_lecturer_succeeds_for_admin() -> None:
+    """``remove_lecturer`` must succeed and commit for an admin caller."""
+    session = MagicMock()
+    session.commit = AsyncMock()
+    course = _make_course(course_id=1)
+
+    current_user = MagicMock(spec=User)
+    current_user.id = 1
+    current_user.role = UserRole.ADMIN
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.courses.remove_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+    ):
+        await CoursesService(session).remove_lecturer(1, 42, current_user)
+
+    session.commit.assert_called_once()

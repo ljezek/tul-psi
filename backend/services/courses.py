@@ -1,27 +1,52 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.courses import (
+    add_course_lecturer,
+    get_course_evaluations,
+    get_course_lecturers,
+    get_course_project_stats,
+    remove_course_lecturer,
+)
 from db.courses import create_course as db_create_course
 from db.courses import get_course as db_get_course
-from db.courses import get_course_evaluations, get_course_lecturers, get_course_project_stats
 from db.courses import get_courses as db_get_courses
 from db.courses import update_course as db_update_course
+from db.projects import get_or_create_user
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
 from schemas.courses import (
+    AddLecturerBody,
     CourseCreate,
     CourseDetail,
     CourseEvaluationPublic,
+    CourseLecturerPublic,
     CourseListItem,
     CourseStats,
     CourseUpdate,
 )
 from schemas.projects import LecturerPublic
 
+logger = logging.getLogger(__name__)
+
 
 class CoursePermissionError(Exception):
     """Raised when a user lacks the permission to create or modify a course."""
+
+
+class CourseNotFoundError(Exception):
+    """Raised when a course with the requested id does not exist."""
+
+
+class CourseLecturerAlreadyAssignedError(Exception):
+    """Raised when a lecturer is already assigned to the course."""
+
+
+class CourseLecturerNotAssignedError(Exception):
+    """Raised when trying to remove a lecturer who is not assigned to the course."""
 
 
 def _require_course_id(course_id: int | None) -> int:
@@ -252,3 +277,106 @@ class CoursesService:
         if result is None:
             raise ValueError(f"Course {course_id} disappeared after update.")
         return result
+
+    async def add_lecturer(
+        self,
+        course_id: int,
+        body: AddLecturerBody,
+        current_user: User,
+    ) -> CourseLecturerPublic:
+        """Assign the user identified by *body.email* as a lecturer on *course_id*.
+
+        If no account exists for that e-mail address a new LECTURER account is
+        created.  A login-link notification is logged (in lieu of real SMTP
+        delivery while that integration is pending).
+
+        Raises ``CourseNotFoundError`` when no course with the given id exists,
+        ``CoursePermissionError`` when *current_user* is not an admin or
+        an assigned lecturer on the course, and ``CourseLecturerAlreadyAssignedError``
+        when the target user is already a lecturer on this course.
+        """
+        course = await db_get_course(self._session, course_id)
+        if course is None:
+            raise CourseNotFoundError(f"Course {course_id} not found.")
+
+        lecturers_by_course = await get_course_lecturers(self._session, [course_id])
+        lecturer_ids = {u.id for u in lecturers_by_course.get(course_id, []) if u.id is not None}
+
+        if not _can_modify_course(current_user, lecturer_ids):
+            raise CoursePermissionError(
+                "Only admins and assigned lecturers can manage course lecturers."
+            )
+
+        # Default name to the local part of the email address when none is provided.
+        resolved_name = body.name if body.name is not None else body.email.split("@")[0]
+        target_user, created = await get_or_create_user(
+            self._session,
+            body.email,
+            resolved_name,
+            body.github_alias,
+            role=UserRole.LECTURER,
+        )
+
+        if created:
+            # TODO(#72): Send login-link notification email to the new user via SMTP.
+            # Log in lieu of real email delivery while that integration is pending.
+            logger.info(
+                "New lecturer account created via course invite; send login link.",
+                extra={"email": body.email, "course_id": course_id},
+            )
+        else:
+            # TODO(#72): Send invitation notification email to the existing user via SMTP.
+            logger.info(
+                "Existing user invited as lecturer; send notification.",
+                extra={"email": body.email, "course_id": course_id},
+            )
+
+        if target_user.id is None:
+            raise ValueError(f"User returned from DB has no id after flush: {target_user!r}")
+
+        _row, added = await add_course_lecturer(self._session, course_id, target_user.id)
+        if not added:
+            raise CourseLecturerAlreadyAssignedError(
+                f"User {target_user.email} is already a lecturer on course {course_id}."
+            )
+
+        await self._session.commit()
+        return CourseLecturerPublic(
+            id=target_user.id,
+            name=target_user.name,
+            github_alias=target_user.github_alias,
+            email=target_user.email,
+        )
+
+    async def remove_lecturer(
+        self,
+        course_id: int,
+        user_id: int,
+        current_user: User,
+    ) -> None:
+        """Remove the lecturer assignment for *user_id* from *course_id*.
+
+        Raises ``CourseNotFoundError`` when no course with the given id exists,
+        ``CoursePermissionError`` when *current_user* is not an admin or
+        an assigned lecturer on the course, and ``CourseLecturerNotAssignedError``
+        when no such assignment exists.
+        """
+        course = await db_get_course(self._session, course_id)
+        if course is None:
+            raise CourseNotFoundError(f"Course {course_id} not found.")
+
+        lecturers_by_course = await get_course_lecturers(self._session, [course_id])
+        lecturer_ids = {u.id for u in lecturers_by_course.get(course_id, []) if u.id is not None}
+
+        if not _can_modify_course(current_user, lecturer_ids):
+            raise CoursePermissionError(
+                "Only admins and assigned lecturers can manage course lecturers."
+            )
+
+        deleted = await remove_course_lecturer(self._session, course_id, user_id)
+        if not deleted:
+            raise CourseLecturerNotAssignedError(
+                f"User {user_id} is not a lecturer on course {course_id}."
+            )
+
+        await self._session.commit()

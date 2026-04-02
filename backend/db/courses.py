@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.course import Course
@@ -142,3 +145,78 @@ async def get_course_evaluations(
         .order_by(CourseEvaluation.project_id, CourseEvaluation.id)
     )
     return list((await session.execute(stmt)).scalars().all())
+
+
+async def add_course_lecturer(
+    session: AsyncSession,
+    course_id: int,
+    user_id: int,
+) -> tuple[CourseLecturer, bool]:
+    """Assign *user_id* as a lecturer on *course_id*.
+
+    Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) against the composite
+    primary key ``(course_id, user_id)`` so concurrent assignments for the
+    same pair are handled atomically.
+
+    Returns a ``(row, created)`` tuple.  When the lecturer is already assigned,
+    ``created`` is ``False`` and the existing row is returned unchanged.
+    The caller must commit the session after a successful return.
+    """
+    stmt = (
+        pg_insert(CourseLecturer)
+        .values(
+            course_id=course_id,
+            user_id=user_id,
+            assigned_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing(index_elements=["course_id", "user_id"])
+    )
+    result = await session.execute(stmt)
+    created = result.rowcount > 0
+    # Fetch the full ORM object whether just inserted or pre-existing.
+    row = (
+        (
+            await session.execute(
+                select(CourseLecturer).where(
+                    CourseLecturer.course_id == course_id,
+                    CourseLecturer.user_id == user_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if row is None:
+        raise RuntimeError(
+            f"Expected CourseLecturer row for user {user_id} in course {course_id} after UPSERT."
+        )
+    return row, created
+
+
+async def remove_course_lecturer(
+    session: AsyncSession,
+    course_id: int,
+    user_id: int,
+) -> bool:
+    """Remove the lecturer assignment for *user_id* from *course_id*.
+
+    Returns ``True`` when a row was found and deleted, ``False`` when no
+    assignment existed.  The caller must commit the session after a
+    successful return.
+    """
+    row = (
+        (
+            await session.execute(
+                select(CourseLecturer).where(
+                    CourseLecturer.course_id == course_id,
+                    CourseLecturer.user_id == user_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if row is None:
+        return False
+    await session.delete(row)
+    return True
