@@ -5,11 +5,12 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.auth import get_or_create_user
+from db.courses import get_course as db_get_course
 from db.projects import (
     add_project_member,
     get_course_evaluations,
     get_course_lecturers,
-    get_or_create_user,
     get_peer_feedback_authored,
     get_peer_feedback_received,
     get_project_evaluations,
@@ -20,7 +21,16 @@ from db.projects import (
     update_project,
 )
 from db.projects import (
+    create_project as db_create_project,
+)
+from db.projects import (
+    delete_project as db_delete_project,
+)
+from db.projects import (
     get_project as db_get_project,
+)
+from db.projects import (
+    unlock_project_results as db_unlock_project_results,
 )
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
@@ -36,10 +46,12 @@ from schemas.projects import (
     LecturerPublic,
     MemberPublic,
     PeerFeedbackDetail,
+    ProjectCreate,
     ProjectEvaluationDetail,
     ProjectPublic,
     ProjectUpdate,
 )
+from services.auth import require_course_manage_access
 
 logger = logging.getLogger(__name__)
 
@@ -462,3 +474,118 @@ class ProjectsService:
             name=target_user.name,
             email=target_user.email,
         )
+
+    async def create_project(
+        self,
+        course_id: int,
+        data: ProjectCreate,
+        requester: User,
+    ) -> ProjectPublic:
+        """Create a new project for the course identified by *course_id*.
+
+        Raises ``LookupError`` when the course does not exist.
+        Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
+
+        When ``data.owner_email`` is set, the system looks up (or creates) a
+        ``STUDENT`` account and adds it as the initial project member.  A fake
+        invite email is logged to simulate the notification workflow.
+
+        Returns the assembled ``ProjectPublic`` for the newly created project.
+        """
+        course = await db_get_course(self._session, course_id)
+        if course is None:
+            raise LookupError(f"Course {course_id} not found.")
+
+        if course.id is None:
+            raise ValueError(f"Course returned from DB has no id: {course!r}")
+
+        await require_course_manage_access(self._session, course.id, requester)
+
+        project = await db_create_project(
+            self._session,
+            course_id=course.id,
+            title=data.title,
+            description=data.description,
+            github_url=data.github_url,
+            live_url=data.live_url,
+            technologies=data.technologies,
+            academic_year=data.academic_year,
+        )
+
+        if data.owner_email is not None:
+            # Name derivation is handled inside get_or_create_user when name is None.
+            owner_user, _ = await get_or_create_user(
+                self._session,
+                data.owner_email,
+            )
+            if project.id is None:
+                raise ValueError(f"Project returned from DB has no id: {project!r}")
+            if owner_user.id is None:
+                raise ValueError(f"Owner user returned from DB has no id: {owner_user!r}")
+            await add_project_member(
+                self._session,
+                project.id,
+                owner_user.id,
+                invited_by=_require_id(requester),
+            )
+            logger.info(
+                "Invite email (simulated): project owner assigned.",
+                extra={
+                    "recipient_email": data.owner_email,
+                    "project_id": project.id,
+                    "course_id": course.id,
+                },
+            )
+
+        await self._session.commit()
+        await self._session.refresh(project)
+
+        if project.id is None:
+            raise ValueError(f"Project returned from DB has no id after commit: {project!r}")
+        detail = await self.get_project_detail(project.id, requester)
+        if detail is None:
+            raise RuntimeError(
+                "get_project_detail unexpectedly returned None for newly created"
+                f" project {project.id}."
+            )
+        return detail
+
+    async def delete_project(self, project_id: int, requester: User) -> None:
+        """Delete the project identified by *project_id*.
+
+        Raises ``LookupError`` when the project does not exist.
+        Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
+        """
+        row = await db_get_project(self._session, project_id)
+        if row is None:
+            raise LookupError(f"Project {project_id} not found.")
+
+        _p, course = row
+        if course.id is None:
+            raise ValueError(f"Course returned from DB has no id: {course!r}")
+
+        await require_course_manage_access(self._session, course.id, requester)
+        await db_delete_project(self._session, project_id)
+        await self._session.commit()
+
+    async def unlock_project(self, project_id: int, requester: User) -> ProjectPublic:
+        """Set ``results_unlocked=True`` on the project identified by *project_id*.
+
+        Raises ``LookupError`` when the project does not exist.
+        Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
+
+        Returns the updated ``ProjectPublic``.
+        """
+        row = await db_get_project(self._session, project_id)
+        if row is None:
+            raise LookupError(f"Project {project_id} not found.")
+
+        _p, course = row
+        if course.id is None:
+            raise ValueError(f"Course returned from DB has no id: {course!r}")
+
+        await require_course_manage_access(self._session, course.id, requester)
+        await db_unlock_project_results(self._session, project_id)
+        await self._session.commit()
+
+        return await self.get_project_detail(project_id, requester)
