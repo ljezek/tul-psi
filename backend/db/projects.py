@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import delete, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.course import Course, CourseTerm
@@ -10,7 +13,7 @@ from models.peer_feedback import PeerFeedback
 from models.project import Project
 from models.project_evaluation import ProjectEvaluation
 from models.project_member import ProjectMember
-from models.user import User
+from models.user import User, UserRole
 
 
 def _escape_like(value: str) -> str:
@@ -233,6 +236,167 @@ async def get_peer_feedback_authored(
     return list((await session.execute(stmt)).scalars().all())
 
 
+async def is_project_member(
+    session: AsyncSession,
+    project_id: int,
+    user_id: int,
+) -> bool:
+    """Return ``True`` when *user_id* is a member of *project_id*.
+
+    Used to gate write operations so that only current project members (and
+    lecturers — checked separately) may update the project or add new members.
+    """
+    stmt = select(ProjectMember).where(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user_id,
+    )
+    row = (await session.execute(stmt)).first()
+    return row is not None
+
+
+async def is_course_lecturer(
+    session: AsyncSession,
+    project_id: int,
+    user_id: int,
+) -> bool:
+    """Return ``True`` when *user_id* is a lecturer on the course that owns *project_id*.
+
+    Joins through ``project`` → ``course_lecturer`` to resolve the relationship.
+    """
+    stmt = (
+        select(CourseLecturer)
+        .join(Project, CourseLecturer.course_id == Project.course_id)
+        .where(
+            Project.id == project_id,
+            CourseLecturer.user_id == user_id,
+        )
+    )
+    row = (await session.execute(stmt)).first()
+    return row is not None
+
+
+async def update_project(
+    session: AsyncSession,
+    project_id: int,
+    *,
+    title: str | None = None,
+    description: str | None = None,
+    github_url: str | None = None,
+    live_url: str | None = None,
+    technologies: list[str] | None = None,
+) -> Project | None:
+    """Apply the supplied field changes to the project identified by *project_id*.
+
+    Only fields whose keyword arguments are not ``None`` are written.  Returns the
+    updated ``Project`` row, or ``None`` when no project with *project_id* exists.
+    The caller must commit the session after a successful return.
+    """
+    stmt = select(Project).where(Project.id == project_id)
+    project = (await session.execute(stmt)).scalars().first()
+    if project is None:
+        return None
+
+    if title is not None:
+        project.title = title
+    if description is not None:
+        project.description = description
+    if github_url is not None:
+        project.github_url = github_url
+    if live_url is not None:
+        project.live_url = live_url
+    if technologies is not None:
+        project.technologies = technologies
+
+    session.add(project)
+    return project
+
+
+async def get_or_create_user(
+    session: AsyncSession,
+    email: str,
+    name: str | None = None,
+    github_alias: str | None = None,
+) -> tuple[User, bool]:
+    """Return the user matching *email*, creating a new STUDENT account if absent.
+
+    Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) so concurrent requests
+    for the same address are handled atomically without a separate SELECT before
+    INSERT.  *name* and *github_alias* are only used when a new row is created;
+    callers are responsible for computing any desired defaults (e.g. deriving
+    a display name from the local part of the e-mail address).
+
+    Returns a ``(user, created)`` tuple where ``created`` is ``True`` when a new
+    row was inserted and ``False`` when an existing row was returned.
+    The caller must commit the session after a successful return.
+    """
+    stmt = (
+        pg_insert(User)
+        .values(
+            email=email,
+            name=name,
+            github_alias=github_alias,
+            role=UserRole.STUDENT,
+            created_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing(index_elements=["email"])
+    )
+    result = await session.execute(stmt)
+    created = result.rowcount > 0
+    # Fetch the full ORM object whether just inserted or pre-existing.
+    user = (await session.execute(select(User).where(User.email == email))).scalars().first()
+    if user is None:
+        raise RuntimeError(f"Expected user row for {email!r} after UPSERT.")
+    return user, created
+
+
+async def add_project_member(
+    session: AsyncSession,
+    project_id: int,
+    user_id: int,
+    invited_by: int,
+) -> tuple[ProjectMember, bool]:
+    """Add *user_id* as a member of *project_id*, invited by *invited_by*.
+
+    Uses an UPSERT (INSERT … ON CONFLICT DO NOTHING) against the unique constraint
+    ``uq_project_member_project_user`` so concurrent invites for the same user
+    are handled atomically without a race-prone SELECT before INSERT.
+
+    Returns a ``(member, created)`` tuple.  When the user is already a member
+    ``created`` is ``False`` and the existing row is returned unchanged.
+    The caller must commit the session after a successful return.
+    """
+    stmt = (
+        pg_insert(ProjectMember)
+        .values(
+            project_id=project_id,
+            user_id=user_id,
+            invited_by=invited_by,
+            invited_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing(constraint="uq_project_member_project_user")
+    )
+    result = await session.execute(stmt)
+    created = result.rowcount > 0
+    # Fetch the full ORM object whether just inserted or pre-existing.
+    member = (
+        (
+            await session.execute(
+                select(ProjectMember).where(
+                    ProjectMember.project_id == project_id,
+                    ProjectMember.user_id == user_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if member is None:
+        raise RuntimeError(
+            f"Expected member row for user {user_id} in project {project_id} after UPSERT."
+        )
+    return member, created
+
+
 async def create_project(
     session: AsyncSession,
     *,
@@ -263,29 +427,6 @@ async def create_project(
     session.add(project)
     await session.flush()
     return project
-
-
-async def add_project_member(
-    session: AsyncSession,
-    *,
-    project_id: int,
-    user_id: int,
-    invited_by: int | None = None,
-) -> ProjectMember:
-    """Insert a ``ProjectMember`` row linking *user_id* to *project_id*.
-
-    ``invited_by`` is the id of the lecturer who performed the seeding action;
-    pass ``None`` when the member is added without an explicit inviter.
-    The caller is responsible for committing the session after this call.
-    """
-    member = ProjectMember(
-        project_id=project_id,
-        user_id=user_id,
-        invited_by=invited_by,
-    )
-    session.add(member)
-    await session.flush()
-    return member
 
 
 async def delete_project(session: AsyncSession, project_id: int) -> bool:
@@ -340,3 +481,13 @@ async def unlock_project_results(session: AsyncSession, project_id: int) -> Proj
     session.add(project)
     await session.flush()
     return project
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if member is None:
+        raise RuntimeError(
+            f"Expected member row for user {user_id} in project {project_id} after UPSERT."
+        )
+    return member, created

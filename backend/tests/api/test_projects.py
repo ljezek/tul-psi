@@ -12,7 +12,12 @@ from main import app
 from models.course import CourseTerm, ProjectType
 from models.user import UserRole
 from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
-from services.projects import ProjectsService
+from services.projects import (
+    AlreadyMemberError,
+    PermissionDeniedError,
+    ProjectNotFoundError,
+    ProjectsService,
+)
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -79,6 +84,8 @@ def _make_service(projects: list[ProjectPublic] | None = None) -> ProjectsServic
     service.get_projects = AsyncMock(return_value=projects or [])
     service.get_project = AsyncMock(return_value=None)
     service.get_project_detail = AsyncMock(return_value=None)
+    service.patch_project = AsyncMock(return_value=None)
+    service.add_member = AsyncMock(return_value=None)
     return service
 
 
@@ -471,3 +478,221 @@ async def test_delete_project_forwards_id_and_user_to_service(client: AsyncClien
     await client.delete("/api/v1/projects/42")
 
     mock_service.delete_project.assert_called_once_with(42, user)
+
+
+# ---------------------------------------------------------------------------
+# PATCH /projects/{project_id} — endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_patch_project_returns_401_when_unauthenticated(client: AsyncClient) -> None:
+    """PATCH /api/v1/projects/{id} must return HTTP 401 for unauthenticated requests."""
+    mock_service = _make_service()
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+    response = await client.patch("/api/v1/projects/1", json={"title": "New Title"})
+    assert response.status_code == 401
+
+
+async def test_patch_project_returns_200_on_success(client: AsyncClient) -> None:
+    """PATCH /api/v1/projects/{id} must return HTTP 200 with the updated project."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.patch_project = AsyncMock(return_value=_PROJECT_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.patch("/api/v1/projects/1", json={"title": "Updated Title"})
+
+    assert response.status_code == 200
+    assert response.json() == _PROJECT_DETAIL.model_dump(mode="json")
+
+
+async def test_patch_project_forwards_body_to_service(client: AsyncClient) -> None:
+    """PATCH /api/v1/projects/{id} must forward the parsed body and user to the service."""
+    from schemas.projects import ProjectUpdate
+
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.patch_project = AsyncMock(return_value=_PROJECT_DETAIL)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.patch(
+        "/api/v1/projects/1",
+        json={"title": "New", "technologies": ["Python"]},
+    )
+
+    call_args = mock_service.patch_project.call_args
+    assert call_args.args[0] == 1
+    assert call_args.args[1] == ProjectUpdate(title="New", technologies=["Python"])
+    assert call_args.args[2] is user
+
+
+async def test_patch_project_returns_404_when_not_found(client: AsyncClient) -> None:
+    """PATCH /api/v1/projects/{id} must return HTTP 404 when the project does not exist."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.patch_project = AsyncMock(side_effect=ProjectNotFoundError(999))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.patch("/api/v1/projects/999", json={"title": "X"})
+
+    assert response.status_code == 404
+
+
+async def test_patch_project_returns_403_when_not_member(client: AsyncClient) -> None:
+    """PATCH /api/v1/projects/{id} must return HTTP 403 when the user lacks write access."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.patch_project = AsyncMock(side_effect=PermissionDeniedError("no access"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.patch("/api/v1/projects/1", json={"title": "X"})
+
+    assert response.status_code == 403
+
+
+async def test_patch_project_returns_500_on_service_error(client: AsyncClient) -> None:
+    """PATCH /api/v1/projects/{id} must return HTTP 500 on unexpected service error."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.patch_project = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.patch("/api/v1/projects/1", json={"title": "X"})
+
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# POST /projects/{project_id}/members — endpoint tests
+# ---------------------------------------------------------------------------
+
+_NEW_MEMBER = MemberPublic(id=10, github_alias=None, name="bob@tul.cz", email="bob@tul.cz")
+
+
+async def test_add_member_returns_401_when_unauthenticated(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 401 for unauthenticated requests."""
+    mock_service = _make_service()
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+    response = await client.post("/api/v1/projects/1/members", json={"email": "bob@tul.cz"})
+    assert response.status_code == 401
+
+
+async def test_add_member_returns_201_on_success(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 201 with the new member."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(return_value=_NEW_MEMBER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/members", json={"email": "bob@tul.cz"})
+
+    assert response.status_code == 201
+    assert response.json() == _NEW_MEMBER.model_dump(mode="json")
+
+
+async def test_add_member_forwards_body_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must forward the parsed body and user to the service."""
+    from schemas.projects import AddMemberBody
+
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(return_value=_NEW_MEMBER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.post("/api/v1/projects/1/members", json={"email": "bob@tul.cz"})
+
+    call_args = mock_service.add_member.call_args
+    assert call_args.args[0] == 1
+    assert call_args.args[1] == AddMemberBody(email="bob@tul.cz")
+    assert call_args.args[2] is user
+
+
+async def test_add_member_returns_404_when_project_not_found(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 404 when the project does not exist."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(side_effect=ProjectNotFoundError(999))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/999/members", json={"email": "bob@tul.cz"})
+
+    assert response.status_code == 404
+
+
+async def test_add_member_returns_403_when_not_authorised(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 403 when caller lacks write access."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(side_effect=PermissionDeniedError("no access"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/members", json={"email": "bob@tul.cz"})
+
+    assert response.status_code == 403
+
+
+async def test_add_member_returns_409_when_already_member(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 409 when the user is already a member."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(side_effect=AlreadyMemberError("already member"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/members", json={"email": "bob@tul.cz"})
+
+    assert response.status_code == 409
+
+
+async def test_add_member_returns_500_on_service_error(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 500 on unexpected service error."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/members", json={"email": "bob@tul.cz"})
+
+    assert response.status_code == 500
+
+
+async def test_add_member_rejects_non_tul_email(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must return HTTP 422 for non-@tul.cz addresses."""
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/members", json={"email": "bob@gmail.com"})
+
+    assert response.status_code == 422
+
+
+async def test_add_member_forwards_name_and_alias_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/members must forward optional name and github_alias fields."""
+    from schemas.projects import AddMemberBody
+
+    user = _make_authenticated_user()
+    mock_service = _make_service()
+    mock_service.add_member = AsyncMock(return_value=_NEW_MEMBER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.post(
+        "/api/v1/projects/1/members",
+        json={"email": "bob@tul.cz", "name": "Bob Smith", "github_alias": "bobsmith"},
+    )
+
+    call_args = mock_service.add_member.call_args
+    body = call_args.args[1]
+    assert body == AddMemberBody(email="bob@tul.cz", name="Bob Smith", github_alias="bobsmith")

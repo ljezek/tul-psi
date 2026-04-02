@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, field_validator
 
 from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectType
+from validators import validate_tul_email
 
 
 class LecturerPublic(BaseModel):
@@ -110,6 +111,40 @@ class ProjectCreate(BaseModel):
     academic_year: int
     # Optional email of the student who owns this project.
     owner_email: str | None = None
+
+
+class ProjectUpdate(BaseModel):
+    """Request body for ``PATCH /projects/{id}``.
+
+    All fields are optional. Only fields provided with a non-null value will be updated.
+    Passing ``None`` is currently equivalent to omitting the field and does not clear it.
+    """
+
+    title: str | None = None
+    description: str | None = None
+    github_url: str | None = None
+    live_url: str | None = None
+    technologies: list[str] | None = None
+
+
+class AddMemberBody(BaseModel):
+    """Request body for ``POST /projects/{id}/members``.
+
+    ``name`` and ``github_alias`` are propagated to a newly-created user account
+    when no existing user matches the given *email*.  When omitted, ``github_alias``
+    defaults to ``None`` and ``name`` defaults to the local part of the e-mail
+    address (the portion before the ``@`` sign).
+    """
+
+    email: EmailStr
+    name: str | None = None
+    github_alias: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def email_must_be_tul_domain(cls, v: str) -> str:
+        """Reject any address whose domain is not @tul.cz."""
+        return validate_tul_email(v)
 
 
 class ProjectPublic(BaseModel):
