@@ -198,19 +198,14 @@ export const CourseDetailView = () => {
                         className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md hover:border-tul-blue/20 transition-all group gap-4"
                       >
                         <div className="min-w-0 flex-grow">
-                          <div className="flex items-baseline gap-3">
-                            <h4 className="font-bold text-slate-800 group-hover:text-tul-blue transition-colors truncate">
-                              {project.title}
-                            </h4>
-                            <span className="text-[11px] text-slate-500 truncate italic hidden sm:inline">
-                              {project.members.map(m => m.name).join(', ')}
-                            </span>
-                          </div>
+                          <h4 className="font-bold text-slate-800 group-hover:text-tul-blue transition-colors truncate">
+                            {project.title}
+                          </h4>
                           <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider whitespace-nowrap">
                               {project.academic_year}/{project.academic_year + 1}
                             </span>
-                            <span className="text-[11px] text-slate-500 truncate italic sm:hidden">
+                            <span className="text-[11px] text-slate-500 truncate italic">
                               {project.members.map(m => m.name).join(', ')}
                             </span>
                           </div>
