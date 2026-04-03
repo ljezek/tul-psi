@@ -32,7 +32,15 @@ def _override_session() -> Generator[None, None, None]:
 
 @pytest.fixture(autouse=True)
 def _mock_settings() -> Generator[None, None, None]:
-    """Stub application settings so tests do not require a real database URL."""
+    """Stub settings consumed by the OTP-verify flow across all tests in this module.
+
+    Three distinct settings values are exercised:
+    - ``jwt_secret`` / ``jwt_algorithm``: used by ``_create_jwt`` to sign the session token;
+      tests decode the resulting cookie to verify the payload, so they need the same secret.
+    - ``app_env="local"``: prevents the route from setting the ``Secure`` flag on the cookie;
+      the test client uses plain HTTP so a Secure cookie would be silently dropped.
+    - ``show_otp_dev_only``: gates the dev-only OTP echo in the verify response.
+    """
     mock_settings = MagicMock()
     mock_settings.show_otp_dev_only = False
     mock_settings.jwt_secret = _JWT_SECRET
