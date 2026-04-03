@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Code, ExternalLink, Users, Tag } from 'lucide-react';
+import { ExternalLink, Users, Tag } from 'lucide-react';
+import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { ProjectPublic } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -82,7 +83,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
               className="text-slate-400 hover:text-slate-800 transition-colors"
               title={t('project.source_code')}
             >
-              <Code size={18} />
+              <GitHubLogo size={18} />
             </a>
           )}
           {project.live_url && (

@@ -22,6 +22,7 @@ const translations: Record<string, Record<Language, string>> = {
   'role.public': { cs: 'Veřejnost', en: 'Public' },
   'role.student': { cs: 'Student', en: 'Student' },
   'role.lecturer': { cs: 'Lektor', en: 'Lecturer' },
+  'role.admin': { cs: 'Administrátor', en: 'Administrator' },
   'role.select_demo': { cs: 'Vyberte roli (Demo):', en: 'Select Role (Demo):' },
   'footer.copyright': { cs: 'Fakulta mechatroniky, informatiky a mezioborových studií TUL.', en: 'Faculty of Mechatronics, Informatics and Interdisciplinary Studies TUL.' },
 
@@ -166,6 +167,31 @@ const translations: Record<string, Record<Language, string>> = {
   'student.received_feedback': { cs: 'Obdržená hodnocení od kolegů', en: 'Received Feedback from Colleagues' },
   'student.subject_feedback_title': { cs: 'Zpětná vazba na předmět', en: 'Subject Feedback' },
   'student.anonymous_notice': { cs: 'Hodnocení předmětu je anonymizované.', en: 'Subject evaluation is anonymized.' },
+
+  // Login
+  'login.title': { cs: 'Přihlášení', en: 'Login' },
+  'login.email_label': { cs: 'Univerzitní email', en: 'University Email' },
+  'login.email_placeholder': { cs: 'jan.novak@tul.cz', en: 'jan.novak@tul.cz' },
+  'login.send_code': { cs: 'Odeslat kód', en: 'Send Code' },
+  'login.email_info': { cs: 'Zadejte svůj @tul.cz email pro přihlášení.', en: 'Enter your @tul.cz email to sign in.' },
+  'login.code_sent': { cs: 'Pokud účet existuje, kód byl odeslán na', en: 'If the account exists, a code was sent to' },
+  'login.otp_label': { cs: 'Jednorázový kód', en: 'One-Time Code' },
+  'login.otp_placeholder': { cs: '123456', en: '123456' },
+  'login.verify': { cs: 'Ověřit', en: 'Verify' },
+  'login.back': { cs: 'Zpět', en: 'Back' },
+  'login.resend': { cs: 'Odeslat znovu', en: 'Resend Code' },
+  'login.error_invalid_email': { cs: 'Zadejte platný @tul.cz email.', en: 'Enter a valid @tul.cz email.' },
+  'login.error_invalid_otp': { cs: 'Neplatný nebo expirovaný kód.', en: 'Invalid or expired code.' },
+  'login.error_too_many': { cs: 'Příliš mnoho pokusů — vyžádejte nový kód.', en: 'Too many attempts — request a new code.' },
+
+  // Profile
+  'profile.title': { cs: 'Můj profil', en: 'My Profile' },
+  'profile.role': { cs: 'Role', en: 'Role' },
+  'profile.name': { cs: 'Jméno', en: 'Name' },
+  'profile.github': { cs: 'GitHub alias', en: 'GitHub alias' },
+  'profile.save': { cs: 'Uložit změny', en: 'Save Changes' },
+  'profile.success': { cs: 'Profil byl úspěšně aktualizován.', en: 'Profile successfully updated.' },
+  'profile.editing': { cs: 'Upravit profil', en: 'Edit Profile' },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
