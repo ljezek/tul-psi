@@ -872,9 +872,7 @@ _OVERVIEW = EvaluationOverviewResponse(
                     student_id=5,
                     student_name="Alice",
                     feedback=[
-                        ReceivedPeerFeedback(
-                            bonus_points=3, strengths=None, improvements=None
-                        )
+                        ReceivedPeerFeedback(bonus_points=3, strengths=None, improvements=None)
                     ],
                 )
             ],

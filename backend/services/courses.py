@@ -439,9 +439,7 @@ class CoursesService:
             bonus_by_student: dict[int, tuple[str, list[ReceivedPeerFeedback]]] = {}
             for feedback, receiving_user in peer_fb_entries:
                 sid = feedback.receiving_student_id
-                existing_name, existing_fbs = bonus_by_student.get(
-                    sid, (receiving_user.name, [])
-                )
+                existing_name, existing_fbs = bonus_by_student.get(sid, (receiving_user.name, []))
                 bonus_by_student[sid] = (
                     existing_name,
                     existing_fbs
