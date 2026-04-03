@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
+type NotificationState = { type: 'success' | 'error'; message: string } | null;
+
 const StarRating = ({ rating, onChange, disabled }: { rating: number, onChange: (r: number) => void, disabled?: boolean }) => {
   return (
     <div className="flex gap-2">
@@ -54,6 +56,14 @@ export const CourseEvaluation = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [notification, setNotification] = useState<NotificationState>(null);
+
+  // Auto-dismiss success notifications after 3 seconds.
+  useEffect(() => {
+    if (notification?.type !== 'success') return;
+    const timer = setTimeout(() => setNotification(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notification]);
 
   // Form State
   const [rating, setRating] = useState(0);
@@ -63,20 +73,23 @@ export const CourseEvaluation = () => {
   
   // Peer state
   const [peerTexts, setPeerState] = useState<Record<number, { strengths: string, improvements: string }>>({});
-  
+  // Bonus points loaded from an existing draft; used as the initial distribution.
+  const [savedPoints, setSavedPoints] = useState<Record<number, number>>({});
+
   const teammates = project?.members.filter(m => m.id !== user?.id) || [];
   const budget = project?.course.peer_bonus_budget;
 
   // Memoize so the object reference is stable between renders. Without this,
   // usePointRedistribution's sync effect would fire every render, creating an
-  // infinite loop.
+  // infinite loop. savedPoints takes precedence over the equal-split default
+  // so that a loaded draft restores the previously saved allocation.
   const teammateIds = teammates.map(m => m.id).join(',');
   const initialPoints = useMemo(() =>
     teammates.reduce((acc, m) => {
-      acc[m.id] = budget || 0;
+      acc[m.id] = savedPoints[m.id] ?? (budget || 0);
       return acc;
     }, {} as Record<number, number>),
-    [teammateIds, budget]
+    [teammateIds, budget, savedPoints]
   );
 
   const { values: peerPoints, handlePointChange, remainingPoints } = usePointRedistribution(
@@ -106,15 +119,18 @@ export const CourseEvaluation = () => {
         setIsSubmitted(evalData.submitted);
         
         const newPeerTexts: Record<number, { strengths: string, improvements: string }> = {};
+        const loadedPoints: Record<number, number> = {};
         evalData.peer_evaluations.forEach(pe => {
           newPeerTexts[pe.receiving_student_id] = {
             strengths: pe.strengths,
             improvements: pe.improvements
           };
-          // Initialize points in hook (handled by useEffect in hook)
-          // Note: The hook takes initialValues as a prop and syncs via useEffect.
+          loadedPoints[pe.receiving_student_id] = pe.bonus_points;
         });
         setPeerState(newPeerTexts);
+        if (Object.keys(loadedPoints).length > 0) {
+          setSavedPoints(loadedPoints);
+        }
       }
     } catch (err) {
       setError(t('projectDetail.error_fetching'));
@@ -130,10 +146,11 @@ export const CourseEvaluation = () => {
 
   const handleSubmit = async (e: FormEvent, publish: boolean) => {
     e.preventDefault();
-    if (publish && !window.confirm(t('common.confirm_action') || 'Are you sure? This cannot be undone.')) {
+    if (publish && !window.confirm(t('common.confirm_action'))) {
       return;
     }
 
+    setNotification(null);
     setSubmitting(true);
     try {
       const payload: CourseEvaluationSubmit = {
@@ -154,18 +171,18 @@ export const CourseEvaluation = () => {
         setIsSubmitted(true);
         navigate('/student');
       } else {
-        alert(t('profile.success'));
+        setNotification({ type: 'success', message: t('student.draft_saved') });
       }
     } catch (err) {
       console.error(err);
-      alert(t('login.error_unexpected'));
+      setNotification({ type: 'error', message: t('student.submit_error') });
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
-  if (error || !project) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error || 'Project not found'} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
+  if (error || !project) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error || t('projectDetail.not_found')} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -384,8 +401,19 @@ export const CourseEvaluation = () => {
           <div className="flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-2xl border border-red-100 animate-in fade-in slide-in-from-top-2">
             <AlertCircle size={18} />
             <span className="text-sm font-bold">
-              {t('student.points_remaining')}: {remainingPoints}. Total points must be exactly {(budget || 0) * teammates.length}.
+              {t('student.points_remaining')}: {remainingPoints}. {t('student.points_must_total')} {(budget || 0) * teammates.length}.
             </span>
+          </div>
+        )}
+
+        {notification && (
+          <div className={`flex items-center gap-2 p-4 rounded-2xl border animate-in fade-in ${
+            notification.type === 'success'
+              ? 'text-green-700 bg-green-50 border-green-100'
+              : 'text-red-600 bg-red-50 border-red-100'
+          }`}>
+            {notification.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+            <span className="text-sm font-bold">{notification.message}</span>
           </div>
         )}
       </form>

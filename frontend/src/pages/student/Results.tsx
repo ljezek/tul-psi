@@ -44,7 +44,7 @@ export const Results = () => {
   }, [projectId]);
 
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
-  if (error || !project) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error || 'Project not found'} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
+  if (error || !project) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error || t('projectDetail.not_found')} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
 
   if (!project.results_unlocked) {
     return (
@@ -209,7 +209,7 @@ export const Results = () => {
                     {peerBonus.map((f, idx) => (
                       <div key={idx} className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 space-y-4">
                         <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-2">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Feedback #{idx + 1}</span>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('results.feedback')} #{idx + 1}</span>
                           {project.course.peer_bonus_budget !== null && (
                             <span className="text-sm font-black text-purple-600">+{f.bonus_points} pts</span>
                           )}

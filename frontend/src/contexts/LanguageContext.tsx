@@ -104,6 +104,7 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Error / loading states
   'error.retry': { cs: 'Zkusit znovu', en: 'Retry' },
+  'common.confirm_action': { cs: 'Jste si jisti? Tuto akci nelze vrátit zpět.', en: 'Are you sure? This cannot be undone.' },
   
   // Admin Panel
   'admin.title': { cs: 'Administrace Lektora', en: 'Lecturer Administration' },
@@ -176,6 +177,9 @@ const translations: Record<string, Record<Language, string>> = {
   'student.results_pending': { cs: 'Čeká se', en: 'Pending' },
   'student.submit_evaluation': { cs: 'Odevzdat hodnocení', en: 'Submit Evaluation' },
   'student.view_results': { cs: 'Zobrazit výsledky', en: 'View Results' },
+  'student.points_must_total': { cs: 'Celkový počet bodů musí být přesně', en: 'Total points must be exactly' },
+  'student.draft_saved': { cs: 'Koncept byl uložen.', en: 'Draft saved.' },
+  'student.submit_error': { cs: 'Odeslání se nezdařilo. Zkuste to prosím znovu.', en: 'Submission failed. Please try again.' },
 
   // Results
   'results.title': { cs: 'Výsledky hodnocení', en: 'Evaluation Results' },
@@ -189,6 +193,7 @@ const translations: Record<string, Record<Language, string>> = {
   'results.verdict': { cs: 'Výsledek', en: 'Verdict' },
   'results.pass': { cs: 'SPLNĚNO', en: 'PASS' },
   'results.fail': { cs: 'NESPLNĚNO', en: 'FAIL' },
+  'results.feedback': { cs: 'Hodnocení', en: 'Feedback' },
 
   // Login
   'login.title': { cs: 'Přihlášení', en: 'Login' },

@@ -156,4 +156,24 @@ describe('CourseEvaluation', () => {
       expect(screen.getByRole('button', { name: /Odeslat hodnocení/i })).toBeDisabled();
     });
   });
+
+  it('shows inline draft-saved notification instead of alert', async () => {
+    const user = userEvent.setup();
+    (api.submitCourseEvaluation as Mock).mockResolvedValue({ message: 'Success' });
+
+    await renderEval();
+    await waitFor(() => expect(screen.getByText('Project Alpha')).toBeInTheDocument());
+
+    // Click "Save Draft" (the outline button next to Submit).
+    const saveDraftButton = screen.getByRole('button', { name: /Uložit změny/i });
+    await user.click(saveDraftButton);
+
+    await waitFor(() => {
+      expect(api.submitCourseEvaluation).toHaveBeenCalledWith(
+        expect.any(Number),
+        expect.objectContaining({ submitted: false })
+      );
+      expect(screen.getByText(/Koncept byl uložen/i)).toBeInTheDocument();
+    });
+  });
 });

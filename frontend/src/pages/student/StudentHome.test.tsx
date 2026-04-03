@@ -124,4 +124,24 @@ describe('StudentHome', () => {
       expect(screen.getByText(/Nejste přiřazeni k žádnému projektu/i)).toBeInTheDocument();
     });
   });
+
+  it('shows View Results button when results_unlocked even if not yet submitted', async () => {
+    const unsubmittedUnlocked = [
+      {
+        id: 104,
+        title: 'Unlocked Project',
+        academic_year: 2024,
+        course: { id: 4, code: 'C4', name: 'Course 4', project_type: ProjectType.TEAM },
+        members: [{ id: 1, name: 'Test Student' }],
+        results_unlocked: true,
+        course_evaluations: [],
+      },
+    ];
+    (api.getProjects as Mock).mockResolvedValue(unsubmittedUnlocked);
+    await renderHome();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Zobrazit výsledky/i)).toBeInTheDocument();
+    });
+  });
 });

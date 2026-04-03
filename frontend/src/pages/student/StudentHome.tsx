@@ -125,7 +125,7 @@ export const StudentHome = () => {
                       {t('student.results_status')}
                     </span>
                     {project.results_unlocked ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-tul-blue/5 text-tul-blue text-[10px] font-black uppercase border border-tul-blue/10">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-50 text-green-700 text-[10px] font-black uppercase border border-green-100">
                         <CheckCircle size={12} />
                         {t('student.results_available')}
                       </span>
@@ -153,16 +153,22 @@ export const StudentHome = () => {
                     {t('student.submitted')}
                   </Button>
                 )}
-                
-                <Link to={`/projects/${project.id}`} className={!isSubmitted ? 'col-span-2' : 'col-span-1'}>
+
+                <Link
+                  to={`/projects/${project.id}`}
+                  className={isSubmitted ? 'col-span-1' : (project.results_unlocked ? 'col-span-1' : 'col-span-2')}
+                >
                   <Button variant="outline" className="w-full rounded-xl font-bold gap-2 bg-white">
                     <ExternalLink size={18} />
                     {t('projectDetail.title')}
                   </Button>
                 </Link>
 
-                {project.results_unlocked && isSubmitted && (
-                  <Link to={`/student/project/${project.id}/results`} className="col-span-1">
+                {project.results_unlocked && (
+                  <Link
+                    to={`/student/project/${project.id}/results`}
+                    className={isSubmitted ? 'col-span-2' : 'col-span-1'}
+                  >
                     <Button variant="outline" className="w-full rounded-xl font-bold gap-2 border-tul-blue text-tul-blue bg-white hover:bg-tul-blue/5">
                       {t('student.view_results')}
                     </Button>
