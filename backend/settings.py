@@ -21,7 +21,11 @@ class Settings(BaseSettings):
 
     # Public base URL of the frontend SPA (e.g. https://spc.tul.cz in production).
     # Included in outgoing email bodies so recipients can navigate to the portal.
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:3000"
+
+    # List of origins allowed to make cross-origin requests (CORS).
+    # In production, this should be restricted to the actual frontend domain.
+    allowed_origins: list[str] = ["http://localhost:3000"]
 
     # Secret key used to sign JWT session cookies.
     # Must be a long, random string; override in production via the JWT_SECRET env var.

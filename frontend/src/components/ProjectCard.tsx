@@ -12,6 +12,8 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
+  // TODO: Add image/thumbnail support for project cards when backend supports it.
+
   const handleCardClick = () => {
     navigate(`/projects/${project.id}`);
   };
