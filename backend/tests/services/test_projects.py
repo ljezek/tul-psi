@@ -1639,6 +1639,46 @@ async def test_save_project_evaluation_raises_for_score_exceeding_max() -> None:
         await ProjectsService(session).save_project_evaluation(1, body, user)
 
 
+async def test_save_project_evaluation_raises_for_negative_score() -> None:
+    """``save_project_evaluation`` raises ``InvalidEvaluationDataError`` when score < 0."""
+    from models.course import EvaluationCriterion
+    from schemas.projects import EvaluationScoreDetail, ProjectEvaluationCreate
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    course.evaluation_criteria = [
+        EvaluationCriterion(code="code_quality", description="Code Quality", max_score=25)
+    ]
+    session = MagicMock()
+    user = _make_lecturer_user()
+
+    body = ProjectEvaluationCreate(
+        scores=[
+            EvaluationScoreDetail(
+                criterion_code="code_quality",
+                score=-1,
+                strengths="Good",
+                improvements="Bad",
+            )
+        ]
+    )
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [MagicMock(id=user.id)]},
+        ),
+        pytest.raises(InvalidEvaluationDataError, match="-1"),
+    ):
+        await ProjectsService(session).save_project_evaluation(1, body, user)
+
+
 async def test_save_project_evaluation_creates_draft_without_unlock_check() -> None:
     """Draft submission (``submitted=False``) must save the row without triggering auto-unlock."""
     from datetime import UTC, datetime
