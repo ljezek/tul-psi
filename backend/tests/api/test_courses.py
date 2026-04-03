@@ -16,9 +16,16 @@ from models.user import UserRole
 from schemas.courses import (
     CourseDetail,
     CourseEvaluationPublic,
+    CourseEvaluationSummary,
     CourseLecturerPublic,
     CourseListItem,
     CourseStats,
+    CriterionScoreSummary,
+    EvaluationOverviewResponse,
+    ProjectEvaluationSummary,
+    ProjectOverviewItem,
+    ReceivedPeerFeedback,
+    StudentBonusSummary,
 )
 from schemas.projects import CoursePublic, LecturerPublic, ProjectPublic
 from services.courses import (
@@ -830,5 +837,161 @@ async def test_remove_course_lecturer_returns_500_on_service_error(
     app.dependency_overrides[get_courses_service] = lambda: mock_service
 
     response = await client.delete("/api/v1/courses/1/lecturers/20")
+
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/courses/{course_id}/evaluation-overview
+# ---------------------------------------------------------------------------
+
+_OVERVIEW = EvaluationOverviewResponse(
+    projects=[
+        ProjectOverviewItem(
+            project_id=1,
+            project_title="Project Alpha",
+            academic_year=2025,
+            project_evaluations=[
+                ProjectEvaluationSummary(
+                    lecturer_id=10,
+                    criterion_scores=[
+                        CriterionScoreSummary(
+                            criterion_code="code_quality",
+                            score=18,
+                            strengths="Good code.",
+                            improvements="More tests.",
+                        )
+                    ],
+                )
+            ],
+            course_evaluations=[
+                CourseEvaluationSummary(rating=4, strengths="Great.", improvements=None)
+            ],
+            student_bonus_points=[
+                StudentBonusSummary(
+                    student_id=5,
+                    student_name="Alice",
+                    feedback=[
+                        ReceivedPeerFeedback(bonus_points=3, strengths=None, improvements=None)
+                    ],
+                )
+            ],
+        )
+    ]
+)
+
+
+def _make_courses_service_with_overview(
+    overview: EvaluationOverviewResponse | None = None,
+) -> CoursesService:
+    """Return a mock ``CoursesService`` with ``get_evaluation_overview`` pre-configured."""
+    service = _make_service()
+    service.get_evaluation_overview = AsyncMock(return_value=overview or _OVERVIEW)
+    return service
+
+
+async def test_get_evaluation_overview_returns_200(client: AsyncClient) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must return HTTP 200 for an authorised user."""
+    user = _make_user(UserRole.LECTURER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: _make_courses_service_with_overview()
+
+    response = await client.get("/api/v1/courses/1/evaluation-overview")
+
+    assert response.status_code == 200
+
+
+async def test_get_evaluation_overview_returns_schema(client: AsyncClient) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must return the full overview schema."""
+    user = _make_user(UserRole.ADMIN)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: _make_courses_service_with_overview()
+
+    response = await client.get("/api/v1/courses/1/evaluation-overview")
+
+    assert response.json() == _OVERVIEW.model_dump(mode="json")
+
+
+async def test_get_evaluation_overview_returns_401_when_unauthenticated(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must return HTTP 401 when not authenticated."""
+    app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_courses_service] = lambda: _make_courses_service_with_overview()
+
+    response = await client.get("/api/v1/courses/1/evaluation-overview")
+
+    assert response.status_code == 401
+
+
+async def test_get_evaluation_overview_returns_403_on_permission_error(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must return HTTP 403 when access is denied."""
+    user = _make_user(UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_evaluation_overview = AsyncMock(
+        side_effect=CoursePermissionError("Not authorised.")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/courses/1/evaluation-overview")
+
+    assert response.status_code == 403
+
+
+async def test_get_evaluation_overview_returns_404_when_course_not_found(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must return HTTP 404 when course is missing."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.get_evaluation_overview = AsyncMock(
+        side_effect=CourseNotFoundError("Course 99 not found.")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/courses/99/evaluation-overview")
+
+    assert response.status_code == 404
+
+
+async def test_get_evaluation_overview_forwards_year_filter(client: AsyncClient) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must forward the year query parameter."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_courses_service_with_overview()
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    await client.get("/api/v1/courses/5/evaluation-overview?year=2025")
+
+    mock_service.get_evaluation_overview.assert_called_once_with(5, year=2025, requester=user)
+
+
+async def test_get_evaluation_overview_forwards_none_when_no_year(client: AsyncClient) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must pass year=None when omitted."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_courses_service_with_overview()
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    await client.get("/api/v1/courses/5/evaluation-overview")
+
+    mock_service.get_evaluation_overview.assert_called_once_with(5, year=None, requester=user)
+
+
+async def test_get_evaluation_overview_returns_500_on_unexpected_error(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/courses/{id}/evaluation-overview must return HTTP 500 on unexpected error."""
+    user = _make_user(UserRole.ADMIN)
+    mock_service = _make_service()
+    mock_service.get_evaluation_overview = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_courses_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/courses/1/evaluation-overview")
 
     assert response.status_code == 500

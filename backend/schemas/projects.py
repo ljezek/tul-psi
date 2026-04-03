@@ -76,7 +76,8 @@ class CourseEvaluationDetail(BaseModel):
 
     id: int
     student_id: int
-    rating: int
+    # Null when the student has not yet set a rating (draft without a rating).
+    rating: int | None
     strengths: str | None
     improvements: str | None
     submitted: bool
@@ -205,3 +206,66 @@ class ProjectPublic(BaseModel):
     received_peer_feedback: list[PeerFeedbackDetail] | None = None
     # Populated for student when results_unlocked is True.
     authored_peer_feedback: list[PeerFeedbackDetail] | None = None
+
+
+class PeerFeedbackInput(BaseModel):
+    """A single peer feedback entry submitted as part of a course evaluation.
+
+    ``receiving_student_id`` must reference a project teammate (validated at
+    the service layer).  ``bonus_points`` is zero when the course does not
+    use a peer-bonus scheme; the service validates that the total across all
+    entries equals ``Course.peer_bonus_budget`` on final submission.
+    """
+
+    receiving_student_id: int
+    strengths: str | None = None
+    improvements: str | None = None
+    # Zero when the course has no peer-bonus scheme.
+    bonus_points: int = 0
+
+
+class CourseEvaluationUpsert(BaseModel):
+    """Request body for ``PUT /projects/{id}/course-evaluation``.
+
+    ``submitted=False`` (default) saves the evaluation as a draft that can be
+    updated later.  ``submitted=True`` finalises the evaluation and triggers
+    the automatic project-result unlock check once all students and lecturers
+    have submitted.  Draft saves may omit ``rating`` and any text fields;
+    final submissions (``submitted=True``) require ``rating`` to be present.
+    """
+
+    # Overall course satisfaction rating; must be in the 1–5 range when provided.
+    # Null is allowed for drafts where the student has not yet chosen a rating.
+    rating: int | None = None
+    strengths: str | None = None
+    improvements: str | None = None
+    # False means save as draft; True means finalise and trigger auto-unlock.
+    submitted: bool = False
+    peer_feedback: list[PeerFeedbackInput] = Field(default_factory=list)
+
+    @field_validator("rating")
+    @classmethod
+    def rating_must_be_in_range(cls, v: int | None) -> int | None:
+        """Reject any non-null rating outside the 1–5 scale."""
+        if v is not None and (v < 1 or v > 5):
+            raise ValueError("Rating must be between 1 and 5.")
+        return v
+
+
+class CourseEvaluationFormResponse(BaseModel):
+    """Response for ``GET /projects/{id}/course-evaluation``.
+
+    Returns all data a student needs to render and populate the combined
+    course-evaluation and peer-feedback form.  When ``results_unlocked`` is
+    ``True`` the form is read-only and the evaluation can no longer be edited.
+    """
+
+    # Project members other than the requesting student.
+    teammates: list[MemberPublic]
+    # Null when the course has no peer-bonus scheme.
+    peer_bonus_budget: int | None
+    # Null when the student has not yet started a draft.
+    current_evaluation: CourseEvaluationDetail | None
+    # One entry per teammate; empty list when no draft exists yet.
+    authored_peer_feedback: list[PeerFeedbackDetail]
+    results_unlocked: bool

@@ -11,9 +11,9 @@ from sqlmodel import Field, SQLModel
 
 # Module-level adapter built once.
 # It provides early Python-layer validation of the 1–5 rating range, complementing
-# the DB-level CHECK constraint.
-_rating_adapter: TypeAdapter[Annotated[int, PydanticField(ge=1, le=5)]] = TypeAdapter(
-    Annotated[int, PydanticField(ge=1, le=5)]
+# the DB-level CHECK constraint.  Accepts ``None`` so that drafts can omit the rating.
+_rating_adapter: TypeAdapter[Annotated[int, PydanticField(ge=1, le=5)] | None] = TypeAdapter(
+    Annotated[int, PydanticField(ge=1, le=5)] | None
 )
 
 
@@ -41,13 +41,18 @@ class CourseEvaluation(SQLModel, table=True):
     project_id: int = Field(foreign_key="project.id")
     student_id: int = Field(foreign_key="user.id")
     # Overall course satisfaction rating; validated to the 1–5 range both in
-    # Python and at the DB level via a CHECK constraint.
-    rating: int = Field(
+    # Python and at the DB level via a CHECK constraint.  Null when the student
+    # has not yet set a rating (allowed for draft evaluations).
+    rating: int | None = Field(
+        default=None,
         sa_column=Column(
             Integer,
-            CheckConstraint("rating >= 1 AND rating <= 5", name="ck_course_evaluation_rating"),
-            nullable=False,
-        )
+            CheckConstraint(
+                "rating IS NULL OR (rating >= 1 AND rating <= 5)",
+                name="ck_course_evaluation_rating",
+            ),
+            nullable=True,
+        ),
     )
     # Null means the student has not yet filled in the free-text sections (draft).
     strengths: str | None = Field(default=None)

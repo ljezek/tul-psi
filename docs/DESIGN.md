@@ -236,7 +236,9 @@ sequenceDiagram
     end
 ```
 
-Results become visible to each student once **both** conditions are met: **all** assigned lecturers have submitted a project evaluation **and** every team member has submitted their course evaluation. Any assigned lecturer can also trigger an early unlock via `POST /projects/{id}/unlock` to unblock results in cases where a student is absent or a lecturer cannot submit (preventing a deadlock). Peer feedback sections are only included in the form for **TEAM** projects; `peer_bonus_budget` on the course controls whether bonus-point distribution is shown (null = disabled). A student passes if their final score (sum of average lecturer criterion scores + average received peer bonus points) meets `COURSE.min_score`.
+Results become visible to each student once **both** conditions are met: **all** assigned lecturers have submitted a project evaluation **and** every team member has submitted their course evaluation. Any assigned lecturer can also trigger an early unlock via `POST /projects/{id}/unlock` to unblock results in cases where a student is absent or a lecturer cannot submit (preventing a deadlock). Peer feedback sections are only included in the form for **TEAM** projects; `peer_bonus_budget` on the course controls whether bonus-point distribution is shown (null = disabled).
+
+**Peer bonus semantics:** `peer_bonus_budget` is a *per-teammate* budget. In a team of *N* students, each student distributes a total of `(N − 1) × peer_bonus_budget` points across their teammates. Each individual teammate may receive anywhere from 0 to `2 × peer_bonus_budget` points. The final peer bonus score for a student is the **average** of the bonus points they received from each teammate. A student passes if their final score (sum of average lecturer criterion scores + average received peer bonus points) meets `COURSE.min_score`.
 
 ## API & Interface Specification
 

@@ -15,17 +15,31 @@ from db.courses import create_course as db_create_course
 from db.courses import get_course as db_get_course
 from db.courses import get_courses as db_get_courses
 from db.courses import update_course as db_update_course
-from db.projects import get_or_create_user
+from db.projects import (
+    get_or_create_user,
+    get_peer_feedback_with_users_for_projects,
+    get_projects_for_course,
+    get_submitted_course_evaluations_for_projects,
+    get_submitted_project_evaluations,
+)
+from models.course import ProjectType
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
 from schemas.courses import (
     CourseCreate,
     CourseDetail,
     CourseEvaluationPublic,
+    CourseEvaluationSummary,
     CourseLecturerPublic,
     CourseListItem,
     CourseStats,
     CourseUpdate,
+    CriterionScoreSummary,
+    EvaluationOverviewResponse,
+    ProjectEvaluationSummary,
+    ProjectOverviewItem,
+    ReceivedPeerFeedback,
+    StudentBonusSummary,
 )
 from schemas.projects import AddUserBody, LecturerPublic
 from services.auth import is_admin_or_course_lecturer, require_course_manage_access
@@ -336,3 +350,129 @@ class CoursesService:
             )
 
         await self._session.commit()
+
+    async def get_evaluation_overview(
+        self,
+        course_id: int,
+        *,
+        year: int | None = None,
+        requester: User,
+    ) -> EvaluationOverviewResponse:
+        """Return an aggregated evaluation overview for all projects in *course_id*.
+
+        For each project the response includes per-criterion average scores from
+        submitted lecturer evaluations, the average course-satisfaction rating from
+        submitted student course evaluations, and per-student average peer bonus
+        points received.
+
+        When *year* is provided only projects from that academic year are included.
+        Projects are ordered by academic year descending and project title ascending.
+
+        Raises ``CourseNotFoundError`` when the course does not exist.
+        Raises ``CoursePermissionError`` when *requester* is not an admin or an
+        assigned lecturer for the course.
+        """
+        course = await db_get_course(self._session, course_id)
+        if course is None:
+            raise CourseNotFoundError(f"Course {course_id} not found.")
+
+        cid = _require_course_id(course.id)
+
+        try:
+            await require_course_manage_access(self._session, cid, requester)
+        except PermissionError as exc:
+            raise CoursePermissionError(str(exc)) from exc
+
+        projects = await get_projects_for_course(self._session, cid, year=year)
+        project_ids = [p.id for p in projects if p.id is not None]
+
+        # Bulk-fetch all evaluation data in two or three queries depending on course type.
+        lecturer_evals_by_project = await get_submitted_project_evaluations(
+            self._session, project_ids
+        )
+        course_evals_by_project = await get_submitted_course_evaluations_for_projects(
+            self._session, project_ids
+        )
+        # Peer feedback is only relevant for team courses; skip the query for individual courses.
+        if course.project_type == ProjectType.TEAM:
+            peer_feedback_by_project = await get_peer_feedback_with_users_for_projects(
+                self._session, project_ids
+            )
+        else:
+            peer_feedback_by_project: dict = {}
+
+        items: list[ProjectOverviewItem] = []
+        for project in projects:
+            pid = project.id
+            if pid is None:
+                continue
+
+            # Build per-lecturer evaluation summaries with per-criterion verbatim feedback.
+            lecturer_evals = lecturer_evals_by_project.get(pid, [])
+            project_evaluations = [
+                ProjectEvaluationSummary(
+                    lecturer_id=ev.lecturer_id,
+                    criterion_scores=[
+                        CriterionScoreSummary(
+                            criterion_code=s["criterion_code"],
+                            score=s["score"],
+                            strengths=s["strengths"],
+                            improvements=s["improvements"],
+                        )
+                        for s in ev.scores
+                    ],
+                )
+                for ev in lecturer_evals
+            ]
+
+            # Build anonymous per-student course evaluation summaries.
+            course_evaluations = [
+                CourseEvaluationSummary(
+                    rating=ce.rating,
+                    strengths=ce.strengths,
+                    improvements=ce.improvements,
+                )
+                for ce in course_evals_by_project.get(pid, [])
+            ]
+
+            # Aggregate per-student received peer feedback (team courses only).
+            peer_fb_entries = peer_feedback_by_project.get(pid, [])
+            bonus_by_student: dict[int, tuple[str, list[ReceivedPeerFeedback]]] = {}
+            for feedback, receiving_user in peer_fb_entries:
+                sid = feedback.receiving_student_id
+                existing_name, existing_fbs = bonus_by_student.get(sid, (receiving_user.name, []))
+                bonus_by_student[sid] = (
+                    existing_name,
+                    existing_fbs
+                    + [
+                        ReceivedPeerFeedback(
+                            bonus_points=feedback.bonus_points,
+                            strengths=feedback.strengths,
+                            improvements=feedback.improvements,
+                        )
+                    ],
+                )
+
+            student_bonus_points = [
+                StudentBonusSummary(
+                    student_id=sid,
+                    student_name=name,
+                    feedback=feedbacks,
+                )
+                for sid, (name, feedbacks) in sorted(
+                    bonus_by_student.items(), key=lambda kv: kv[1][0]
+                )
+            ]
+
+            items.append(
+                ProjectOverviewItem(
+                    project_id=pid,
+                    project_title=project.title,
+                    academic_year=project.academic_year,
+                    project_evaluations=project_evaluations,
+                    course_evaluations=course_evaluations,
+                    student_bonus_points=student_bonus_points,
+                )
+            )
+
+        return EvaluationOverviewResponse(projects=items)
