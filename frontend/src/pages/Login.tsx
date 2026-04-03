@@ -1,6 +1,6 @@
 import { useState, FormEvent, useRef, KeyboardEvent, ClipboardEvent, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Mail, KeyRound, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { requestOtp, ApiError } from '@/api';
@@ -229,7 +229,7 @@ export const Login = () => {
                   {otpValues.map((value, index) => (
                     <input
                       key={index}
-                      ref={(el) => (otpRefs.current[index] = el)}
+                      ref={(el) => { otpRefs.current[index] = el; }}
                       type="text"
                       inputMode="numeric"
                       maxLength={1}
