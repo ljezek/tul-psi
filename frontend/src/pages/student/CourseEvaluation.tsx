@@ -1,3 +1,7 @@
+import { useLanguage } from "@/contexts/LanguageContext";
+
 export const CourseEvaluation = () => {
-  return <h1>Course Evaluation</h1>;
+  const { t } = useLanguage();
+
+  return <h1>{t("student.courseEvaluation.title")}</h1>;
 };

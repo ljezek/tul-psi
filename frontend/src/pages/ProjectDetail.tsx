@@ -1,3 +1,7 @@
+import { useLanguage } from '@/context/LanguageContext';
+
 export const ProjectDetail = () => {
-  return <h1>Project Detail</h1>;
+  const { t } = useLanguage();
+
+  return <h1>{t('projectDetail.title')}</h1>;
 };

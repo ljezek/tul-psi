@@ -43,11 +43,15 @@ async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof 
   });
 
   if (!response.ok) {
-    let detail;
-    try {
-      detail = await response.json();
-    } catch {
-      detail = await response.text();
+    const errorText = await response.text();
+    let detail: unknown = errorText;
+
+    if (errorText) {
+      try {
+        detail = JSON.parse(errorText);
+      } catch {
+        detail = errorText;
+      }
     }
     throw new ApiError(response.status, detail);
   }
