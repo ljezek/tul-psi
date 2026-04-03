@@ -8,13 +8,14 @@ The **Student Projects Catalogue (SPC)** is a centralized platform for the Facul
 
 ### Key Features
 *   **Project Discovery:** Publicly searchable and filterable list of student projects.
+*   **Course Discovery:** List of all courses with detailed syllabus and project links.
 *   **Role-Based Access:** Distinct views for Public, Student, and Lecturer roles.
 *   **Evaluation System:** Multi-criteria project evaluations (Lecturers), course feedback (Students), and peer feedback (Students).
 *   **OTP Authentication:** Secure, passwordless login restricted to `@tul.cz` email addresses.
 
 ### 🛠️ Tech Stack
 *   **Backend:** Python 3.12, FastAPI, SQLModel (SQLAlchemy + Pydantic), PostgreSQL, Alembic.
-*   **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, React Query.
+*   **Frontend:** React 19, TypeScript, Vite, Tailwind CSS. (Note: Migration to React Query is planned).
 *   **Observability:** OpenTelemetry, Prometheus, Jaeger, Grafana (structured JSON logging).
 *   **Infrastructure:** Docker (local), Azure (production), GitHub Actions (CI/CD).
 
@@ -74,9 +75,36 @@ npm run dev                # Starts on http://localhost:3000
 *   **Frontend:** uses **Vitest** (Target: ≥ 80% coverage).
     *   `npm test`
 
-### Best Practices
-*   **Auth:** OTP tokens are single-use, 15-min expiry, @tul.cz only.
-*   **Security:** JWT in HttpOnly/Secure cookies + XSRF protection (Double Submit Cookie).
-*   **Observability:** All backend logs are structured JSON. Every request is traced via OpenTelemetry.
+### 💎 Best Practices
+
+#### General
 *   **Git Workflow:** All changes must be made via **Feature Branches** and **Pull Requests**. Never commit directly to `main`.
-*   **Documentation:** Maintain `DESIGN.md` and `SPECIFICATION.md` as the source of truth for architecture and requirements.
+*   **Observability:** All backend logs are structured JSON. Every request is traced via OpenTelemetry.
+*   **Tech Debt:** Document missing functionality or future improvements with `// TODO:` comments.
+
+#### Frontend
+*   **Internationalization (i18n):**
+    *   Consistently use `t()` from `LanguageContext` for **all** user-visible strings.
+    *   Maintain full support for both Czech (`cs`) and English (`en`).
+    *   Add all new labels, filters, and error messages to `src/contexts/LanguageContext.tsx`.
+*   **Testing:**
+    *   Test non-trivial logic (e.g., client-side filtering, API parameter building).
+    *   Colocate tests with components (`Component.test.tsx`).
+    *   Priority: Query by role (`getByRole`) > Label (`getByLabelText`) > Test ID.
+    *   Mock API responses carefully (handle lists/objects to avoid runtime errors during tests).
+*   **State & Routing:**
+    *   Persist UI state (like Dashboard filters) in the URL using `useSearchParams`. This ensures filters are remembered when navigating back.
+    *   Use unique identifiers (integer IDs) for routing (e.g., `/courses/:id`) rather than names or codes.
+*   **Accessibility (A11y):**
+    *   Always provide `aria-label` for form inputs that don't have visible labels.
+    *   Use semantic HTML elements (e.g., `<nav>`, `<main>`, `<section>`, `<h1>`-`<h6>`).
+*   **Type Safety:**
+    *   Maintain parity between backend schemas and frontend types (use `snake_case` matching the API).
+    *   Avoid `any` types or `as` casts without a valid `// TODO:` justification.
+*   **UI Components:**
+    *   Be version-aware regarding libraries. For `lucide-react` (v1.7.0), use available icons or logical fallbacks (e.g., `Code` instead of `Github`).
+
+#### Backend
+*   **Security:** JWT in HttpOnly/Secure cookies. Configure `CORSMiddleware` to strictly allow required origins (e.g., `localhost:3000`).
+*   **Auth:** OTP tokens are single-use, 15-min expiry, @tul.cz only.
+*   **API Design:** Ensure resources include necessary identifiers (IDs) for frontend routing.
