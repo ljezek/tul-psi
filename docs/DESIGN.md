@@ -250,6 +250,7 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 |--------|------|------|-------------|
 | `POST` | `/auth/otp/request` | – | Request a one-time code |
 | `POST` | `/auth/otp/verify` | – | Exchange OTP for JWT |
+| `POST` | `/auth/logout` | – | Expire the session cookie |
 
 ```json
 // POST /auth/otp/request — request body
@@ -261,6 +262,10 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 { "email": "jan.novak@tul.cz", "otp": "483921" }
 // 200 + Set-Cookie: session=<jwt>; HttpOnly; Secure; SameSite=Strict
 // 200 → {} · 401 → { "detail": "Invalid or expired code" } · 429 → { "detail": "Too many attempts — request a new code" }
+
+// POST /auth/logout — no request body
+// 200 → {} + Set-Cookie: session=; Max-Age=0; HttpOnly; Secure; SameSite=Strict
+// Idempotent — safe to call without an active session.
 ```
 
 ### Health

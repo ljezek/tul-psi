@@ -1,18 +1,49 @@
-import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { MainLayout } from '@/layouts/MainLayout';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { UserRole } from '@/types';
 
-const App: React.FC = () => {
+// Pages
+import { Dashboard } from '@/pages/Dashboard';
+import { Login } from '@/pages/Login';
+import { ProjectDetail } from '@/pages/ProjectDetail';
+import { StudentHome } from '@/pages/student/StudentHome';
+import { CourseEvaluation } from '@/pages/student/CourseEvaluation';
+import { Results } from '@/pages/student/Results';
+import { LecturerHome } from '@/pages/lecturer/LecturerHome';
+import { CourseProjects } from '@/pages/lecturer/CourseProjects';
+import { ProjectEvaluation } from '@/pages/lecturer/ProjectEvaluation';
+
+function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-tul-blue rounded-2xl mb-6 text-white font-bold text-2xl">
-          FM
-        </div>
-        <h1 className="text-4xl font-bold text-slate-800 mb-2">Katalog Projektů</h1>
-        <p className="text-slate-500">Technická univerzita v Liberci</p>
-      </div>
-    </div>
+    <LanguageProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
+              
+              <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
+                <Route path="/student" element={<StudentHome />} />
+                <Route path="/student/project/:id/evaluate" element={<CourseEvaluation />} />
+                <Route path="/student/project/:id/results" element={<Results />} />
+              </Route>
+              
+              <Route element={<ProtectedRoute allowedRoles={[UserRole.LECTURER, UserRole.ADMIN]} />}>
+                <Route path="/lecturer" element={<LecturerHome />} />
+                <Route path="/lecturer/course/:id" element={<CourseProjects />} />
+                <Route path="/lecturer/project/:id/evaluate" element={<ProjectEvaluation />} />
+              </Route>
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </LanguageProvider>
   );
-};
+}
 
 export default App;
-

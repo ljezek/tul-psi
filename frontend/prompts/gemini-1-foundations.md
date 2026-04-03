@@ -9,7 +9,7 @@ You are building the production React frontend for the **Student Projects Catalo
 - `tailwind.config.js` has a custom `tul-blue` (#0077c8) color and Inter font
 - The backend API is at `VITE_API_URL` (default `http://localhost:8000`), all endpoints prefixed `/api/v1`
 - Authentication is cookie-based: the backend sets an HttpOnly `session` cookie after OTP verification
-- There is NO logout endpoint on the backend — do not attempt to delete the HttpOnly `session` cookie client-side; instead, implement logout as clearing frontend auth state only, and note that server authentication will persist until the cookie expires
+- A `POST /api/v1/auth/logout` endpoint exists on the backend; call it to clear the HttpOnly `session` cookie server-side (it responds with `Set-Cookie: session=; Max-Age=0`)
 - Read `prototype/LanguageContext.tsx` and `prototype/components/Button.tsx` for reference patterns
 
 ## Task
@@ -97,7 +97,7 @@ Requirements:
 
 Authentication context. Pattern:
 - On mount: call `getCurrentUser()`. If 200, store `UserPublic` in state. If error (401), set `user = null`.
-- Expose via context: `user: UserPublic | null`, `loading: boolean`, `login(email: string, otp: string): Promise<void>` (calls `verifyOtp`, then refetches `getCurrentUser`), `logout(): void` (delete `session` cookie by setting `document.cookie = 'session=; Max-Age=0; path=/;'`, set user to null), `refreshUser(): Promise<void>`.
+- Expose via context: `user: UserPublic | null`, `loading: boolean`, `login(email: string, otp: string): Promise<void>` (calls `verifyOtp`, then refetches `getCurrentUser`), `logout(): Promise<void>` (calls `POST /api/v1/auth/logout` to expire the HttpOnly cookie server-side, then sets user to null), `refreshUser(): Promise<void>`.
 - Wrap children with the provider. Show nothing (or a spinner) until initial auth check completes.
 - Export `useAuth()` hook that throws if used outside provider.
 
