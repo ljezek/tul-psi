@@ -849,3 +849,283 @@ async def test_remove_lecturer_succeeds_for_admin() -> None:
         await CoursesService(session).remove_lecturer(1, 42, current_user)
 
     session.commit.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# CoursesService.get_evaluation_overview unit tests
+# ---------------------------------------------------------------------------
+
+
+async def test_get_evaluation_overview_raises_not_found_when_course_absent() -> None:
+    """``get_evaluation_overview`` must raise ``CourseNotFoundError`` when course is missing."""
+    session = MagicMock()
+    admin = MagicMock(spec=User)
+    admin.role = UserRole.ADMIN
+    admin.id = 1
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=None),
+        pytest.raises(CourseNotFoundError),
+    ):
+        await CoursesService(session).get_evaluation_overview(99, requester=admin)
+
+
+async def test_get_evaluation_overview_raises_permission_error_for_student() -> None:
+    """``get_evaluation_overview`` must raise ``CoursePermissionError`` for students."""
+    course = _make_course()
+    session = MagicMock()
+    student = MagicMock(spec=User)
+    student.role = UserRole.STUDENT
+    student.id = 5
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.auth.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        pytest.raises(CoursePermissionError),
+    ):
+        await CoursesService(session).get_evaluation_overview(1, requester=student)
+
+
+async def test_get_evaluation_overview_returns_empty_when_no_projects() -> None:
+    """``get_evaluation_overview`` must return an empty list when the course has no projects."""
+    course = _make_course()
+    session = MagicMock()
+    admin = MagicMock(spec=User)
+    admin.role = UserRole.ADMIN
+    admin.id = 1
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_projects_for_course",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "services.courses.get_submitted_project_evaluations",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.courses.get_submitted_course_evaluations_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.courses.get_peer_feedback_with_users_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+    ):
+        result = await CoursesService(session).get_evaluation_overview(1, requester=admin)
+
+    assert result.projects == []
+
+
+async def test_get_evaluation_overview_aggregates_lecturer_scores() -> None:
+    """``get_evaluation_overview`` must collect per-criterion scores per lecturer evaluation."""
+    from models.project import Project
+    from models.project_evaluation import ProjectEvaluation
+
+    course = _make_course()
+    session = MagicMock()
+    admin = MagicMock(spec=User)
+    admin.role = UserRole.ADMIN
+    admin.id = 1
+
+    project = MagicMock(spec=Project)
+    project.id = 10
+    project.title = "Alpha"
+    project.academic_year = 2025
+
+    ev1 = MagicMock(spec=ProjectEvaluation)
+    ev1.project_id = 10
+    ev1.lecturer_id = 3
+    ev1.scores = [
+        {
+            "criterion_code": "code_quality",
+            "score": 20,
+            "strengths": "Good.",
+            "improvements": "More tests.",
+        }
+    ]
+
+    ev2 = MagicMock(spec=ProjectEvaluation)
+    ev2.project_id = 10
+    ev2.lecturer_id = 4
+    ev2.scores = [
+        {
+            "criterion_code": "code_quality",
+            "score": 16,
+            "strengths": "OK.",
+            "improvements": "Docs.",
+        }
+    ]
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_projects_for_course",
+            new_callable=AsyncMock,
+            return_value=[project],
+        ),
+        patch(
+            "services.courses.get_submitted_project_evaluations",
+            new_callable=AsyncMock,
+            return_value={10: [ev1, ev2]},
+        ),
+        patch(
+            "services.courses.get_submitted_course_evaluations_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.courses.get_peer_feedback_with_users_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+    ):
+        result = await CoursesService(session).get_evaluation_overview(1, requester=admin)
+
+    assert len(result.projects) == 1
+    item = result.projects[0]
+    assert item.project_id == 10
+    # Two lecturer evaluations, each with one criterion score.
+    assert len(item.project_evaluations) == 2
+    assert item.project_evaluations[0].lecturer_id == 3
+    assert item.project_evaluations[0].criterion_scores[0].criterion_code == "code_quality"
+    assert item.project_evaluations[0].criterion_scores[0].score == 20
+    assert item.project_evaluations[1].criterion_scores[0].score == 16
+    # No course evaluations submitted.
+    assert item.course_evaluations == []
+
+
+async def test_get_evaluation_overview_computes_avg_course_rating() -> None:
+    """``get_evaluation_overview`` must include verbatim course evaluations (no aggregation)."""
+    from models.course_evaluation import CourseEvaluation
+    from models.project import Project
+
+    course = _make_course()
+    session = MagicMock()
+    admin = MagicMock(spec=User)
+    admin.role = UserRole.ADMIN
+    admin.id = 1
+
+    project = MagicMock(spec=Project)
+    project.id = 10
+    project.title = "Beta"
+    project.academic_year = 2025
+
+    ce1 = MagicMock(spec=CourseEvaluation)
+    ce1.project_id = 10
+    ce1.rating = 4
+    ce1.strengths = "Good."
+    ce1.improvements = None
+
+    ce2 = MagicMock(spec=CourseEvaluation)
+    ce2.project_id = 10
+    ce2.rating = 2
+    ce2.strengths = None
+    ce2.improvements = "Needs work."
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_projects_for_course",
+            new_callable=AsyncMock,
+            return_value=[project],
+        ),
+        patch(
+            "services.courses.get_submitted_project_evaluations",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.courses.get_submitted_course_evaluations_for_projects",
+            new_callable=AsyncMock,
+            return_value={10: [ce1, ce2]},
+        ),
+        patch(
+            "services.courses.get_peer_feedback_with_users_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+    ):
+        result = await CoursesService(session).get_evaluation_overview(1, requester=admin)
+
+    assert len(result.projects) == 1
+    evals = result.projects[0].course_evaluations
+    assert len(evals) == 2
+    ratings = {ce.rating for ce in evals}
+    assert ratings == {4, 2}
+
+
+async def test_get_evaluation_overview_aggregates_peer_bonus_points() -> None:
+    """``get_evaluation_overview`` must collect per-student received peer feedback items."""
+    from models.peer_feedback import PeerFeedback
+    from models.project import Project
+
+    course = _make_course()
+    session = MagicMock()
+    admin = MagicMock(spec=User)
+    admin.role = UserRole.ADMIN
+    admin.id = 1
+
+    project = MagicMock(spec=Project)
+    project.id = 10
+    project.title = "Gamma"
+    project.academic_year = 2025
+
+    alice = MagicMock(spec=User)
+    alice.id = 5
+    alice.name = "Alice"
+
+    fb1 = MagicMock(spec=PeerFeedback)
+    fb1.receiving_student_id = 5
+    fb1.bonus_points = 3
+    fb1.strengths = "Fast."
+    fb1.improvements = None
+
+    fb2 = MagicMock(spec=PeerFeedback)
+    fb2.receiving_student_id = 5
+    fb2.bonus_points = 2
+    fb2.strengths = None
+    fb2.improvements = "More communication."
+
+    with (
+        patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
+        patch(
+            "services.courses.get_projects_for_course",
+            new_callable=AsyncMock,
+            return_value=[project],
+        ),
+        patch(
+            "services.courses.get_submitted_project_evaluations",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.courses.get_submitted_course_evaluations_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.courses.get_peer_feedback_with_users_for_projects",
+            new_callable=AsyncMock,
+            return_value={10: [(fb1, alice), (fb2, alice)]},
+        ),
+    ):
+        result = await CoursesService(session).get_evaluation_overview(1, requester=admin)
+
+    assert len(result.projects) == 1
+    bonuses = result.projects[0].student_bonus_points
+    assert len(bonuses) == 1
+    assert bonuses[0].student_id == 5
+    assert bonuses[0].student_name == "Alice"
+    assert len(bonuses[0].feedback) == 2
+    bonus_values = {fb.bonus_points for fb in bonuses[0].feedback}
+    assert bonus_values == {3, 2}
