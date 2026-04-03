@@ -125,3 +125,34 @@ async def verify_otp(
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
     return {}
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_200_OK,
+    summary="Log out the current user",
+    description=(
+        "Expires the ``session`` HttpOnly cookie by setting ``Max-Age=0``.  "
+        "This endpoint is idempotent — calling it when no session is active is safe."
+    ),
+)
+async def logout(response: Response) -> dict[str, str]:
+    """Clear the ``session`` cookie to log out the current user.
+
+    Sets the cookie with ``Max-Age=0`` and the same attributes used during login
+    so that the browser discards it immediately.  The endpoint is intentionally
+    unauthenticated — callers with an invalid or already-expired session can
+    still hit it safely without receiving a 401.
+    """
+    settings = get_settings()
+    # Mirror the Secure flag used during login so browsers honour the override.
+    secure_cookie = settings.app_env != "local"
+    response.set_cookie(
+        key="session",
+        value="",
+        httponly=True,
+        secure=secure_cookie,
+        samesite="strict",
+        max_age=0,
+    )
+    return {}
