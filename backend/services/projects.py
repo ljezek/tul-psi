@@ -836,7 +836,8 @@ class ProjectsService:
         (if any), and the peer-feedback entries the caller has authored.
 
         Raises ``ProjectNotFoundError`` when the project does not exist.
-        Raises ``PermissionDeniedError`` when *user* is not a project member.
+        Raises ``PermissionDeniedError`` when *user* is not a student or is
+        not a project member.
         """
         row = await db_get_project(self._session, project_id)
         if row is None:

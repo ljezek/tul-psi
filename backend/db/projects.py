@@ -646,9 +646,10 @@ async def replace_peer_feedback(
 ) -> None:
     """Replace all peer feedback rows for *course_evaluation_id* with *items*.
 
-    Deletes all existing ``PeerFeedback`` rows for the evaluation and inserts
-    the provided items in one round-trip.  Passing an empty list clears all
-    existing feedback.  The caller is responsible for committing the session.
+    Deletes all existing ``PeerFeedback`` rows for the evaluation, adds the
+    provided items to the session, and flushes the pending changes.  Passing
+    an empty list clears all existing feedback.  The caller is responsible for
+    committing the session.
     """
     await session.execute(
         delete(PeerFeedback).where(PeerFeedback.course_evaluation_id == course_evaluation_id)

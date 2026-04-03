@@ -357,8 +357,8 @@ class CoursesService:
 
         For each project the response includes per-criterion average scores from
         submitted lecturer evaluations, the average course-satisfaction rating from
-        submitted student course evaluations, and per-student total peer bonus points
-        received.
+        submitted student course evaluations, and per-student average peer bonus
+        points received.
 
         When *year* is provided only projects from that academic year are included.
         Projects are ordered by academic year descending and project title ascending.
@@ -410,7 +410,10 @@ class CoursesService:
                     criterion_code=code,
                     avg_score=sum(values) / len(values),
                 )
-                for code, values in criterion_totals.items()
+                for code, values in sorted(
+                    criterion_totals.items(),
+                    key=lambda item: item[0],
+                )
             ]
 
             # Compute average course satisfaction rating.
