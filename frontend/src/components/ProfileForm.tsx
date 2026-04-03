@@ -18,6 +18,7 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
   const [github, setGithub] = useState(user?.github_alias || '');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -30,14 +31,16 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(false);
+    setError(null);
     try {
       await updateCurrentUser({ name, github_alias: github || null });
       await refreshUser();
       setSuccess(true);
       if (onSuccess) onSuccess();
       setTimeout(() => setSuccess(false), 2000);
-    } catch (error) {
-      console.error('Failed to update profile:', error);
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      setError(t('profile.error_update'));
     } finally {
       setLoading(false);
     }
@@ -85,12 +88,16 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
 
       <form onSubmit={handleSave} className="space-y-5">
         <div>
-          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">
+          <label 
+            htmlFor="profile-name"
+            className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1"
+          >
             {t('profile.name')}
           </label>
           <div className="relative group">
             <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-tul-blue transition-colors" />
             <input
+              id="profile-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -101,12 +108,16 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
         </div>
 
         <div>
-          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">
+          <label 
+            htmlFor="profile-github"
+            className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1"
+          >
             {t('profile.github')}
           </label>
           <div className="relative group">
             <GitHubLogo size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-tul-blue transition-colors" />
             <input
+              id="profile-github"
               type="text"
               value={github}
               onChange={(e) => setGithub(e.target.value)}
@@ -115,6 +126,12 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
             />
           </div>
         </div>
+
+        {error && (
+          <div className="text-sm text-red-600 font-medium bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-1">
+            {error}
+          </div>
+        )}
 
         <Button
           type="submit"

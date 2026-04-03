@@ -183,6 +183,8 @@ const translations: Record<string, Record<Language, string>> = {
   'login.error_invalid_email': { cs: 'Zadejte platný @tul.cz email.', en: 'Enter a valid @tul.cz email.' },
   'login.error_invalid_otp': { cs: 'Neplatný nebo expirovaný kód.', en: 'Invalid or expired code.' },
   'login.error_too_many': { cs: 'Příliš mnoho pokusů — vyžádejte nový kód.', en: 'Too many attempts — request a new code.' },
+  'login.error_unexpected': { cs: 'Došlo k nečekané chybě. Zkuste to prosím znovu.', en: 'An unexpected error occurred. Please try again.' },
+  'login.otp_digit': { cs: 'Číslice {index} z 6', en: 'Digit {index} of 6' },
 
   // Profile
   'profile.title': { cs: 'Můj profil', en: 'My Profile' },
@@ -191,6 +193,7 @@ const translations: Record<string, Record<Language, string>> = {
   'profile.github': { cs: 'GitHub alias', en: 'GitHub alias' },
   'profile.save': { cs: 'Uložit změny', en: 'Save Changes' },
   'profile.success': { cs: 'Profil byl úspěšně aktualizován.', en: 'Profile successfully updated.' },
+  'profile.error_update': { cs: 'Nepodařilo se aktualizovat profil.', en: 'Failed to update profile.' },
   'profile.editing': { cs: 'Upravit profil', en: 'Edit Profile' },
 };
 

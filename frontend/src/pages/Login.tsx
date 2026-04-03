@@ -46,7 +46,7 @@ export const Login = () => {
       if (err instanceof ApiError && err.status === 422) {
         setError(t('login.error_invalid_email'));
       } else {
-        setError('An unexpected error occurred. Please try again.');
+        setError(t('login.error_unexpected'));
         console.error(err);
       }
     } finally {
@@ -73,10 +73,10 @@ export const Login = () => {
         } else if (err.status === 429) {
           setError(t('login.error_too_many'));
         } else {
-          setError('An unexpected error occurred. Please try again.');
+          setError(t('login.error_unexpected'));
         }
       } else {
-        setError('An unexpected error occurred. Please try again.');
+        setError(t('login.error_unexpected'));
         console.error(err);
       }
     } finally {
@@ -90,7 +90,7 @@ export const Login = () => {
     try {
       await requestOtp(fullEmail);
     } catch (err) {
-      setError('Failed to resend code. Please try again.');
+      setError(t('login.error_unexpected'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -175,6 +175,7 @@ export const Login = () => {
                       type="text"
                       required
                       autoFocus
+                      autoComplete="username"
                       className="block w-full pl-11 pr-3 py-3.5 border border-slate-200 rounded-l-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue focus:bg-white transition-all text-slate-900 text-right"
                       placeholder="jan.novak"
                       value={emailPrefix}
@@ -235,6 +236,8 @@ export const Login = () => {
                       maxLength={1}
                       value={value}
                       autoFocus={index === 0}
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      aria-label={t('login.otp_digit').replace('{index}', (index + 1).toString())}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       onPaste={index === 0 ? handlePaste : undefined}

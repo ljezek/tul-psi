@@ -107,6 +107,8 @@ export const MainLayout = () => {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
                 aria-label={mobileMenuOpen ? t('nav.close_menu') : t('nav.open_menu')}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-nav-menu"
               >
                 {mobileMenuOpen ? <X /> : <Menu />}
               </button>
