@@ -51,7 +51,7 @@ const translations: Record<string, Record<Language, string>> = {
   'courseDetail.peer_bonus': { cs: 'Studentské peer-bonus body', en: 'Student peer-bonus points' },
 
   // Dashboard
-  'dashboard.title': { cs: 'Katalog projektů', en: 'Project Catalogue' },
+  'dashboard.title': { cs: 'Prohlížeč projektů', en: 'Project Browser' },
   'dashboard.subtitle': { cs: 'Prozkoumejte inovativní práce studentů FM TUL.', en: 'Explore innovative work by FM TUL students.' },
   'dashboard.search_placeholder': { cs: 'Hledat projekt nebo technologii...', en: 'Search project or technology...' },
   'dashboard.filter_subject': { cs: 'Předmět', en: 'Subject' },

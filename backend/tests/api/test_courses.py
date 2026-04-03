@@ -301,6 +301,7 @@ _SEEDED_PROJECT = ProjectPublic(
     academic_year=2025,
     results_unlocked=False,
     course=CoursePublic(
+        id=1,
         code="PSI",
         name="PSI Course",
         syllabus=None,
