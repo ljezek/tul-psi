@@ -1,0 +1,127 @@
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { StudentHome } from './StudentHome';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import * as api from '@/api';
+import { UserRole, ProjectType } from '@/types';
+
+// Mock API
+vi.mock('@/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof api>();
+  return {
+    ...actual,
+    getProjects: vi.fn(),
+    getCurrentUser: vi.fn(),
+  };
+});
+
+const mockUser = {
+  id: 1,
+  email: 'student@tul.cz',
+  name: 'Test Student',
+  role: UserRole.STUDENT,
+  is_active: true,
+};
+
+const mockProjects = [
+  {
+    id: 101,
+    title: 'Project Alpha',
+    academic_year: 2024,
+    course: { id: 1, code: 'C1', name: 'Course 1', project_type: ProjectType.TEAM },
+    members: [{ id: 1, name: 'Test Student' }, { id: 2, name: 'Other' }],
+    results_unlocked: true,
+    course_evaluations: [{ student_id: 1, submitted: true }],
+  },
+  {
+    id: 102,
+    title: 'Project Beta',
+    academic_year: 2024,
+    course: { id: 2, code: 'C2', name: 'Course 2', project_type: ProjectType.INDIVIDUAL },
+    members: [{ id: 1, name: 'Test Student' }],
+    results_unlocked: false,
+    course_evaluations: [{ student_id: 1, submitted: false }],
+  },
+  {
+    id: 103,
+    title: 'Other Project',
+    academic_year: 2024,
+    course: { id: 3, code: 'C3', name: 'Course 3', project_type: ProjectType.TEAM },
+    members: [{ id: 3, name: 'Someone Else' }],
+    results_unlocked: false,
+    course_evaluations: [],
+  }
+];
+
+describe('StudentHome', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (api.getCurrentUser as Mock).mockResolvedValue(mockUser);
+    (api.getProjects as Mock).mockResolvedValue(mockProjects);
+  });
+
+  const renderHome = async () => {
+    let result;
+    await act(async () => {
+      result = render(
+        <LanguageProvider>
+          <AuthProvider>
+            <MemoryRouter>
+              <StudentHome />
+            </MemoryRouter>
+          </AuthProvider>
+        </LanguageProvider>
+      );
+    });
+    return result;
+  };
+
+  it('renders only projects where user is a member', async () => {
+    await renderHome();
+    
+    await waitFor(() => {
+      expect(screen.getByText('Project Alpha')).toBeInTheDocument();
+      expect(screen.getByText('Project Beta')).toBeInTheDocument();
+      expect(screen.queryByText('Other Project')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows correct status badges for evaluations', async () => {
+    await renderHome();
+    
+    await waitFor(() => {
+      // Project Alpha: Submitted
+      const alphaCard = screen.getByText('Project Alpha').closest('div.group');
+      expect(alphaCard).toHaveTextContent(/Odesláno/i);
+      
+      // Project Beta: Draft
+      const betaCard = screen.getByText('Project Beta').closest('div.group');
+      expect(betaCard).toHaveTextContent(/Koncept/i);
+    });
+  });
+
+  it('shows correct status badges for results', async () => {
+    await renderHome();
+    
+    await waitFor(() => {
+      // Project Alpha: Available
+      const alphaCard = screen.getByText('Project Alpha').closest('div.group');
+      expect(alphaCard).toHaveTextContent(/Dostupné/i);
+      
+      // Project Beta: Pending
+      const betaCard = screen.getByText('Project Beta').closest('div.group');
+      expect(betaCard).toHaveTextContent(/Čeká se/i);
+    });
+  });
+
+  it('shows empty state when no projects assigned', async () => {
+    (api.getProjects as Mock).mockResolvedValue([]);
+    await renderHome();
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Nejste přiřazeni k žádnému projektu/i)).toBeInTheDocument();
+    });
+  });
+});
