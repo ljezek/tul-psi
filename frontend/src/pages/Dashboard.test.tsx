@@ -159,11 +159,18 @@ describe('Dashboard', () => {
   it('filters projects by lecturer', async () => {
     const user = userEvent.setup();
     
-    // Add a lecturer to the second mock project for testing
-    const projectsWithLecturer = [
-      ...mockProjects,
-    ];
-    projectsWithLecturer[1].course.lecturers = [{ name: 'Prof. Data', github_alias: null, email: null }];
+    // Create a modified copy of the second project without mutating shared fixtures.
+    const projectsWithLecturer = mockProjects.map((project, index) =>
+      index === 1
+        ? {
+            ...project,
+            course: {
+              ...project.course,
+              lecturers: [{ name: 'Prof. Data', github_alias: null, email: null }],
+            },
+          }
+        : project,
+    );
     (api.getProjects as Mock).mockResolvedValue(projectsWithLecturer);
 
     renderDashboard();

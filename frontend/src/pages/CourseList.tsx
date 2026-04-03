@@ -25,7 +25,7 @@ export const CourseList = () => {
       const data = await getCourses();
       setCourses(data);
     } catch (err) {
-      setError(t('courseList.error_fetching') || 'Failed to fetch courses');
+      setError(t('courseList.error_fetching'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -108,6 +108,7 @@ export const CourseList = () => {
           type="text"
           className="block w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue transition-all shadow-sm"
           placeholder={t('dashboard.search_placeholder')}
+          aria-label={t('dashboard.search_placeholder')}
           value={searchTerm}
           onChange={(e) => setSearchQuery(e.target.value)}
         />

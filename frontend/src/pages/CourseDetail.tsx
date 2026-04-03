@@ -27,18 +27,27 @@ export const CourseDetailView = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCourseData = async () => {
-    if (!id) return;
     setLoading(true);
     setError(null);
+
+    const courseId = id ? Number(id) : NaN;
+
+    if (!Number.isInteger(courseId) || courseId <= 0) {
+      setCourse(null);
+      setError(t('courseDetail.not_found'));
+      setLoading(false);
+      return;
+    }
+
     try {
-      const courseData = await getCourse(parseInt(id));
+      const courseData = await getCourse(courseId);
       setCourse(courseData);
       
       // Fetch projects for this course
       const projectsData = await getProjects({ course: courseData.code });
       setProjects(projectsData);
     } catch (err) {
-      setError(t('courseDetail.error_fetching') || 'Failed to fetch course details');
+      setError(t('courseDetail.error_fetching'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -66,7 +75,7 @@ export const CourseDetailView = () => {
   if (error || !course) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <ErrorMessage message={error || 'Course not found'} onRetry={fetchCourseData} retryLabel={t('error.retry')} />
+        <ErrorMessage message={error || t('courseDetail.not_found')} onRetry={fetchCourseData} retryLabel={t('error.retry')} />
       </div>
     );
   }
@@ -153,7 +162,7 @@ export const CourseDetailView = () => {
                   ))}
                   
                   {/* Students peer-bonus body */}
-                  {course.peer_bonus_budget && (
+                  {course.peer_bonus_budget != null && (
                     <tr className="bg-blue-50/30">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 font-bold text-blue-800">

@@ -37,6 +37,7 @@ const translations: Record<string, Record<Language, string>> = {
   'courseList.filter_by_lecturer': { cs: 'Předměty vyučujícího: ', en: 'Courses by lecturer: ' },
   'courseList.clear_filter': { cs: 'Zobrazit všechny předměty', en: 'Show all courses' },
   'courseList.no_courses': { cs: 'Nebyly nalezeny žádné předměty.', en: 'No courses found.' },
+  'courseList.error_fetching': { cs: 'Nepodařilo se načíst seznam předmětů.', en: 'Failed to fetch courses.' },
   'courseDetail.syllabus': { cs: 'Sylabus předmětu', en: 'Course Syllabus' },
   'courseDetail.evaluation_criteria': { cs: 'Kritéria hodnocení', en: 'Evaluation Criteria' },
   'courseDetail.min_score': { cs: 'Minimum k splnění', en: 'Minimum to pass' },
@@ -47,6 +48,7 @@ const translations: Record<string, Record<Language, string>> = {
   'courseDetail.no_projects': { cs: 'Pro tento předmět zatím nejsou žádné projekty.', en: 'No projects for this course yet.' },
   'courseDetail.back_to_list': { cs: 'Zpět na seznam předmětů', en: 'Back to course list' },
   'courseDetail.error_fetching': { cs: 'Nepodařilo se načíst detail předmětu.', en: 'Failed to fetch course details.' },
+  'courseDetail.not_found': { cs: 'Předmět nebyl nalezen.', en: 'Course not found.' },
   'courseDetail.view_detail': { cs: 'Detail předmětu', en: 'Course details' },
   'courseDetail.peer_bonus': { cs: 'Studentské peer-bonus body', en: 'Student peer-bonus points' },
 
@@ -87,6 +89,7 @@ const translations: Record<string, Record<Language, string>> = {
   // Project Detail page
   'projectDetail.title': { cs: 'Detail projektu', en: 'Project Detail' },
   'projectDetail.error_fetching': { cs: 'Nepodařilo se načíst detail projektu.', en: 'Failed to fetch project details.' },
+  'projectDetail.not_found': { cs: 'Projekt nebyl nalezen.', en: 'Project not found.' },
 
   // Lecturer pages
   'lecturer.courseProjects.heading': { cs: 'Projekty předmětu', en: 'Course Projects' },

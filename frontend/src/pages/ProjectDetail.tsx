@@ -29,14 +29,23 @@ export const ProjectDetail = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProject = async () => {
-    if (!id) return;
     setLoading(true);
     setError(null);
+
+    const projectId = id ? Number(id) : NaN;
+
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      setProject(null);
+      setError(t('projectDetail.not_found'));
+      setLoading(false);
+      return;
+    }
+
     try {
-      const data = await getProject(parseInt(id));
+      const data = await getProject(projectId);
       setProject(data);
     } catch (err) {
-      setError(t('projectDetail.error_fetching') || 'Failed to fetch project details');
+      setError(t('projectDetail.error_fetching'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -54,7 +63,7 @@ export const ProjectDetail = () => {
   if (error || !project) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <ErrorMessage message={error || 'Project not found'} onRetry={fetchProject} retryLabel={t('error.retry')} />
+        <ErrorMessage message={error || t('projectDetail.not_found')} onRetry={fetchProject} retryLabel={t('error.retry')} />
       </div>
     );
   }

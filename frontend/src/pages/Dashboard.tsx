@@ -49,7 +49,7 @@ export const Dashboard = () => {
       setProjects(projectsData);
       setCourses(coursesData);
     } catch (err) {
-      setError(t('dashboard.error_fetching') || 'Failed to fetch projects');
+      setError(t('dashboard.error_fetching'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -133,6 +133,7 @@ export const Dashboard = () => {
               type="text"
               className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue transition-all"
               placeholder={t('dashboard.search_placeholder')}
+              aria-label={t('dashboard.search_placeholder')}
               value={searchQuery}
               onChange={(e) => updateFilter('q', e.target.value)}
             />
