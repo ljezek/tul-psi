@@ -2146,6 +2146,30 @@ async def test_save_course_evaluation_raises_conflict_when_results_unlocked() ->
         await ProjectsService(session).save_course_evaluation(1, body, user)
 
 
+async def test_save_course_evaluation_raises_when_submitted_without_rating() -> None:
+    """``save_course_evaluation`` must raise when ``submitted=True`` but rating is None."""
+    from schemas.projects import CourseEvaluationUpsert
+    from services.projects import InvalidEvaluationDataError
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    session = MagicMock()
+    user = _make_student_user(user_id=5)
+
+    body = CourseEvaluationUpsert(submitted=True)  # rating defaults to None
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
+        pytest.raises(InvalidEvaluationDataError, match="[Rr]ating"),
+    ):
+        await ProjectsService(session).save_course_evaluation(1, body, user)
+
+
 async def test_save_course_evaluation_raises_invalid_data_for_unknown_recipient() -> None:
     """``save_course_evaluation`` must raise ``InvalidEvaluationDataError`` for bad recipient."""
     from models.user import User

@@ -852,20 +852,22 @@ class ProjectsService:
         if not await is_project_member(self._session, project_id, user_id):
             raise PermissionDeniedError(f"User {user_id} is not a member of project {project_id}.")
 
-        members_by_project = await get_project_members(self._session, [project_id])
-        all_members = members_by_project.get(project_id, [])
-
-        # Teammates are all project members except the requesting student.
-        teammates = [
-            MemberPublic(
-                id=_require_id(m),
-                github_alias=m.github_alias,
-                name=m.name,
-                email=m.email,
-            )
-            for m in all_members
-            if m.id != user_id
-        ]
+        # For team courses, build the teammates list from project members.
+        # Individual projects have a single student member, so there are no teammates.
+        teammates: list[MemberPublic] = []
+        if course.project_type == ProjectType.TEAM:
+            members_by_project = await get_project_members(self._session, [project_id])
+            all_members = members_by_project.get(project_id, [])
+            teammates = [
+                MemberPublic(
+                    id=_require_id(m),
+                    github_alias=m.github_alias,
+                    name=m.name,
+                    email=m.email,
+                )
+                for m in all_members
+                if m.id != user_id
+            ]
 
         current_eval = await get_course_evaluation_by_student(self._session, project_id, user_id)
         current_evaluation: CourseEvaluationDetail | None = None
@@ -903,12 +905,12 @@ class ProjectsService:
         Raises ``PermissionDeniedError`` when *user* is not a student or not a project member.
         Raises ``EvaluationConflictError`` when the project results are already
         unlocked (editing is no longer permitted after unlock).
-        Raises ``InvalidEvaluationDataError`` when peer feedback is provided for a
-        non-team course, a recipient ID appears more than once, a recipient is not a
-        project teammate, bonus points are non-zero when the course has no peer-bonus
-        scheme, bonus points are negative or exceed ``2 × peer_bonus_budget``, or the
-        total bonus does not equal ``peer_bonus_budget × N_teammates`` on a final
-        submission.
+        Raises ``InvalidEvaluationDataError`` when ``submitted=True`` but ``rating``
+        is ``None``, when peer feedback is provided for a non-team course, a
+        recipient ID appears more than once, a recipient is not a project teammate,
+        bonus points are non-zero when the course has no peer-bonus scheme, bonus
+        points are negative or exceed ``2 × peer_bonus_budget``, or the total bonus
+        does not equal ``peer_bonus_budget × N_teammates`` on a final submission.
         """
         row = await db_get_project(self._session, project_id)
         if row is None:
@@ -927,6 +929,12 @@ class ProjectsService:
             raise EvaluationConflictError(
                 f"Project {project_id} results are already unlocked;"
                 " course evaluation cannot be edited."
+            )
+
+        # A final submission requires a rating; drafts may omit it.
+        if body.submitted and body.rating is None:
+            raise InvalidEvaluationDataError(
+                "Rating is required when submitting a course evaluation."
             )
 
         # Peer feedback is only meaningful on team courses; reject it for individual courses.
@@ -1004,16 +1012,18 @@ class ProjectsService:
         if evaluation.id is None:
             raise ValueError(f"CourseEvaluation returned from DB has no id: {evaluation!r}")
 
-        feedback_items: list[dict[str, object]] = [
-            {
-                "receiving_student_id": fb.receiving_student_id,
-                "strengths": fb.strengths,
-                "improvements": fb.improvements,
-                "bonus_points": fb.bonus_points,
-            }
-            for fb in body.peer_feedback
-        ]
-        await replace_peer_feedback(self._session, evaluation.id, feedback_items)
+        # Peer feedback is only stored for team courses.
+        if course.project_type == ProjectType.TEAM:
+            feedback_items: list[dict[str, object]] = [
+                {
+                    "receiving_student_id": fb.receiving_student_id,
+                    "strengths": fb.strengths,
+                    "improvements": fb.improvements,
+                    "bonus_points": fb.bonus_points,
+                }
+                for fb in body.peer_feedback
+            ]
+            await replace_peer_feedback(self._session, evaluation.id, feedback_items)
         await self._session.commit()
 
         if body.submitted:

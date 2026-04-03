@@ -76,7 +76,8 @@ class CourseEvaluationDetail(BaseModel):
 
     id: int
     student_id: int
-    rating: int
+    # Null when the student has not yet set a rating (draft without a rating).
+    rating: int | None
     strengths: str | None
     improvements: str | None
     submitted: bool
@@ -229,11 +230,13 @@ class CourseEvaluationUpsert(BaseModel):
     ``submitted=False`` (default) saves the evaluation as a draft that can be
     updated later.  ``submitted=True`` finalises the evaluation and triggers
     the automatic project-result unlock check once all students and lecturers
-    have submitted.
+    have submitted.  Draft saves may omit ``rating`` and any text fields;
+    final submissions (``submitted=True``) require ``rating`` to be present.
     """
 
-    # Overall course satisfaction rating; must be in the 1–5 range.
-    rating: int
+    # Overall course satisfaction rating; must be in the 1–5 range when provided.
+    # Null is allowed for drafts where the student has not yet chosen a rating.
+    rating: int | None = None
     strengths: str | None = None
     improvements: str | None = None
     # False means save as draft; True means finalise and trigger auto-unlock.
@@ -242,9 +245,9 @@ class CourseEvaluationUpsert(BaseModel):
 
     @field_validator("rating")
     @classmethod
-    def rating_must_be_in_range(cls, v: int) -> int:
-        """Reject any rating outside the 1–5 scale."""
-        if v < 1 or v > 5:
+    def rating_must_be_in_range(cls, v: int | None) -> int | None:
+        """Reject any non-null rating outside the 1–5 scale."""
+        if v is not None and (v < 1 or v > 5):
             raise ValueError("Rating must be between 1 and 5.")
         return v
 

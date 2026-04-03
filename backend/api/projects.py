@@ -471,11 +471,11 @@ async def save_course_evaluation(
     Raises HTTP 403 when the caller is not a student or not a project member.
     Raises HTTP 404 when the project does not exist.
     Raises HTTP 409 when the project results are already unlocked.
-    Raises HTTP 422 when peer feedback is provided for a non-team course, a recipient
-    ID is duplicated, a recipient is not a teammate, bonus points are non-zero when
-    the course has no peer-bonus scheme, bonus points are negative or exceed the
-    per-recipient cap, or the total bonus does not match the course budget on a final
-    submission.
+    Raises HTTP 422 when ``submitted=True`` but ``rating`` is not provided, when
+    peer feedback is provided for a non-team course, a recipient ID is duplicated,
+    a recipient is not a teammate, bonus points are non-zero when the course has
+    no peer-bonus scheme, bonus points are negative or exceed the per-recipient cap,
+    or the total bonus does not match the course budget on a final submission.
     """
     try:
         return await service.save_course_evaluation(project_id, body, current_user)

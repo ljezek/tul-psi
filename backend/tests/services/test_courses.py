@@ -906,7 +906,7 @@ async def test_get_evaluation_overview_returns_empty_when_no_projects() -> None:
             return_value=[],
         ),
         patch(
-            "services.courses.get_submitted_project_evaluations_for_projects",
+            "services.courses.get_submitted_project_evaluations",
             new_callable=AsyncMock,
             return_value={},
         ),
@@ -927,7 +927,7 @@ async def test_get_evaluation_overview_returns_empty_when_no_projects() -> None:
 
 
 async def test_get_evaluation_overview_aggregates_lecturer_scores() -> None:
-    """``get_evaluation_overview`` must average per-criterion scores across lecturer evaluations."""
+    """``get_evaluation_overview`` must collect per-criterion scores per lecturer evaluation."""
     from models.project import Project
     from models.project_evaluation import ProjectEvaluation
 
@@ -944,11 +944,27 @@ async def test_get_evaluation_overview_aggregates_lecturer_scores() -> None:
 
     ev1 = MagicMock(spec=ProjectEvaluation)
     ev1.project_id = 10
-    ev1.scores = [{"criterion_code": "code_quality", "score": 20}]
+    ev1.lecturer_id = 3
+    ev1.scores = [
+        {
+            "criterion_code": "code_quality",
+            "score": 20,
+            "strengths": "Good.",
+            "improvements": "More tests.",
+        }
+    ]
 
     ev2 = MagicMock(spec=ProjectEvaluation)
     ev2.project_id = 10
-    ev2.scores = [{"criterion_code": "code_quality", "score": 16}]
+    ev2.lecturer_id = 4
+    ev2.scores = [
+        {
+            "criterion_code": "code_quality",
+            "score": 16,
+            "strengths": "OK.",
+            "improvements": "Docs.",
+        }
+    ]
 
     with (
         patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
@@ -958,7 +974,7 @@ async def test_get_evaluation_overview_aggregates_lecturer_scores() -> None:
             return_value=[project],
         ),
         patch(
-            "services.courses.get_submitted_project_evaluations_for_projects",
+            "services.courses.get_submitted_project_evaluations",
             new_callable=AsyncMock,
             return_value={10: [ev1, ev2]},
         ),
@@ -978,14 +994,18 @@ async def test_get_evaluation_overview_aggregates_lecturer_scores() -> None:
     assert len(result.projects) == 1
     item = result.projects[0]
     assert item.project_id == 10
-    assert len(item.avg_criterion_scores) == 1
-    assert item.avg_criterion_scores[0].criterion_code == "code_quality"
-    assert item.avg_criterion_scores[0].avg_score == 18.0
-    assert item.avg_course_rating is None
+    # Two lecturer evaluations, each with one criterion score.
+    assert len(item.project_evaluations) == 2
+    assert item.project_evaluations[0].lecturer_id == 3
+    assert item.project_evaluations[0].criterion_scores[0].criterion_code == "code_quality"
+    assert item.project_evaluations[0].criterion_scores[0].score == 20
+    assert item.project_evaluations[1].criterion_scores[0].score == 16
+    # No course evaluations submitted.
+    assert item.course_evaluations == []
 
 
 async def test_get_evaluation_overview_computes_avg_course_rating() -> None:
-    """``get_evaluation_overview`` must average course ratings across submitted evaluations."""
+    """``get_evaluation_overview`` must include verbatim course evaluations (no aggregation)."""
     from models.course_evaluation import CourseEvaluation
     from models.project import Project
 
@@ -1003,10 +1023,14 @@ async def test_get_evaluation_overview_computes_avg_course_rating() -> None:
     ce1 = MagicMock(spec=CourseEvaluation)
     ce1.project_id = 10
     ce1.rating = 4
+    ce1.strengths = "Good."
+    ce1.improvements = None
 
     ce2 = MagicMock(spec=CourseEvaluation)
     ce2.project_id = 10
     ce2.rating = 2
+    ce2.strengths = None
+    ce2.improvements = "Needs work."
 
     with (
         patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
@@ -1016,7 +1040,7 @@ async def test_get_evaluation_overview_computes_avg_course_rating() -> None:
             return_value=[project],
         ),
         patch(
-            "services.courses.get_submitted_project_evaluations_for_projects",
+            "services.courses.get_submitted_project_evaluations",
             new_callable=AsyncMock,
             return_value={},
         ),
@@ -1034,11 +1058,14 @@ async def test_get_evaluation_overview_computes_avg_course_rating() -> None:
         result = await CoursesService(session).get_evaluation_overview(1, requester=admin)
 
     assert len(result.projects) == 1
-    assert result.projects[0].avg_course_rating == 3.0
+    evals = result.projects[0].course_evaluations
+    assert len(evals) == 2
+    ratings = {ce.rating for ce in evals}
+    assert ratings == {4, 2}
 
 
 async def test_get_evaluation_overview_aggregates_peer_bonus_points() -> None:
-    """``get_evaluation_overview`` must sum peer bonus points per receiving student."""
+    """``get_evaluation_overview`` must collect per-student received peer feedback items."""
     from models.peer_feedback import PeerFeedback
     from models.project import Project
 
@@ -1060,10 +1087,14 @@ async def test_get_evaluation_overview_aggregates_peer_bonus_points() -> None:
     fb1 = MagicMock(spec=PeerFeedback)
     fb1.receiving_student_id = 5
     fb1.bonus_points = 3
+    fb1.strengths = "Fast."
+    fb1.improvements = None
 
     fb2 = MagicMock(spec=PeerFeedback)
     fb2.receiving_student_id = 5
     fb2.bonus_points = 2
+    fb2.strengths = None
+    fb2.improvements = "More communication."
 
     with (
         patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
@@ -1073,7 +1104,7 @@ async def test_get_evaluation_overview_aggregates_peer_bonus_points() -> None:
             return_value=[project],
         ),
         patch(
-            "services.courses.get_submitted_project_evaluations_for_projects",
+            "services.courses.get_submitted_project_evaluations",
             new_callable=AsyncMock,
             return_value={},
         ),
@@ -1095,4 +1126,6 @@ async def test_get_evaluation_overview_aggregates_peer_bonus_points() -> None:
     assert len(bonuses) == 1
     assert bonuses[0].student_id == 5
     assert bonuses[0].student_name == "Alice"
-    assert bonuses[0].avg_bonus_points == 2.5
+    assert len(bonuses[0].feedback) == 2
+    bonus_values = {fb.bonus_points for fb in bonuses[0].feedback}
+    assert bonus_values == {3, 2}

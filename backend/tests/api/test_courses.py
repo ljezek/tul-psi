@@ -16,12 +16,15 @@ from models.user import UserRole
 from schemas.courses import (
     CourseDetail,
     CourseEvaluationPublic,
+    CourseEvaluationSummary,
     CourseLecturerPublic,
     CourseListItem,
     CourseStats,
     CriterionScoreSummary,
     EvaluationOverviewResponse,
+    ProjectEvaluationSummary,
     ProjectOverviewItem,
+    ReceivedPeerFeedback,
     StudentBonusSummary,
 )
 from schemas.projects import CoursePublic, LecturerPublic, ProjectPublic
@@ -848,12 +851,32 @@ _OVERVIEW = EvaluationOverviewResponse(
             project_id=1,
             project_title="Project Alpha",
             academic_year=2025,
-            avg_criterion_scores=[
-                CriterionScoreSummary(criterion_code="code_quality", avg_score=18.5)
+            project_evaluations=[
+                ProjectEvaluationSummary(
+                    lecturer_id=10,
+                    criterion_scores=[
+                        CriterionScoreSummary(
+                            criterion_code="code_quality",
+                            score=18,
+                            strengths="Good code.",
+                            improvements="More tests.",
+                        )
+                    ],
+                )
             ],
-            avg_course_rating=4.0,
+            course_evaluations=[
+                CourseEvaluationSummary(rating=4, strengths="Great.", improvements=None)
+            ],
             student_bonus_points=[
-                StudentBonusSummary(student_id=5, student_name="Alice", avg_bonus_points=3.0)
+                StudentBonusSummary(
+                    student_id=5,
+                    student_name="Alice",
+                    feedback=[
+                        ReceivedPeerFeedback(
+                            bonus_points=3, strengths=None, improvements=None
+                        )
+                    ],
+                )
             ],
         )
     ]

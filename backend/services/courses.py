@@ -20,21 +20,25 @@ from db.projects import (
     get_peer_feedback_with_users_for_projects,
     get_projects_for_course,
     get_submitted_course_evaluations_for_projects,
-    get_submitted_project_evaluations_for_projects,
+    get_submitted_project_evaluations,
 )
+from models.course import ProjectType
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole
 from schemas.courses import (
     CourseCreate,
     CourseDetail,
     CourseEvaluationPublic,
+    CourseEvaluationSummary,
     CourseLecturerPublic,
     CourseListItem,
     CourseStats,
     CourseUpdate,
     CriterionScoreSummary,
     EvaluationOverviewResponse,
+    ProjectEvaluationSummary,
     ProjectOverviewItem,
+    ReceivedPeerFeedback,
     StudentBonusSummary,
 )
 from schemas.projects import AddUserBody, LecturerPublic
@@ -381,16 +385,20 @@ class CoursesService:
         projects = await get_projects_for_course(self._session, cid, year=year)
         project_ids = [p.id for p in projects if p.id is not None]
 
-        # Bulk-fetch all evaluation data in three queries.
-        lecturer_evals_by_project = await get_submitted_project_evaluations_for_projects(
+        # Bulk-fetch all evaluation data in two or three queries depending on course type.
+        lecturer_evals_by_project = await get_submitted_project_evaluations(
             self._session, project_ids
         )
         course_evals_by_project = await get_submitted_course_evaluations_for_projects(
             self._session, project_ids
         )
-        peer_feedback_by_project = await get_peer_feedback_with_users_for_projects(
-            self._session, project_ids
-        )
+        # Peer feedback is only relevant for team courses; skip the query for individual courses.
+        if course.project_type == ProjectType.TEAM:
+            peer_feedback_by_project = await get_peer_feedback_with_users_for_projects(
+                self._session, project_ids
+            )
+        else:
+            peer_feedback_by_project: dict = {}
 
         items: list[ProjectOverviewItem] = []
         for project in projects:
@@ -398,50 +406,63 @@ class CoursesService:
             if pid is None:
                 continue
 
-            # Compute per-criterion average scores across submitted lecturer evaluations.
+            # Build per-lecturer evaluation summaries with per-criterion verbatim feedback.
             lecturer_evals = lecturer_evals_by_project.get(pid, [])
-            criterion_totals: dict[str, list[int]] = {}
-            for ev in lecturer_evals:
-                for score_entry in ev.scores:
-                    code = score_entry["criterion_code"]
-                    criterion_totals.setdefault(code, []).append(score_entry["score"])
-            avg_criterion_scores = [
-                CriterionScoreSummary(
-                    criterion_code=code,
-                    avg_score=sum(values) / len(values),
+            project_evaluations = [
+                ProjectEvaluationSummary(
+                    lecturer_id=ev.lecturer_id,
+                    criterion_scores=[
+                        CriterionScoreSummary(
+                            criterion_code=s["criterion_code"],
+                            score=s["score"],
+                            strengths=s["strengths"],
+                            improvements=s["improvements"],
+                        )
+                        for s in ev.scores
+                    ],
                 )
-                for code, values in sorted(
-                    criterion_totals.items(),
-                    key=lambda item: item[0],
-                )
+                for ev in lecturer_evals
             ]
 
-            # Compute average course satisfaction rating.
-            submitted_course_evals = course_evals_by_project.get(pid, [])
-            avg_course_rating: float | None = None
-            if submitted_course_evals:
-                avg_course_rating = sum(ev.rating for ev in submitted_course_evals) / len(
-                    submitted_course_evals
+            # Build anonymous per-student course evaluation summaries.
+            course_evaluations = [
+                CourseEvaluationSummary(
+                    rating=ce.rating,
+                    strengths=ce.strengths,
+                    improvements=ce.improvements,
                 )
+                for ce in course_evals_by_project.get(pid, [])
+            ]
 
-            # Aggregate average peer bonus points per receiving student.
-            # Each student's score is the mean of bonus points awarded by their teammates.
+            # Aggregate per-student received peer feedback (team courses only).
             peer_fb_entries = peer_feedback_by_project.get(pid, [])
-            bonus_by_student: dict[int, tuple[str, list[int]]] = {}
+            bonus_by_student: dict[int, tuple[str, list[ReceivedPeerFeedback]]] = {}
             for feedback, receiving_user in peer_fb_entries:
                 sid = feedback.receiving_student_id
-                existing_name, existing_points = bonus_by_student.get(
+                existing_name, existing_fbs = bonus_by_student.get(
                     sid, (receiving_user.name, [])
                 )
-                bonus_by_student[sid] = (existing_name, existing_points + [feedback.bonus_points])
+                bonus_by_student[sid] = (
+                    existing_name,
+                    existing_fbs
+                    + [
+                        ReceivedPeerFeedback(
+                            bonus_points=feedback.bonus_points,
+                            strengths=feedback.strengths,
+                            improvements=feedback.improvements,
+                        )
+                    ],
+                )
 
             student_bonus_points = [
                 StudentBonusSummary(
                     student_id=sid,
                     student_name=name,
-                    avg_bonus_points=sum(points) / len(points) if points else 0.0,
+                    feedback=feedbacks,
                 )
-                for sid, (name, points) in sorted(bonus_by_student.items(), key=lambda kv: kv[1][0])
+                for sid, (name, feedbacks) in sorted(
+                    bonus_by_student.items(), key=lambda kv: kv[1][0]
+                )
             ]
 
             items.append(
@@ -449,8 +470,8 @@ class CoursesService:
                     project_id=pid,
                     project_title=project.title,
                     academic_year=project.academic_year,
-                    avg_criterion_scores=avg_criterion_scores,
-                    avg_course_rating=avg_course_rating,
+                    project_evaluations=project_evaluations,
+                    course_evaluations=course_evaluations,
                     student_bonus_points=student_bonus_points,
                 )
             )

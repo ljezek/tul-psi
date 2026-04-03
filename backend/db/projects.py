@@ -583,7 +583,7 @@ async def upsert_course_evaluation(
     project_id: int,
     student_id: int,
     *,
-    rating: int,
+    rating: int | None,
     strengths: str | None,
     improvements: str | None,
     submitted: bool,
@@ -686,7 +686,7 @@ async def get_projects_for_course(
     return list((await session.execute(stmt)).scalars().all())
 
 
-async def get_submitted_project_evaluations_for_projects(
+async def get_submitted_project_evaluations(
     session: AsyncSession,
     project_ids: list[int],
 ) -> dict[int, list[ProjectEvaluation]]:
