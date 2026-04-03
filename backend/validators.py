@@ -45,4 +45,4 @@ def derive_display_name(email: str) -> str:
     title-cased (e.g. ``jan.novak@tul.cz`` → ``"Jan Novak"``).
     """
     prefix = email.split("@")[0]
-    return " ".join(part.capitalize() for part in prefix.replace("_", ".").split("."))
+    return " ".join(part.capitalize() for part in prefix.replace("_", ".").split(".") if part)
