@@ -27,39 +27,24 @@ def _mock_settings() -> Generator[None, None, None]:
 # ---------------------------------------------------------------------------
 
 
-async def test_logout_returns_200(client: AsyncClient) -> None:
-    """POST /api/v1/auth/logout must return HTTP 200."""
+async def test_logout_success(client: AsyncClient) -> None:
+    """POST /api/v1/auth/logout must return HTTP 200 with an empty JSON body."""
     response = await client.post("/api/v1/auth/logout")
     assert response.status_code == 200
-
-
-async def test_logout_returns_empty_body(client: AsyncClient) -> None:
-    """POST /api/v1/auth/logout must return an empty JSON object."""
-    response = await client.post("/api/v1/auth/logout")
     assert response.json() == {}
 
 
-async def test_logout_sets_session_cookie_with_max_age_zero(client: AsyncClient) -> None:
-    """POST /api/v1/auth/logout must set the ``session`` cookie with ``Max-Age=0``."""
+async def test_logout_cookie_attributes(client: AsyncClient) -> None:
+    """The ``session`` cookie returned by logout must have Max-Age=0, HttpOnly, and SameSite=strict.
+
+    httpx discards expired cookies (Max-Age=0) from its cookie jar automatically,
+    so the raw ``Set-Cookie`` response header is inspected instead.
+    """
     response = await client.post("/api/v1/auth/logout")
-    # httpx stores the Set-Cookie attributes in response.headers; inspect the raw header
-    # because the cookie jar discards expired cookies (Max-Age=0) automatically.
     set_cookie_header = response.headers.get("set-cookie", "")
     assert "session=" in set_cookie_header
     assert "Max-Age=0" in set_cookie_header
-
-
-async def test_logout_cookie_is_httponly(client: AsyncClient) -> None:
-    """The cookie set by the logout endpoint must carry the ``HttpOnly`` flag."""
-    response = await client.post("/api/v1/auth/logout")
-    set_cookie_header = response.headers.get("set-cookie", "")
     assert "httponly" in set_cookie_header.lower()
-
-
-async def test_logout_cookie_has_samesite_strict(client: AsyncClient) -> None:
-    """The cookie set by the logout endpoint must use ``SameSite=strict``."""
-    response = await client.post("/api/v1/auth/logout")
-    set_cookie_header = response.headers.get("set-cookie", "")
     assert "samesite=strict" in set_cookie_header.lower()
 
 
