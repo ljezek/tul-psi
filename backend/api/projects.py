@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_user, require_current_user
+from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
 from models.course import CourseTerm
 from models.user import User
@@ -105,7 +105,7 @@ async def list_projects(
 )
 async def get_project(
     project_id: int,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> ProjectPublic:
     """Return the project identified by ``project_id``.
