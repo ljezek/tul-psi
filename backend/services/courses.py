@@ -16,12 +16,12 @@ from db.courses import get_course as db_get_course
 from db.courses import get_courses as db_get_courses
 from db.courses import update_course as db_update_course
 from db.projects import (
-    get_or_create_user,
     get_peer_feedback_with_users_for_projects,
     get_projects_for_course,
     get_submitted_course_evaluations_for_projects,
     get_submitted_project_evaluations,
 )
+from db.users import get_or_create_user
 from models.course import ProjectType
 from models.course_evaluation import CourseEvaluation
 from models.user import User, UserRole

@@ -6,7 +6,7 @@ from sqlalchemy import not_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from db.users import get_or_create_user as _users_get_or_create_user
+from db.users import get_or_create_user as db_get_or_create_user
 from models import OtpToken, User
 from validators import derive_display_name
 
@@ -33,7 +33,7 @@ async def get_or_create_user(
     The caller must commit the session after a successful return.
     """
     resolved_name = name if name is not None else derive_display_name(email)
-    return await _users_get_or_create_user(
+    return await db_get_or_create_user(
         session,
         email,
         resolved_name,

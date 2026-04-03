@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.auth import get_or_create_user
 from db.courses import get_course as db_get_course
+from db.courses import get_course_lecturers
 from db.projects import (
     add_project_member,
     get_course_evaluation_by_student,
     get_course_evaluations,
-    get_course_lecturers,
     get_lecturer_evaluation_statuses,
     get_member_evaluation_statuses,
     get_peer_feedback_authored,
@@ -832,7 +832,7 @@ class ProjectsService:
             raise ProjectNotFoundError(project_id)
 
         p, course = row
-        user_id = _require_id(user)
+        user_id = require_user_id(user)
 
         if user.role != UserRole.STUDENT:
             raise PermissionDeniedError("Only students may access the course evaluation form.")
@@ -848,7 +848,7 @@ class ProjectsService:
             all_members = members_by_project.get(project_id, [])
             teammates = [
                 MemberPublic(
-                    id=_require_id(m),
+                    id=require_user_id(m),
                     github_alias=m.github_alias,
                     name=m.name,
                     email=m.email,
@@ -905,7 +905,7 @@ class ProjectsService:
             raise ProjectNotFoundError(project_id)
 
         p, course = row
-        user_id = _require_id(user)
+        user_id = require_user_id(user)
 
         if user.role != UserRole.STUDENT:
             raise PermissionDeniedError("Only students may submit a course evaluation.")
