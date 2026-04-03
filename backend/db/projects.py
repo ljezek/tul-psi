@@ -6,6 +6,7 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.courses import get_course_lecturers as get_course_lecturers
 from db.users import get_or_create_user as get_or_create_user
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
@@ -128,29 +129,6 @@ async def get_project_members(
     result: dict[int, list[User]] = {}
     for project_id, user in (await session.execute(stmt)).all():
         result.setdefault(project_id, []).append(user)
-    return result
-
-
-async def get_course_lecturers(
-    session: AsyncSession,
-    course_ids: list[int],
-) -> dict[int, list[User]]:
-    """Return a mapping from course id to its list of lecturer users.
-
-    Only courses whose ids appear in ``course_ids`` are queried.
-    """
-    if not course_ids:
-        return {}
-
-    stmt = (
-        select(CourseLecturer.course_id, User)
-        .join(User, CourseLecturer.user_id == User.id)
-        .where(CourseLecturer.course_id.in_(course_ids))
-    )
-
-    result: dict[int, list[User]] = {}
-    for course_id, user in (await session.execute(stmt)).all():
-        result.setdefault(course_id, []).append(user)
     return result
 
 
@@ -461,6 +439,7 @@ async def upsert_project_evaluation(
     and later update or finalise it (``submitted=True``) without conflicts.
     The caller is responsible for committing the session after this call.
     """
+    now = datetime.now(UTC)
     stmt = (
         pg_insert(ProjectEvaluation)
         .values(
@@ -468,14 +447,14 @@ async def upsert_project_evaluation(
             lecturer_id=lecturer_id,
             scores=scores,
             submitted=submitted,
-            updated_at=datetime.now(UTC),
+            updated_at=now,
         )
         .on_conflict_do_update(
             index_elements=["project_id", "lecturer_id"],
             set_={
                 "scores": scores,
                 "submitted": submitted,
-                "updated_at": datetime.now(UTC),
+                "updated_at": now,
             },
         )
     )

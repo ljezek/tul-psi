@@ -31,6 +31,7 @@ from schemas.projects import AddUserBody, LecturerPublic
 from services.auth import is_admin_or_course_lecturer, require_course_manage_access
 from services.email import EmailSender, EmailTemplate
 from settings import get_settings
+from validators import derive_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -263,8 +264,8 @@ class CoursesService:
         except PermissionError as exc:
             raise CoursePermissionError(str(exc)) from exc
 
-        # Default name to the local part of the email address when none is provided.
-        resolved_name = body.name if body.name is not None else body.email.split("@")[0]
+        # Derive a human-readable name from the email local part when none is provided.
+        resolved_name = body.name if body.name is not None else derive_display_name(body.email)
         target_user, created = await get_or_create_user(
             self._session,
             body.email,

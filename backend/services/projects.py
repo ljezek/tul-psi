@@ -61,21 +61,9 @@ from schemas.projects import (
 from services.auth import require_course_lecturer_access, require_course_manage_access
 from services.email import EmailSender, EmailTemplate
 from settings import get_settings
+from validators import derive_display_name, require_user_id
 
 logger = logging.getLogger(__name__)
-
-
-def _require_id(user: User) -> int:
-    """Return ``user.id``, raising ``ValueError`` if it is ``None``.
-
-    ``User.id`` is typed as ``int | None`` because SQLModel allows unsaved instances,
-    but any row returned from the database always has a non-None primary key.
-    This helper surfaces the inconsistency early with a clear message rather than
-    letting it propagate as a silent ``None``.
-    """
-    if user.id is None:
-        raise ValueError(f"User returned from DB has no id: {user!r}")
-    return user.id
 
 
 def _build_project(
@@ -134,7 +122,7 @@ def _build_project(
         ),
         members=[
             MemberPublic(
-                id=_require_id(m),
+                id=require_user_id(m),
                 github_alias=m.github_alias,
                 name=m.name,
                 email=(m.email if authenticated else None),
@@ -527,8 +515,8 @@ class ProjectsService:
         # need a second round-trip to fetch the project details for the email.
         project, course = await self._check_write_permission(project_id, user)
 
-        # Default name to the local part of the email address when none is provided.
-        resolved_name = body.name if body.name is not None else body.email.split("@")[0]
+        # Derive a human-readable name from the email local part when none is provided.
+        resolved_name = body.name if body.name is not None else derive_display_name(body.email)
         target_user, created = await get_or_create_user(
             self._session,
             body.email,
@@ -623,7 +611,7 @@ class ProjectsService:
                 self._session,
                 project.id,
                 owner_user.id,
-                invited_by=_require_id(requester),
+                invited_by=require_user_id(requester),
             )
 
         # Commit the project and member rows before attempting email delivery.
@@ -717,7 +705,7 @@ class ProjectsService:
 
         await require_course_manage_access(self._session, course.id, requester)
 
-        requester_id = _require_id(requester)
+        requester_id = require_user_id(requester)
 
         evaluation = await get_project_evaluation_by_lecturer(
             self._session, project_id, requester_id
@@ -792,7 +780,7 @@ class ProjectsService:
                     f" Allowed range is 0 to {max_score}."
                 )
 
-        requester_id = _require_id(requester)
+        requester_id = require_user_id(requester)
 
         scores_dicts = [
             {

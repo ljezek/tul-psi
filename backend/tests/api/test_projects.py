@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import AsyncClient
 
-from api.deps import get_current_user
+from api.deps import get_current_user, get_optional_current_user
 from api.projects import get_projects_service
 from main import app
 from models.course import CourseTerm, ProjectType
@@ -105,14 +105,16 @@ def _make_authenticated_user(role: UserRole = UserRole.STUDENT) -> MagicMock:
 def _clear_dependency_overrides() -> Generator[None, None, None]:
     """Reset FastAPI dependency overrides after every test to ensure isolation.
 
-    Sets ``get_current_user`` to return ``None`` by default for backward compatibility
-    with existing unauthenticated tests.  Tests that need an authenticated user
-    override ``get_current_user`` explicitly before making their request.
+    Sets ``get_current_user`` and ``get_optional_current_user`` to return ``None``
+    by default for backward compatibility with existing unauthenticated tests.
+    Tests that need an authenticated user override the dependency explicitly.
     """
     app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_optional_current_user] = lambda: None
     yield
     app.dependency_overrides.pop(get_projects_service, None)
     app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_optional_current_user, None)
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +270,7 @@ async def test_get_project_authenticated_calls_get_project_detail(client: AsyncC
     user = _make_authenticated_user()
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(return_value=_PROJECT_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/1")
@@ -283,7 +285,7 @@ async def test_get_project_authenticated_response_includes_emails(client: AsyncC
     user = _make_authenticated_user(UserRole.STUDENT)
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(return_value=_PROJECT_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/1")
@@ -299,7 +301,7 @@ async def test_get_project_authenticated_404_when_not_found(client: AsyncClient)
     user = _make_authenticated_user()
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(return_value=None)
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/999")
@@ -312,7 +314,7 @@ async def test_get_project_authenticated_500_on_service_error(client: AsyncClien
     user = _make_authenticated_user()
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(side_effect=RuntimeError("db failure"))
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/1")

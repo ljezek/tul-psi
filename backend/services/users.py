@@ -9,6 +9,7 @@ from db.users import get_user as db_get_user
 from db.users import get_users as db_get_users
 from models.user import User, UserRole
 from schemas.users import AdminUserUpdate, UserCreate, UserPublic, UserUpdate
+from validators import require_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +26,6 @@ class PermissionDeniedError(Exception):
     """Raised when a user attempts an operation without sufficient permissions."""
 
 
-def _require_id(user: User) -> int:
-    """Return ``user.id``, raising ``ValueError`` if it is ``None``.
-
-    ``User.id`` is typed as ``int | None`` because SQLModel allows unsaved instances,
-    but any row returned from the database always has a non-None primary key.
-    This helper surfaces the inconsistency early with a clear message rather than
-    letting it propagate as a silent ``None``.
-    """
-    if user.id is None:
-        raise ValueError(f"User returned from DB has no id: {user!r}")
-    return user.id
-
-
 class UsersService:
     """Business logic for user management endpoints."""
 
@@ -52,7 +40,7 @@ class UsersService:
         users = await db_get_users(self._session)
         return [
             UserPublic(
-                id=_require_id(u),
+                id=require_user_id(u),
                 email=u.email,
                 github_alias=u.github_alias,
                 name=u.name,
@@ -72,7 +60,7 @@ class UsersService:
             raise UserNotFoundError(f"User {user_id} not found.")
 
         return UserPublic(
-            id=_require_id(user),
+            id=require_user_id(user),
             email=user.email,
             github_alias=user.github_alias,
             name=user.name,
@@ -105,7 +93,7 @@ class UsersService:
 
         await self._session.commit()
         return UserPublic(
-            id=_require_id(user),
+            id=require_user_id(user),
             email=user.email,
             github_alias=user.github_alias,
             name=user.name,
@@ -122,7 +110,7 @@ class UsersService:
 
         await self._session.commit()
         return UserPublic(
-            id=_require_id(current_user),
+            id=require_user_id(current_user),
             email=current_user.email,
             github_alias=current_user.github_alias,
             name=current_user.name,
@@ -150,7 +138,7 @@ class UsersService:
 
         await self._session.commit()
         return UserPublic(
-            id=_require_id(user),
+            id=require_user_id(user),
             email=user.email,
             github_alias=user.github_alias,
             name=user.name,
