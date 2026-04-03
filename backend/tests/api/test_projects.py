@@ -34,6 +34,7 @@ from services.projects import (
 _LECTURER = LecturerPublic(name="Jan Novák", github_alias="jnovak")
 
 _COURSE = CoursePublic(
+    id=1,
     code="PSI",
     name="Projektový seminář informatiky",
     syllabus=None,
@@ -71,6 +72,7 @@ _PROJECT_DETAIL = ProjectPublic(
     academic_year=2025,
     results_unlocked=True,
     course=CoursePublic(
+        id=1,
         code="PSI",
         name="PSI Course",
         syllabus=None,

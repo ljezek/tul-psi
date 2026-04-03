@@ -32,12 +32,16 @@ def _override_session() -> Generator[None, None, None]:
 
 @pytest.fixture(autouse=True)
 def _mock_settings() -> Generator[None, None, None]:
-    """Stub application settings so tests do not require a real database URL."""
+    """Stub auth-service settings to control email behaviour across all tests in this module.
+
+    The auth service calls ``get_settings()`` to read ``app_env`` (used by
+    ``EmailSender``) and ``frontend_url`` (embedded in OTP email bodies).  Patching
+    here keeps tests hermetic and prevents real email delivery side-effects.
+    """
     mock_settings = MagicMock()
     # Provide minimal attributes expected by EmailSender/EmailTemplate.
     mock_settings.app_env = "local"
     mock_settings.frontend_url = "http://frontend.test"
-    # The auth service reads settings to sign JWTs and to pass env/url to EmailSender.
     with patch("services.auth_service.get_settings", return_value=mock_settings):
         yield
 

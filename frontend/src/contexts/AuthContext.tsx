@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserPublic } from '@/types';
-import { getCurrentUser, verifyOtp, ApiError } from '@/api';
+import { getCurrentUser, verifyOtp, logout as apiLogout, ApiError } from '@/api';
 
 interface AuthContextType {
   user: UserPublic | null;
   loading: boolean;
   login: (email: string, otp: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -40,11 +40,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await fetchUser();
   };
 
-  const logout = () => {
-    // TODO: Call a backend /logout endpoint to properly clear the HttpOnly session cookie.
-    // The `session` cookie is HttpOnly and Secure, so it cannot be cleared from JavaScript.
-    // A dedicated backend endpoint returning Set-Cookie with Max-Age=0 is required (tracked in a separate PR).
-    setUser(null);
+  const logout = async () => {
+    try {
+      await apiLogout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   const refreshUser = async () => {

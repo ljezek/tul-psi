@@ -23,10 +23,10 @@ class LecturerPublic(BaseModel):
 class CoursePublic(BaseModel):
     """Representation of a course embedded in a project response.
 
-    All non-email fields are visible to unauthenticated users. ``code`` is the natural
-    unique identifier for a course and replaces an integer ``id`` for lookups.
+    All non-email fields are visible to unauthenticated users.
     """
 
+    id: int
     code: str
     name: str
     syllabus: str | None

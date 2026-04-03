@@ -26,6 +26,9 @@ export const MainLayout = () => {
       <Link to="/" className="text-slate-600 hover:text-tul-blue font-medium px-3 py-2 rounded-md transition-colors">
         {t('nav.dashboard')}
       </Link>
+      <Link to="/courses" className="text-slate-600 hover:text-tul-blue font-medium px-3 py-2 rounded-md transition-colors">
+        {t('nav.courses')}
+      </Link>
       {user?.role === UserRole.STUDENT && (
         <Link to="/student" className="text-slate-600 hover:text-tul-blue font-medium px-3 py-2 rounded-md transition-colors">
           {t('nav.student_zone')}

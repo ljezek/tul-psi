@@ -5,6 +5,7 @@ import os
 import sys
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger.json import JsonFormatter
 
 from api.auth import router as auth_router
@@ -12,6 +13,7 @@ from api.courses import router as courses_router
 from api.health import router as health_router
 from api.projects import router as projects_router
 from api.users import router as users_router
+from settings import get_settings
 
 
 def _configure_logging() -> None:
@@ -44,7 +46,17 @@ def _configure_logging() -> None:
 
 _configure_logging()
 
+settings = get_settings()
 app = FastAPI(title="Student Projects Catalogue API")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1")

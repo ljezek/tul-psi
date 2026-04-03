@@ -11,7 +11,8 @@ interface LanguageContextType {
 const translations: Record<string, Record<Language, string>> = {
   // Navigation & Roles
   'app.title': { cs: 'Katalog Projektů', en: 'Project Catalog' },
-  'nav.dashboard': { cs: 'Prohlížeč', en: 'Dashboard' },
+  'nav.dashboard': { cs: 'Projekty', en: 'Projects' },
+  'nav.courses': { cs: 'Předměty', en: 'Courses' },
   'nav.student_zone': { cs: 'Studentská zóna', en: 'Student Zone' },
   'nav.lecturer_panel': { cs: 'Panel Lektora', en: 'Lecturer Panel' },
   'nav.login': { cs: 'Přihlásit', en: 'Log In' },
@@ -24,29 +25,77 @@ const translations: Record<string, Record<Language, string>> = {
   'role.select_demo': { cs: 'Vyberte roli (Demo):', en: 'Select Role (Demo):' },
   'footer.copyright': { cs: 'Fakulta mechatroniky, informatiky a mezioborových studií TUL.', en: 'Faculty of Mechatronics, Informatics and Interdisciplinary Studies TUL.' },
 
+  // Enums
+  'enum.WINTER': { cs: 'Zimní', en: 'Winter' },
+  'enum.SUMMER': { cs: 'Letní', en: 'Summer' },
+  'enum.TEAM': { cs: 'Týmový', en: 'Team' },
+  'enum.INDIVIDUAL': { cs: 'Individuální', en: 'Individual' },
+
+  // Course List & Detail
+  'courseList.title': { cs: 'Seznam předmětů', en: 'Course List' },
+  'courseList.subtitle': { cs: 'Prohlédněte si předměty vyučované na FM TUL.', en: 'Browse courses taught at FM TUL.' },
+  'courseList.filter_by_lecturer': { cs: 'Předměty vyučujícího: ', en: 'Courses by lecturer: ' },
+  'courseList.clear_filter': { cs: 'Zobrazit všechny předměty', en: 'Show all courses' },
+  'courseList.no_courses': { cs: 'Nebyly nalezeny žádné předměty.', en: 'No courses found.' },
+  'courseList.error_fetching': { cs: 'Nepodařilo se načíst seznam předmětů.', en: 'Failed to fetch courses.' },
+  'courseDetail.syllabus': { cs: 'Sylabus předmětu', en: 'Course Syllabus' },
+  'courseDetail.evaluation_criteria': { cs: 'Kritéria hodnocení', en: 'Evaluation Criteria' },
+  'courseDetail.min_score': { cs: 'Minimum k splnění', en: 'Minimum to pass' },
+  'courseDetail.points': { cs: 'bodů', en: 'points' },
+  'courseDetail.lecturers': { cs: 'Vyučující', en: 'Lecturers' },
+  'courseDetail.links': { cs: 'Užitečné odkazy', en: 'Useful Links' },
+  'courseDetail.projects': { cs: 'Projekty předmětu', en: 'Course Projects' },
+  'courseDetail.no_projects': { cs: 'Pro tento předmět zatím nejsou žádné projekty.', en: 'No projects for this course yet.' },
+  'courseDetail.back_to_list': { cs: 'Zpět na seznam předmětů', en: 'Back to course list' },
+  'courseDetail.error_fetching': { cs: 'Nepodařilo se načíst detail předmětu.', en: 'Failed to fetch course details.' },
+  'courseDetail.not_found': { cs: 'Předmět nebyl nalezen.', en: 'Course not found.' },
+  'courseDetail.view_detail': { cs: 'Detail předmětu', en: 'Course details' },
+  'courseDetail.peer_bonus': { cs: 'Studentské peer-bonus body', en: 'Student peer-bonus points' },
+
   // Dashboard
   'dashboard.title': { cs: 'Prohlížeč projektů', en: 'Project Browser' },
   'dashboard.subtitle': { cs: 'Prozkoumejte inovativní práce studentů FM TUL.', en: 'Explore innovative work by FM TUL students.' },
   'dashboard.search_placeholder': { cs: 'Hledat projekt nebo technologii...', en: 'Search project or technology...' },
   'dashboard.filter_subject': { cs: 'Předmět', en: 'Subject' },
   'dashboard.filter_year': { cs: 'Akademický rok', en: 'Academic Year' },
+  'dashboard.filter_technology': { cs: 'Technologie', en: 'Technology' },
+  'dashboard.filter_lecturer': { cs: 'Vyučující', en: 'Lecturer' },
   'dashboard.all_subjects': { cs: 'Všechny předměty', en: 'All Subjects' },
   'dashboard.all_years': { cs: 'Všechny roky', en: 'All Years' },
+  'dashboard.all_technologies': { cs: 'Všechny technologie', en: 'All Technologies' },
+  'dashboard.all_lecturers': { cs: 'Všichni vyučující', en: 'All Lecturers' },
   'dashboard.no_results': { cs: 'Nebyly nalezeny žádné projekty', en: 'No projects found' },
   'dashboard.try_adjust': { cs: 'Zkuste upravit filtry nebo hledaný výraz.', en: 'Try adjusting filters or search query.' },
+  'dashboard.clear_filters': { cs: 'Zrušit filtry', en: 'Clear Filters' },
+  'dashboard.error_fetching': { cs: 'Nepodařilo se načíst projekty.', en: 'Failed to fetch projects.' },
   'dashboard.overview_title': { cs: 'Přehled všech projektů', en: 'All Projects Overview' },
 
   // Project Card & Modal
   'project.team': { cs: 'Řešitelský tým', en: 'Project Team' },
   'project.source_code': { cs: 'Zdrojový kód', en: 'Source Code' },
   'project.live_demo': { cs: 'Live Demo', en: 'Live Demo' },
+  'project.back_to_projects': { cs: 'Zpět na projekty', en: 'Back to projects' },
+  'project.no_description': { cs: 'Nebyl zadán žádný popis.', en: 'No description provided.' },
+  'project.lecturer_links': { cs: 'Odkazy pro lektora', en: 'Lecturer links' },
+  'project.student_links': { cs: 'Odkazy pro studenta', en: 'Student links' },
+  'project.technologies': { cs: 'Použité technologie', en: 'Technologies' },
+  'project.members': { cs: 'Členové týmu', en: 'Team Members' },
+  'project.course_info': { cs: 'Informace o předmětu', en: 'Course Information' },
+  'project.term': { cs: 'Semestr', en: 'Term' },
+  'project.type': { cs: 'Typ projektu', en: 'Project Type' },
+  'project.evaluate': { cs: 'Hodnotit projekt', en: 'Evaluate Project' },
+  'project.view_results': { cs: 'Zobrazit výsledky', en: 'View Results' },
 
   // Project Detail page
   'projectDetail.title': { cs: 'Detail projektu', en: 'Project Detail' },
+  'projectDetail.error_fetching': { cs: 'Nepodařilo se načíst detail projektu.', en: 'Failed to fetch project details.' },
+  'projectDetail.not_found': { cs: 'Projekt nebyl nalezen.', en: 'Project not found.' },
 
   // Lecturer pages
   'lecturer.courseProjects.heading': { cs: 'Projekty předmětu', en: 'Course Projects' },
   'lecturer.projectEvaluation.title': { cs: 'Hodnocení projektu', en: 'Project Evaluation' },
+  'lecturer.criterion': { cs: 'Kritérium', en: 'Criterion' },
+  'lecturer.score': { cs: 'Body', en: 'Score' },
 
   // Student pages
   'student.results.title': { cs: 'Výsledky', en: 'Results' },

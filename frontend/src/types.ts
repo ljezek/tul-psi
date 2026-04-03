@@ -48,6 +48,7 @@ export interface CourseLink {
 }
 
 export interface CoursePublic {
+  id: number;
   code: string;
   name: string;
   syllabus: string | null;
