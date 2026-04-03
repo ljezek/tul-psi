@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # List of origins allowed to make cross-origin requests (CORS).
     # In production, this should be restricted to the actual frontend domain.
-    allowed_origins: list[str] = ["http://localhost:3000"]
+    allowed_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     # Secret key used to sign JWT session cookies.
     # Must be a long, random string; override in production via the JWT_SECRET env var.
