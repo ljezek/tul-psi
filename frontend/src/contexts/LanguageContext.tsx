@@ -40,6 +40,17 @@ const translations: Record<string, Record<Language, string>> = {
   'project.team': { cs: 'Řešitelský tým', en: 'Project Team' },
   'project.source_code': { cs: 'Zdrojový kód', en: 'Source Code' },
   'project.live_demo': { cs: 'Live Demo', en: 'Live Demo' },
+  'project.back_to_projects': { cs: '← Zpět na projekty', en: '← Back to projects' },
+  'project.no_description': { cs: 'Nebyl zadán žádný popis.', en: 'No description provided.' },
+  'project.lecturer_links': { cs: 'Odkazy pro lektora', en: 'Lecturer links' },
+  'project.student_links': { cs: 'Odkazy pro studenta', en: 'Student links' },
+  'project.technologies': { cs: 'Použité technologie', en: 'Technologies' },
+  'project.members': { cs: 'Členové týmu', en: 'Team Members' },
+  'project.course_info': { cs: 'Informace o předmětu', en: 'Course Information' },
+  'project.term': { cs: 'Semestr', en: 'Term' },
+  'project.type': { cs: 'Typ projektu', en: 'Project Type' },
+  'project.evaluate': { cs: 'Hodnotit projekt', en: 'Evaluate Project' },
+  'project.view_results': { cs: 'Zobrazit výsledky', en: 'View Results' },
 
   // Project Detail page
   'projectDetail.title': { cs: 'Detail projektu', en: 'Project Detail' },

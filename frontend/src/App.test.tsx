@@ -14,6 +14,16 @@ describe('App', () => {
           text: () => Promise.resolve(body),
         });
       }
+      
+      // Default empty list for projects and courses to avoid 'map is not a function'
+      if (url.includes('/api/v1/projects') || url.includes('/api/v1/courses')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve('[]'),
+        });
+      }
+
       return Promise.resolve({
         ok: true,
         status: 200,
