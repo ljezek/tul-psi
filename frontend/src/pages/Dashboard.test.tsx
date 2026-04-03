@@ -154,6 +154,27 @@ describe('Dashboard', () => {
     expect(screen.getByText('Python Tool')).toBeInTheDocument();
   });
 
+  it('filters projects by lecturer', async () => {
+    const user = userEvent.setup();
+    
+    // Add a lecturer to the second mock project for testing
+    const projectsWithLecturer = [
+      ...mockProjects,
+    ];
+    projectsWithLecturer[1].course.lecturers = [{ name: 'Prof. Data', github_alias: null, email: null }];
+    (api.getProjects as Mock).mockResolvedValue(projectsWithLecturer);
+
+    renderDashboard();
+    
+    await waitFor(() => screen.getByText('React App'));
+    
+    const lecturerSelect = screen.getByLabelText(/Vyučující/i);
+    await user.selectOptions(lecturerSelect, 'Prof. Data');
+    
+    expect(screen.queryByText('React App')).not.toBeInTheDocument();
+    expect(screen.getByText('Python Tool')).toBeInTheDocument();
+  });
+
   it('shows no results state and clears filters', async () => {
     const user = userEvent.setup();
     renderDashboard();
