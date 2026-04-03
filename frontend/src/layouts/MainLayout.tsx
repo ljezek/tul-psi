@@ -139,7 +139,7 @@ export const MainLayout = () => {
                        <span className="font-bold text-slate-800">{user.name}</span>
                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{user.role}</span>
                     </div>
-                    <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
                        <Button variant="outline" className="w-full justify-center rounded-xl font-bold py-3">
                          {t('profile.editing')}
                        </Button>
