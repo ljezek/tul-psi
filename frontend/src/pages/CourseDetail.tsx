@@ -9,8 +9,10 @@ import {
   ListChecks, 
   ArrowRight,
   FolderKanban,
-  Star
+  Star,
+  Mail
 } from 'lucide-react';
+import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getCourse, getProjects } from '@/api';
 import { CourseDetail, ProjectPublic } from '@/types';
@@ -109,14 +111,40 @@ export const CourseDetailView = () => {
         {/* Lecturers */}
         <div className="flex flex-wrap gap-4">
           {course.lecturers.map((lecturer, idx) => (
-            <Link 
+            <div 
               key={idx} 
-              to={`/courses?lecturer=${encodeURIComponent(lecturer.name)}`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-slate-700 hover:border-tul-blue hover:text-tul-blue transition-all shadow-sm group"
+              className="flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-tul-blue transition-all"
             >
-              <User size={18} className="text-slate-400 group-hover:text-tul-blue" />
-              <span className="font-semibold">{lecturer.name}</span>
-            </Link>
+              <Link 
+                to={`/courses?lecturer=${encodeURIComponent(lecturer.name)}`}
+                className="flex items-center gap-2 text-slate-700 hover:text-tul-blue transition-colors group"
+              >
+                <User size={18} className="text-slate-400 group-hover:text-tul-blue" />
+                <span className="font-bold">{lecturer.name}</span>
+              </Link>
+              <div className="flex items-center gap-4 text-xs">
+                {lecturer.github_alias && (
+                  <a 
+                    href={`https://github.com/${lecturer.github_alias}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-slate-500 hover:text-tul-blue transition-colors"
+                  >
+                    <GitHubLogo size={12} />
+                    {lecturer.github_alias}
+                  </a>
+                )}
+                {lecturer.email && (
+                  <a 
+                    href={`mailto:${lecturer.email}`}
+                    className="flex items-center gap-1 text-slate-500 hover:text-tul-blue transition-colors"
+                  >
+                    <Mail size={12} />
+                    {lecturer.email}
+                  </a>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       </div>

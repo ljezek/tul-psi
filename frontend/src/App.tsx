@@ -18,6 +18,7 @@ import { CourseList } from '@/pages/CourseList';
 import { CourseDetailView } from '@/pages/CourseDetail';
 import { Login } from '@/pages/Login';
 import { ProjectDetail } from '@/pages/ProjectDetail';
+import { Profile } from '@/pages/Profile';
 import { StudentHome } from '@/pages/student/StudentHome';
 import { CourseEvaluation } from '@/pages/student/CourseEvaluation';
 import { Results } from '@/pages/student/Results';
@@ -37,6 +38,10 @@ function App() {
               <Route path="/courses/:id" element={<CourseDetailView />} />
               <Route path="/login" element={<Login />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
+              
+              <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.LECTURER, UserRole.ADMIN]} />}>
+                <Route path="/profile" element={<Profile />} />
+              </Route>
               
               <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
                 <Route path="/student" element={<StudentHome />} />

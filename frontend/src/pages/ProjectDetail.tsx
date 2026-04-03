@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
-  Code, 
   ExternalLink, 
   Users, 
   BookOpen, 
@@ -12,6 +11,7 @@ import {
   BarChart3,
   Award
 } from 'lucide-react';
+import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProject } from '@/api';
@@ -147,7 +147,7 @@ export const ProjectDetail = () => {
                 {project.github_url && (
                   <a href={project.github_url} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="gap-2">
-                      <Code size={20} />
+                      <GitHubLogo size={20} />
                       {t('project.source_code')}
                     </Button>
                   </a>
@@ -185,15 +185,18 @@ export const ProjectDetail = () => {
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 hover:text-tul-blue transition-colors"
                       >
-                        <Code size={12} />
+                        <GitHubLogo size={12} />
                         {member.github_alias}
                       </a>
                     )}
                     {member.email && (
-                      <span className="flex items-center gap-1">
+                      <a 
+                        href={`mailto:${member.email}`}
+                        className="flex items-center gap-1 hover:text-tul-blue transition-colors"
+                      >
                         <Mail size={12} />
                         {member.email}
-                      </span>
+                      </a>
                     )}
                   </div>
                 </li>
@@ -219,15 +222,38 @@ export const ProjectDetail = () => {
                 <p className="text-xs text-slate-400 uppercase font-bold mb-2 tracking-widest">
                   {t('role.lecturer')}
                 </p>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   {project.course.lecturers.map((l, i) => (
-                    <Link 
-                      key={i} 
-                      to={`/courses?lecturer=${encodeURIComponent(l.name)}`}
-                      className="font-medium text-slate-700 hover:text-tul-blue transition-colors"
-                    >
-                      {l.name}
-                    </Link>
+                    <div key={i} className="flex flex-col gap-1">
+                      <Link 
+                        to={`/courses?lecturer=${encodeURIComponent(l.name)}`}
+                        className="font-bold text-slate-700 hover:text-tul-blue transition-colors"
+                      >
+                        {l.name}
+                      </Link>
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        {l.github_alias && (
+                          <a 
+                            href={`https://github.com/${l.github_alias}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 hover:text-tul-blue transition-colors"
+                          >
+                            <GitHubLogo size={10} />
+                            {l.github_alias}
+                          </a>
+                        )}
+                        {l.email && (
+                          <a 
+                            href={`mailto:${l.email}`}
+                            className="flex items-center gap-1 hover:text-tul-blue transition-colors"
+                          >
+                            <Mail size={10} />
+                            {l.email}
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
