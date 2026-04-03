@@ -6,8 +6,10 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.courses import get_course_lecturers as get_course_lecturers
-from db.users import get_or_create_user as get_or_create_user
+from db.courses import (
+    get_course_lecturers as get_course_lecturers,  # Re-export for backward compat.
+)
+from db.users import get_or_create_user as get_or_create_user  # Re-export for backward compat.
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
 from models.course_lecturer import CourseLecturer
