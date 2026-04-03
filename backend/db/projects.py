@@ -6,7 +6,6 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.users import get_or_create_user as get_or_create_user
 from models.course import Course, CourseTerm
 from models.course_evaluation import CourseEvaluation
 from models.course_lecturer import CourseLecturer
@@ -128,29 +127,6 @@ async def get_project_members(
     result: dict[int, list[User]] = {}
     for project_id, user in (await session.execute(stmt)).all():
         result.setdefault(project_id, []).append(user)
-    return result
-
-
-async def get_course_lecturers(
-    session: AsyncSession,
-    course_ids: list[int],
-) -> dict[int, list[User]]:
-    """Return a mapping from course id to its list of lecturer users.
-
-    Only courses whose ids appear in ``course_ids`` are queried.
-    """
-    if not course_ids:
-        return {}
-
-    stmt = (
-        select(CourseLecturer.course_id, User)
-        .join(User, CourseLecturer.user_id == User.id)
-        .where(CourseLecturer.course_id.in_(course_ids))
-    )
-
-    result: dict[int, list[User]] = {}
-    for course_id, user in (await session.execute(stmt)).all():
-        result.setdefault(course_id, []).append(user)
     return result
 
 
@@ -461,6 +437,7 @@ async def upsert_project_evaluation(
     and later update or finalise it (``submitted=True``) without conflicts.
     The caller is responsible for committing the session after this call.
     """
+    now = datetime.now(UTC)
     stmt = (
         pg_insert(ProjectEvaluation)
         .values(
@@ -468,14 +445,14 @@ async def upsert_project_evaluation(
             lecturer_id=lecturer_id,
             scores=scores,
             submitted=submitted,
-            updated_at=datetime.now(UTC),
+            updated_at=now,
         )
         .on_conflict_do_update(
             index_elements=["project_id", "lecturer_id"],
             set_={
                 "scores": scores,
                 "submitted": submitted,
-                "updated_at": datetime.now(UTC),
+                "updated_at": now,
             },
         )
     )
@@ -559,6 +536,205 @@ async def get_member_evaluation_statuses(
     )
     rows = (await session.execute(stmt)).all()
     return [(user, bool(submitted)) for user, submitted in rows]
+
+
+async def get_course_evaluation_by_student(
+    session: AsyncSession,
+    project_id: int,
+    student_id: int,
+) -> CourseEvaluation | None:
+    """Return the course evaluation row for *student_id* on *project_id*, or ``None``.
+
+    Used by the GET endpoint so that a student can retrieve their own draft or
+    submitted row before results are unlocked.
+    """
+    stmt = select(CourseEvaluation).where(
+        CourseEvaluation.project_id == project_id,
+        CourseEvaluation.student_id == student_id,
+    )
+    return (await session.execute(stmt)).scalars().first()
+
+
+async def upsert_course_evaluation(
+    session: AsyncSession,
+    project_id: int,
+    student_id: int,
+    *,
+    rating: int | None,
+    strengths: str | None,
+    improvements: str | None,
+    submitted: bool,
+) -> CourseEvaluation:
+    """Insert or update the course evaluation row for *(project_id, student_id)*.
+
+    Uses an UPSERT so that the student can save a draft (``submitted=False``)
+    and later update or finalise it (``submitted=True``) without conflicts.
+    The caller is responsible for committing the session after this call.
+    """
+    stmt = (
+        pg_insert(CourseEvaluation)
+        .values(
+            project_id=project_id,
+            student_id=student_id,
+            rating=rating,
+            strengths=strengths,
+            improvements=improvements,
+            submitted=submitted,
+            updated_at=datetime.now(UTC),
+        )
+        .on_conflict_do_update(
+            constraint="uq_course_evaluation_project_student",
+            set_={
+                "rating": rating,
+                "strengths": strengths,
+                "improvements": improvements,
+                "submitted": submitted,
+                "updated_at": datetime.now(UTC),
+            },
+        )
+    )
+    await session.execute(stmt)
+    await session.flush()
+    # Fetch the full ORM object after upsert to return consistent data.
+    evaluation = (
+        (
+            await session.execute(
+                select(CourseEvaluation).where(
+                    CourseEvaluation.project_id == project_id,
+                    CourseEvaluation.student_id == student_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if evaluation is None:
+        raise RuntimeError(
+            f"Expected course_evaluation row for student {student_id}"
+            f" in project {project_id} after UPSERT."
+        )
+    return evaluation
+
+
+async def replace_peer_feedback(
+    session: AsyncSession,
+    course_evaluation_id: int,
+    items: list[dict[str, object]],
+) -> None:
+    """Replace all peer feedback rows for *course_evaluation_id* with *items*.
+
+    Deletes all existing ``PeerFeedback`` rows for the evaluation, adds the
+    provided items to the session, and flushes the pending changes.  Passing
+    an empty list clears all existing feedback.  The caller is responsible for
+    committing the session.
+    """
+    await session.execute(
+        delete(PeerFeedback).where(PeerFeedback.course_evaluation_id == course_evaluation_id)
+    )
+    for item in items:
+        feedback = PeerFeedback(
+            course_evaluation_id=course_evaluation_id,
+            receiving_student_id=int(item["receiving_student_id"]),  # type: ignore[arg-type]
+            strengths=item.get("strengths"),  # type: ignore[arg-type]
+            improvements=item.get("improvements"),  # type: ignore[arg-type]
+            bonus_points=int(item.get("bonus_points", 0)),  # type: ignore[arg-type]
+        )
+        session.add(feedback)
+    await session.flush()
+
+
+async def get_projects_for_course(
+    session: AsyncSession,
+    course_id: int,
+    *,
+    year: int | None = None,
+) -> list[Project]:
+    """Return all projects for *course_id*, ordered by year descending then title ascending.
+
+    When *year* is provided the results are further filtered to that academic year.
+    """
+    stmt = (
+        select(Project)
+        .where(Project.course_id == course_id)
+        .order_by(Project.academic_year.desc(), Project.title)
+    )
+    if year is not None:
+        stmt = stmt.where(Project.academic_year == year)
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def get_submitted_project_evaluations(
+    session: AsyncSession,
+    project_ids: list[int],
+) -> dict[int, list[ProjectEvaluation]]:
+    """Return submitted lecturer evaluations grouped by project id.
+
+    Only rows with ``submitted=True`` are included so that draft evaluations
+    are excluded from the aggregation used by the overview endpoint.
+    """
+    if not project_ids:
+        return {}
+
+    stmt = select(ProjectEvaluation).where(
+        ProjectEvaluation.project_id.in_(project_ids),
+        ProjectEvaluation.submitted.is_(True),
+    )
+    result: dict[int, list[ProjectEvaluation]] = {}
+    for ev in (await session.execute(stmt)).scalars().all():
+        result.setdefault(ev.project_id, []).append(ev)
+    return result
+
+
+async def get_submitted_course_evaluations_for_projects(
+    session: AsyncSession,
+    project_ids: list[int],
+) -> dict[int, list[CourseEvaluation]]:
+    """Return submitted student course evaluations grouped by project id.
+
+    Only rows with ``submitted=True`` are included so that draft evaluations
+    are excluded from the aggregation used by the overview endpoint.
+    """
+    if not project_ids:
+        return {}
+
+    stmt = select(CourseEvaluation).where(
+        CourseEvaluation.project_id.in_(project_ids),
+        CourseEvaluation.submitted.is_(True),
+    )
+    result: dict[int, list[CourseEvaluation]] = {}
+    for ev in (await session.execute(stmt)).scalars().all():
+        result.setdefault(ev.project_id, []).append(ev)
+    return result
+
+
+async def get_peer_feedback_with_users_for_projects(
+    session: AsyncSession,
+    project_ids: list[int],
+) -> dict[int, list[tuple[PeerFeedback, User]]]:
+    """Return submitted peer feedback rows for *project_ids*, grouped by project id.
+
+    Each entry is ``(peer_feedback, receiving_user)`` so that callers can
+    display the receiving student's name without a further lookup. Uses an
+    explicit join chain through ``course_evaluation`` to resolve the project
+    association and excludes draft course evaluations from the overview data.
+    """
+    if not project_ids:
+        return {}
+
+    stmt = (
+        select(CourseEvaluation.project_id, PeerFeedback, User)
+        .select_from(PeerFeedback)
+        .join(CourseEvaluation, PeerFeedback.course_evaluation_id == CourseEvaluation.id)
+        .join(User, PeerFeedback.receiving_student_id == User.id)
+        .where(
+            CourseEvaluation.project_id.in_(project_ids),
+            CourseEvaluation.submitted.is_(True),
+        )
+    )
+    result: dict[int, list[tuple[PeerFeedback, User]]] = {}
+    for project_id, feedback, user in (await session.execute(stmt)).all():
+        result.setdefault(project_id, []).append((feedback, user))
+    return result
 
 
 async def unlock_project_results(session: AsyncSession, project_id: int) -> Project | None:

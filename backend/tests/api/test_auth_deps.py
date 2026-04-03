@@ -158,13 +158,19 @@ def _clear_dep_overrides():
 
 
 async def test_endpoint_returns_401_for_tampered_cookie(client: AsyncClient) -> None:
-    """A tampered ``session`` cookie must result in HTTP 401 on any protected endpoint."""
+    """A tampered ``session`` cookie must result in HTTP 401 on any protected endpoint.
+
+    Protected endpoints use ``require_current_user`` which raises HTTP 401 for
+    unauthenticated requests.  Public endpoints that use ``get_optional_current_user``
+    gracefully degrade to the unauthenticated response instead.
+    """
     # Override get_session so the DB is not required for this test.
     app.dependency_overrides[get_session] = _mock_get_session
     client.cookies.set("session", "eyJ.tampered.jwt")
     with patch("api.deps.get_settings") as mock_settings:
         mock_settings.return_value.jwt_secret = _JWT_SECRET
-        response = await client.get("/api/v1/projects/1")
+        # Use a protected endpoint (PATCH /projects/{id}) that requires authentication.
+        response = await client.patch("/api/v1/projects/1", json={"title": "x"})
     assert response.status_code == 401
 
 

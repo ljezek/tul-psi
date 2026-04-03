@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import AsyncClient
 
-from api.deps import get_current_user
+from api.deps import get_current_user, get_optional_current_user
 from api.projects import get_projects_service
 from main import app
 from models.course import CourseTerm, ProjectType
 from models.user import UserRole
-from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
+from schemas.projects import (
+    CourseEvaluationDetail,
+    CourseEvaluationFormResponse,
+    CoursePublic,
+    LecturerPublic,
+    MemberPublic,
+    ProjectPublic,
+)
 from services.projects import (
     AlreadyMemberError,
     PermissionDeniedError,
@@ -107,14 +115,16 @@ def _make_authenticated_user(role: UserRole = UserRole.STUDENT) -> MagicMock:
 def _clear_dependency_overrides() -> Generator[None, None, None]:
     """Reset FastAPI dependency overrides after every test to ensure isolation.
 
-    Sets ``get_current_user`` to return ``None`` by default for backward compatibility
-    with existing unauthenticated tests.  Tests that need an authenticated user
-    override ``get_current_user`` explicitly before making their request.
+    Sets ``get_current_user`` and ``get_optional_current_user`` to return ``None``
+    by default for backward compatibility with existing unauthenticated tests.
+    Tests that need an authenticated user override the dependency explicitly.
     """
     app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_optional_current_user] = lambda: None
     yield
     app.dependency_overrides.pop(get_projects_service, None)
     app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_optional_current_user, None)
 
 
 # ---------------------------------------------------------------------------
@@ -270,7 +280,7 @@ async def test_get_project_authenticated_calls_get_project_detail(client: AsyncC
     user = _make_authenticated_user()
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(return_value=_PROJECT_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/1")
@@ -285,7 +295,7 @@ async def test_get_project_authenticated_response_includes_emails(client: AsyncC
     user = _make_authenticated_user(UserRole.STUDENT)
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(return_value=_PROJECT_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/1")
@@ -301,7 +311,7 @@ async def test_get_project_authenticated_404_when_not_found(client: AsyncClient)
     user = _make_authenticated_user()
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(return_value=None)
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/999")
@@ -314,7 +324,7 @@ async def test_get_project_authenticated_500_on_service_error(client: AsyncClien
     user = _make_authenticated_user()
     mock_service = _make_service()
     mock_service.get_project_detail = AsyncMock(side_effect=RuntimeError("db failure"))
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_optional_current_user] = lambda: user
     app.dependency_overrides[get_projects_service] = lambda: mock_service
 
     response = await client.get("/api/v1/projects/1")
@@ -936,5 +946,281 @@ async def test_save_project_evaluation_returns_500_on_unexpected_error(
         "/api/v1/projects/1/project-evaluation",
         json={"scores": []},
     )
+
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/projects/{project_id}/course-evaluation
+# ---------------------------------------------------------------------------
+
+_NOW_CE = datetime(2025, 1, 15, 12, 0, tzinfo=UTC)
+
+_EVAL_DETAIL = CourseEvaluationDetail(
+    id=1,
+    student_id=99,
+    rating=4,
+    strengths="Great course.",
+    improvements="More exercises.",
+    submitted=False,
+    updated_at=_NOW_CE,
+)
+
+_FORM_RESPONSE = CourseEvaluationFormResponse(
+    teammates=[MemberPublic(id=5, github_alias="alice", name="Alice", email="alice@tul.cz")],
+    peer_bonus_budget=10,
+    current_evaluation=_EVAL_DETAIL,
+    authored_peer_feedback=[],
+    results_unlocked=False,
+)
+
+
+async def test_get_course_evaluation_returns_200(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id}/course-evaluation must return HTTP 200 for a project member."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_course_evaluation_form = AsyncMock(return_value=_FORM_RESPONSE)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/course-evaluation")
+
+    assert response.status_code == 200
+
+
+async def test_get_course_evaluation_returns_form_schema(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id}/course-evaluation must return the full form response schema."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_course_evaluation_form = AsyncMock(return_value=_FORM_RESPONSE)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/course-evaluation")
+
+    assert response.json() == _FORM_RESPONSE.model_dump(mode="json")
+
+
+async def test_get_course_evaluation_returns_401_when_unauthenticated(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/projects/{id}/course-evaluation must return HTTP 401 when not authenticated."""
+    app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_projects_service] = lambda: _make_service()
+
+    response = await client.get("/api/v1/projects/1/course-evaluation")
+
+    assert response.status_code == 401
+
+
+async def test_get_course_evaluation_returns_403_when_not_a_member(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id}/course-evaluation must return HTTP 403 for a non-member."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_course_evaluation_form = AsyncMock(
+        side_effect=PermissionDeniedError("Not a member.")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/course-evaluation")
+
+    assert response.status_code == 403
+
+
+async def test_get_course_evaluation_returns_404_when_project_not_found(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/projects/{id}/course-evaluation must return HTTP 404 when project is missing."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_course_evaluation_form = AsyncMock(
+        side_effect=ProjectNotFoundError("Project 99 not found.")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/99/course-evaluation")
+
+    assert response.status_code == 404
+
+
+async def test_get_course_evaluation_forwards_project_id_and_user(client: AsyncClient) -> None:
+    """GET /api/v1/projects/{id}/course-evaluation must pass project_id and user to the service."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_course_evaluation_form = AsyncMock(return_value=_FORM_RESPONSE)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.get("/api/v1/projects/42/course-evaluation")
+
+    mock_service.get_course_evaluation_form.assert_called_once_with(42, user)
+
+
+async def test_get_course_evaluation_returns_500_on_unexpected_error(
+    client: AsyncClient,
+) -> None:
+    """GET /api/v1/projects/{id}/course-evaluation must return HTTP 500 on unexpected error."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.get_course_evaluation_form = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.get("/api/v1/projects/1/course-evaluation")
+
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# PUT /api/v1/projects/{project_id}/course-evaluation
+# ---------------------------------------------------------------------------
+
+_PUT_PAYLOAD = {
+    "rating": 4,
+    "strengths": "Great course.",
+    "improvements": "More exercises.",
+    "submitted": False,
+    "peer_feedback": [],
+}
+
+
+async def test_put_course_evaluation_returns_200(client: AsyncClient) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return HTTP 200 on success."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.save_course_evaluation = AsyncMock(return_value=_FORM_RESPONSE)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
+
+    assert response.status_code == 200
+
+
+async def test_put_course_evaluation_returns_form_schema(client: AsyncClient) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return a form response schema."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.save_course_evaluation = AsyncMock(return_value=_FORM_RESPONSE)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
+
+    assert response.json() == _FORM_RESPONSE.model_dump(mode="json")
+
+
+async def test_put_course_evaluation_returns_401_when_unauthenticated(
+    client: AsyncClient,
+) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return HTTP 401 when not authenticated."""
+    app.dependency_overrides[get_current_user] = lambda: None
+
+    response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
+
+    assert response.status_code == 401
+
+
+async def test_put_course_evaluation_returns_403_when_not_a_member(client: AsyncClient) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return HTTP 403 for a non-member."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.save_course_evaluation = AsyncMock(
+        side_effect=PermissionDeniedError("Not a member.")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
+
+    assert response.status_code == 403
+
+
+async def test_put_course_evaluation_returns_409_when_results_unlocked(
+    client: AsyncClient,
+) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return HTTP 409 when results unlocked."""
+    from services.projects import EvaluationConflictError
+
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.save_course_evaluation = AsyncMock(
+        side_effect=EvaluationConflictError("Results unlocked.")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
+
+    assert response.status_code == 409
+
+
+async def test_put_course_evaluation_returns_422_for_invalid_recipient(
+    client: AsyncClient,
+) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return HTTP 422 for invalid recipient."""
+    from services.projects import InvalidEvaluationDataError
+
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.save_course_evaluation = AsyncMock(
+        side_effect=InvalidEvaluationDataError("Invalid peer feedback recipient IDs: [99].")
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
+
+    assert response.status_code == 422
+
+
+async def test_put_course_evaluation_returns_422_for_invalid_rating(
+    client: AsyncClient,
+) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return HTTP 422 for out-of-range rating."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: _make_service()
+
+    response = await client.put(
+        "/api/v1/projects/1/course-evaluation",
+        json={**_PUT_PAYLOAD, "rating": 6},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_put_course_evaluation_forwards_data_to_service(client: AsyncClient) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must forward the body and user to the service."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.save_course_evaluation = AsyncMock(return_value=_FORM_RESPONSE)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    payload = {"rating": 3, "submitted": True, "peer_feedback": []}
+    await client.put("/api/v1/projects/42/course-evaluation", json=payload)
+
+    mock_service.save_course_evaluation.assert_called_once()
+    call_args = mock_service.save_course_evaluation.call_args
+    assert call_args.args[0] == 42
+    assert call_args.args[1].rating == 3
+    assert call_args.args[1].submitted is True
+    assert call_args.args[2] is user
+
+
+async def test_put_course_evaluation_returns_500_on_unexpected_error(
+    client: AsyncClient,
+) -> None:
+    """PUT /api/v1/projects/{id}/course-evaluation must return HTTP 500 on unexpected error."""
+    user = _make_authenticated_user(role=UserRole.STUDENT)
+    mock_service = _make_service()
+    mock_service.save_course_evaluation = AsyncMock(side_effect=RuntimeError("db failure"))
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
 
     assert response.status_code == 500

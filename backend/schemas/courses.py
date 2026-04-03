@@ -139,3 +139,91 @@ class CourseLecturerPublic(BaseModel):
     name: str
     github_alias: str | None
     email: str
+
+
+class CriterionScoreSummary(BaseModel):
+    """Per-criterion score with verbatim text feedback from a single lecturer evaluation."""
+
+    criterion_code: str
+    score: int
+    # Verbatim text feedback written by the lecturer for this criterion; nullable
+    # because the source data may not always include both fields.
+    strengths: str | None
+    improvements: str | None
+
+
+class ProjectEvaluationSummary(BaseModel):
+    """All criterion scores submitted by a single lecturer for a project."""
+
+    lecturer_id: int
+    criterion_scores: list[CriterionScoreSummary]
+
+
+class CourseEvaluationSummary(BaseModel):
+    """Anonymous student course evaluation for the overview endpoint.
+
+    Student identity is not exposed in the overview; only the rating and
+    optional text fields are included so that lecturers can read the verbatim
+    feedback without identifying individual students.
+    """
+
+    # Null when the student has not provided a rating (drafts or legacy rows).
+    rating: int | None
+    strengths: str | None
+    improvements: str | None
+
+
+class ReceivedPeerFeedback(BaseModel):
+    """Anonymous peer feedback received by one student from a single teammate.
+
+    The giver's identity is not exposed so that the feedback remains
+    pseudonymous from the receiving student's perspective.
+    """
+
+    bonus_points: int
+    strengths: str | None
+    improvements: str | None
+
+
+class StudentBonusSummary(BaseModel):
+    """All peer feedback received by a single student within a project.
+
+    Each entry in ``feedback`` represents one teammate's submission.  The
+    frontend computes any desired aggregations (e.g. average bonus) from the
+    individual entries.
+    """
+
+    student_id: int
+    student_name: str
+    feedback: list[ReceivedPeerFeedback]
+
+
+class ProjectOverviewItem(BaseModel):
+    """Full evaluation data for a single project in the overview.
+
+    ``project_evaluations`` is empty when no lecturers have submitted evaluations.
+    ``course_evaluations`` is empty when no students have submitted course evaluations.
+    ``student_bonus_points`` is empty when the course has no peer-bonus scheme or
+    no peer feedback has been submitted yet.  The frontend is responsible for
+    computing any desired aggregations (averages, totals, etc.) from the raw entries.
+    """
+
+    project_id: int
+    project_title: str
+    academic_year: int
+    # One entry per submitted lecturer evaluation.
+    project_evaluations: list[ProjectEvaluationSummary]
+    # One entry per submitted student course evaluation (anonymous — no student_id).
+    course_evaluations: list[CourseEvaluationSummary]
+    # One entry per receiving student; each contains all peer feedback items for that student.
+    student_bonus_points: list[StudentBonusSummary]
+
+
+class EvaluationOverviewResponse(BaseModel):
+    """Evaluation overview for all projects in a course.
+
+    Sorted by ``academic_year`` descending and then ``project_title`` ascending,
+    matching the ordering applied at the DB query layer.
+    """
+
+    projects: list[ProjectOverviewItem]

@@ -19,7 +19,7 @@ async def test_get_project_members_returns_empty_dict_for_empty_ids() -> None:
 
 async def test_get_course_lecturers_returns_empty_dict_for_empty_ids() -> None:
     """``get_course_lecturers`` must short-circuit and return ``{}`` for an empty id list."""
-    from db.projects import get_course_lecturers
+    from db.courses import get_course_lecturers
 
     session = AsyncMock()
     result = await get_course_lecturers(session, [])

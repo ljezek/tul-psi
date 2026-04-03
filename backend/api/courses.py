@@ -16,6 +16,7 @@ from schemas.courses import (
     CourseLecturerPublic,
     CourseListItem,
     CourseUpdate,
+    EvaluationOverviewResponse,
 )
 from schemas.projects import AddUserBody, ProjectCreate, ProjectPublic
 from services.courses import (
@@ -317,4 +318,46 @@ async def remove_course_lecturer(
         ) from None
     except Exception:
         logger.exception("Failed to remove course lecturer", extra={"course_id": course_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
+@router.get(
+    "/{course_id}/evaluation-overview",
+    response_model=EvaluationOverviewResponse,
+    summary="Lecturer evaluation overview",
+    description=(
+        "Returns aggregated evaluation data for all projects in the course.  "
+        "For each project the response includes per-criterion average scores from "
+        "submitted lecturer evaluations, the average course-satisfaction rating from "
+        "submitted student evaluations, and per-student average peer bonus points received.  "
+        "Optionally filter by academic year using the ``?year=`` query parameter.  "
+        "Projects are sorted by academic year descending and then project title ascending.  "
+        "Only accessible to admin users or lecturers assigned to the course.  "
+        "Returns HTTP 401 when unauthenticated, HTTP 403 when the caller lacks permission, "
+        "and HTTP 404 when the course does not exist."
+    ),
+)
+async def get_evaluation_overview(
+    course_id: int,
+    year: int | None = None,
+    current_user: User = Depends(require_current_user),
+    service: CoursesService = Depends(get_courses_service),
+) -> EvaluationOverviewResponse:
+    """Return the evaluation overview for the course identified by ``course_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 404 when the course does not exist.
+    """
+    try:
+        return await service.get_evaluation_overview(course_id, year=year, requester=current_user)
+    except CourseNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Course {course_id} not found.",
+        ) from None
+    except CoursePermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except Exception:
+        logger.exception("Failed to retrieve evaluation overview", extra={"course_id": course_id})
         raise HTTPException(status_code=500, detail="Internal server error.") from None

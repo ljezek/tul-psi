@@ -5,12 +5,14 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_user, require_current_user
+from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
 from models.course import CourseTerm
 from models.user import User
 from schemas.projects import (
     AddMemberBody,
+    CourseEvaluationFormResponse,
+    CourseEvaluationUpsert,
     MemberPublic,
     ProjectEvaluationCreate,
     ProjectEvaluationDetail,
@@ -103,7 +105,7 @@ async def list_projects(
 )
 async def get_project(
     project_id: int,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> ProjectPublic:
     """Return the project identified by ``project_id``.
@@ -395,3 +397,111 @@ async def delete_project(
         logger.exception("Failed to delete project", extra={"project_id": project_id})
         raise HTTPException(status_code=500, detail="Internal server error.") from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/{project_id}/course-evaluation",
+    response_model=CourseEvaluationFormResponse,
+    summary="Get course evaluation form data",
+    description=(
+        "Returns all data a student needs to fill in the course evaluation and peer feedback form: "
+        "the list of teammates, the course peer-bonus budget, the student's current draft "
+        "(if any), and any peer feedback the student has already authored. "
+        "Only accessible to project members (students).  "
+        "Returns HTTP 401 when unauthenticated, HTTP 403 when the caller is not a project member, "
+        "and HTTP 404 when the project does not exist."
+    ),
+)
+async def get_course_evaluation(
+    project_id: int,
+    current_user: User = Depends(require_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> CourseEvaluationFormResponse:
+    """Return the course-evaluation form data for the calling student.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not a student or not a project member.
+    Raises HTTP 404 when the project does not exist.
+    """
+    try:
+        return await service.get_course_evaluation_form(project_id, current_user)
+    except ProjectNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from None
+    except Exception:
+        logger.exception(
+            "Failed to retrieve course evaluation form",
+            extra={"project_id": project_id},
+        )
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
+@router.put(
+    "/{project_id}/course-evaluation",
+    response_model=CourseEvaluationFormResponse,
+    summary="Save or publish course evaluation",
+    description=(
+        "Creates or updates the calling student's course evaluation and peer feedback for the "
+        "specified project.  "
+        "Set ``submitted=False`` (default) to save a draft that can be updated later.  "
+        "Set ``submitted=True`` to finalise the submission; once all project members have "
+        "submitted and all lecturers have submitted their project evaluations, the project "
+        "results are unlocked automatically and notification emails are sent to all "
+        "participants.  "
+        "Editing is blocked (HTTP 409) once the project results have been unlocked.  "
+        "Only accessible to project members (students)."
+    ),
+)
+async def save_course_evaluation(
+    project_id: int,
+    body: CourseEvaluationUpsert,
+    current_user: User = Depends(require_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> CourseEvaluationFormResponse:
+    """Create or update the calling student's course evaluation for ``project_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not a student or not a project member.
+    Raises HTTP 404 when the project does not exist.
+    Raises HTTP 409 when the project results are already unlocked.
+    Raises HTTP 422 when ``submitted=True`` but ``rating`` is not provided, when
+    peer feedback is provided for a non-team course, a recipient ID is duplicated,
+    a recipient is not a teammate, bonus points are non-zero when the course has
+    no peer-bonus scheme, bonus points are negative or exceed the per-recipient cap,
+    or the total bonus does not match the course budget on a final submission.
+    """
+    try:
+        return await service.save_course_evaluation(project_id, body, current_user)
+    except ProjectNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from None
+    except EvaluationConflictError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Project results are already unlocked; course evaluation cannot be edited.",
+        ) from None
+    except InvalidEvaluationDataError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from None
+    except Exception:
+        logger.exception(
+            "Failed to save course evaluation",
+            extra={"project_id": project_id},
+        )
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
