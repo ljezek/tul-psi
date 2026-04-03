@@ -14,6 +14,8 @@ import { UserRole } from '@/types';
 
 // Pages
 import { Dashboard } from '@/pages/Dashboard';
+import { CourseList } from '@/pages/CourseList';
+import { CourseDetailView } from '@/pages/CourseDetail';
 import { Login } from '@/pages/Login';
 import { ProjectDetail } from '@/pages/ProjectDetail';
 import { StudentHome } from '@/pages/student/StudentHome';
@@ -31,6 +33,8 @@ function App() {
           <Routes>
             <Route element={<MainLayout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/courses" element={<CourseList />} />
+              <Route path="/courses/:id" element={<CourseDetailView />} />
               <Route path="/login" element={<Login />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               

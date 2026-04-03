@@ -70,13 +70,12 @@ The nav bar should now show:
   - Use `LogOut` icon from lucide-react.
 - The mobile hamburger menu should include the same auth items.
 
-### 3. (Optional stretch) Profile editing
+### 3. Profile editing
 
-If time allows, add an inline profile edit capability:
+Add an inline profile edit capability:
 - Clicking the user name in the nav opens a small dropdown/modal.
 - Shows name (editable input) and github_alias (editable input).
 - Save button calls `updateCurrentUser({ name, github_alias })`, then `refreshUser()`.
-- This is LOW PRIORITY — add a `// TODO: Add profile editing` comment if skipping.
 
 ## Constraints
 

@@ -33,9 +33,12 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
     >
       {/* Header Area */}
       <div className="p-4 flex justify-between items-start gap-2">
-        <span className="px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider">
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/courses/${project.course.id}`); }}
+          className="px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider hover:bg-tul-blue/20 transition-colors"
+        >
           {project.course.code}
-        </span>
+        </button>
         <span className="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded">
           {project.academic_year}/{project.academic_year + 1}
         </span>

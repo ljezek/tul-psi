@@ -114,6 +114,7 @@ def _build_project(
         academic_year=p.academic_year,
         results_unlocked=(p.results_unlocked if authenticated else None),
         course=CoursePublic(
+            id=c.id,
             code=c.code,
             name=c.name,
             syllabus=c.syllabus,

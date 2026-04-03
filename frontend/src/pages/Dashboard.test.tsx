@@ -23,6 +23,7 @@ const mockProjects: ProjectPublic[] = [
     github_url: 'https://github.com/test/react',
     live_url: null,
     course: {
+      id: 1,
       code: 'PR1',
       name: 'Programming 1',
       syllabus: null,
@@ -50,6 +51,7 @@ const mockProjects: ProjectPublic[] = [
     github_url: null,
     live_url: 'https://demo.com',
     course: {
+      id: 2,
       code: 'DS1',
       name: 'Data Science 1',
       syllabus: null,

@@ -76,12 +76,18 @@ export const ProjectDetail = () => {
       {/* Header */}
       <div className="mb-10">
         <div className="flex flex-wrap items-center gap-3 mb-4">
-          <span className="px-3 py-1 bg-tul-blue text-white text-sm font-bold rounded uppercase">
+          <Link 
+            to={`/courses/${project.course.id}`}
+            className="px-3 py-1 bg-tul-blue text-white text-sm font-bold rounded uppercase hover:bg-blue-700 transition-colors"
+          >
             {project.course.code}
-          </span>
-          <span className="text-slate-500 font-medium">
+          </Link>
+          <Link 
+            to={`/courses/${project.course.id}`}
+            className="text-slate-500 font-medium hover:text-tul-blue transition-colors"
+          >
             {project.course.name}
-          </span>
+          </Link>
           <span className="h-4 w-px bg-slate-200 mx-1"></span>
           <span className="flex items-center gap-1.5 text-slate-500 font-medium">
             <Calendar size={16} className="text-slate-400" />
@@ -206,7 +212,13 @@ export const ProjectDetail = () => {
                 </p>
                 <div className="flex flex-col gap-2">
                   {project.course.lecturers.map((l, i) => (
-                    <span key={i} className="font-medium text-slate-700">{l.name}</span>
+                    <Link 
+                      key={i} 
+                      to={`/courses?lecturer=${encodeURIComponent(l.name)}`}
+                      className="font-medium text-slate-700 hover:text-tul-blue transition-colors"
+                    >
+                      {l.name}
+                    </Link>
                   ))}
                 </div>
               </div>
