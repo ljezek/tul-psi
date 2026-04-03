@@ -1,23 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 
 describe('App', () => {
   beforeEach(() => {
-    // Mock global fetch
+    // Mock global fetch to simulate an unauthenticated session.
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
       if (url.includes('/api/v1/users/me')) {
+        const body = JSON.stringify({ detail: 'Not authenticated' });
         return Promise.resolve({
           ok: false,
           status: 401,
-          json: () => Promise.resolve({ detail: 'Not authenticated' }),
+          text: () => Promise.resolve(body),
         });
       }
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({}),
+        status: 200,
+        text: () => Promise.resolve('{}'),
       });
     }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders the app with layout and dashboard route', async () => {

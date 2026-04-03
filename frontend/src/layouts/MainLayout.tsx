@@ -105,7 +105,13 @@ export const MainLayout = () => {
               >
                 {language.toUpperCase()}
               </button>
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-600">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-slate-600"
+                aria-label={mobileMenuOpen ? t('nav.close_menu') : t('nav.open_menu')}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-nav-menu"
+              >
                 {mobileMenuOpen ? <X /> : <Menu />}
               </button>
             </div>
@@ -114,7 +120,7 @@ export const MainLayout = () => {
 
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-slate-200 p-4 space-y-4">
+          <div id="mobile-nav-menu" className="md:hidden bg-white border-t border-slate-200 p-4 space-y-4">
             <div className="flex flex-col gap-2">
               <NavLinks />
             </div>

@@ -16,6 +16,8 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.lecturer_panel': { cs: 'Panel Lektora', en: 'Lecturer Panel' },
   'nav.login': { cs: 'Přihlásit', en: 'Log In' },
   'nav.logout': { cs: 'Odhlásit', en: 'Log Out' },
+  'nav.open_menu': { cs: 'Otevřít menu', en: 'Open menu' },
+  'nav.close_menu': { cs: 'Zavřít menu', en: 'Close menu' },
   'role.public': { cs: 'Veřejnost', en: 'Public' },
   'role.student': { cs: 'Student', en: 'Student' },
   'role.lecturer': { cs: 'Lektor', en: 'Lecturer' },
@@ -38,6 +40,20 @@ const translations: Record<string, Record<Language, string>> = {
   'project.team': { cs: 'Řešitelský tým', en: 'Project Team' },
   'project.source_code': { cs: 'Zdrojový kód', en: 'Source Code' },
   'project.live_demo': { cs: 'Live Demo', en: 'Live Demo' },
+
+  // Project Detail page
+  'projectDetail.title': { cs: 'Detail projektu', en: 'Project Detail' },
+
+  // Lecturer pages
+  'lecturer.courseProjects.heading': { cs: 'Projekty předmětu', en: 'Course Projects' },
+  'lecturer.projectEvaluation.title': { cs: 'Hodnocení projektu', en: 'Project Evaluation' },
+
+  // Student pages
+  'student.results.title': { cs: 'Výsledky', en: 'Results' },
+  'student.courseEvaluation.title': { cs: 'Hodnocení předmětu', en: 'Course Evaluation' },
+
+  // Error / loading states
+  'error.retry': { cs: 'Zkusit znovu', en: 'Retry' },
   
   // Admin Panel
   'admin.title': { cs: 'Administrace Lektora', en: 'Lecturer Administration' },

@@ -154,6 +154,9 @@ export async function unlockProject(projectId: number): Promise<ProjectPublic> {
   });
 }
 
+// TODO: The course-evaluation endpoints below are not yet implemented in the backend.
+// They will return 404 until the corresponding routes are added (tracked in a separate PR).
+
 export async function getCourseEvaluation(projectId: number): Promise<CourseEvaluationSubmit> {
   return apiFetch<CourseEvaluationSubmit>(`/api/v1/projects/${projectId}/course-evaluation`);
 }

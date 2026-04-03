@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserPublic } from '@/types';
-import { getCurrentUser, verifyOtp } from '@/api';
+import { getCurrentUser, verifyOtp, ApiError } from '@/api';
 
 interface AuthContextType {
   user: UserPublic | null;
@@ -20,8 +20,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userData = await getCurrentUser();
       setUser(userData);
-    } catch {
-      setUser(null);
+    } catch (error) {
+      // Only clear the user session on authentication errors (401).
+      // Transient failures (network errors, 5xx) should not log the user out.
+      if (error instanceof ApiError && error.status === 401) {
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -37,7 +41,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    document.cookie = 'session=; Max-Age=0; path=/;';
+    // TODO: Call a backend /logout endpoint to properly clear the HttpOnly session cookie.
+    // The `session` cookie is HttpOnly and Secure, so it cannot be cleared from JavaScript.
+    // A dedicated backend endpoint returning Set-Cookie with Max-Age=0 is required (tracked in a separate PR).
     setUser(null);
   };
 
