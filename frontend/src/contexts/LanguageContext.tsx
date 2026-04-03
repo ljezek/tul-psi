@@ -30,10 +30,14 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.search_placeholder': { cs: 'Hledat projekt nebo technologii...', en: 'Search project or technology...' },
   'dashboard.filter_subject': { cs: 'Předmět', en: 'Subject' },
   'dashboard.filter_year': { cs: 'Akademický rok', en: 'Academic Year' },
+  'dashboard.filter_technology': { cs: 'Technologie', en: 'Technology' },
   'dashboard.all_subjects': { cs: 'Všechny předměty', en: 'All Subjects' },
   'dashboard.all_years': { cs: 'Všechny roky', en: 'All Years' },
+  'dashboard.all_technologies': { cs: 'Všechny technologie', en: 'All Technologies' },
   'dashboard.no_results': { cs: 'Nebyly nalezeny žádné projekty', en: 'No projects found' },
   'dashboard.try_adjust': { cs: 'Zkuste upravit filtry nebo hledaný výraz.', en: 'Try adjusting filters or search query.' },
+  'dashboard.clear_filters': { cs: 'Zrušit filtry', en: 'Clear Filters' },
+  'dashboard.error_fetching': { cs: 'Nepodařilo se načíst projekty.', en: 'Failed to fetch projects.' },
   'dashboard.overview_title': { cs: 'Přehled všech projektů', en: 'All Projects Overview' },
 
   // Project Card & Modal
@@ -54,6 +58,7 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Project Detail page
   'projectDetail.title': { cs: 'Detail projektu', en: 'Project Detail' },
+  'projectDetail.error_fetching': { cs: 'Nepodařilo se načíst detail projektu.', en: 'Failed to fetch project details.' },
 
   // Lecturer pages
   'lecturer.courseProjects.heading': { cs: 'Projekty předmětu', en: 'Course Projects' },
