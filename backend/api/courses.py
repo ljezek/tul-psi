@@ -329,7 +329,7 @@ async def remove_course_lecturer(
         "Returns aggregated evaluation data for all projects in the course.  "
         "For each project the response includes per-criterion average scores from "
         "submitted lecturer evaluations, the average course-satisfaction rating from "
-        "submitted student evaluations, and per-student total peer bonus points received.  "
+        "submitted student evaluations, and per-student average peer bonus points received.  "
         "Optionally filter by academic year using the ``?year=`` query parameter.  "
         "Projects are sorted by academic year descending and then project title ascending.  "
         "Only accessible to admin users or lecturers assigned to the course.  "

@@ -41,7 +41,7 @@ from db.projects import (
 from db.projects import (
     upsert_project_evaluation as db_upsert_project_evaluation,
 )
-from models.course import Course, CourseTerm
+from models.course import Course, CourseTerm, ProjectType
 from models.course_evaluation import CourseEvaluation
 from models.peer_feedback import PeerFeedback
 from models.project import Project
@@ -903,11 +903,12 @@ class ProjectsService:
         Raises ``PermissionDeniedError`` when *user* is not a student or not a project member.
         Raises ``EvaluationConflictError`` when the project results are already
         unlocked (editing is no longer permitted after unlock).
-        Raises ``InvalidEvaluationDataError`` when a peer-feedback recipient is
-        not a project teammate, bonus points are non-zero when the course has no
-        peer-bonus scheme, bonus points are negative or exceed ``2 × peer_bonus_budget``,
-        or the total bonus does not equal ``peer_bonus_budget × N_teammates`` on a
-        final submission.
+        Raises ``InvalidEvaluationDataError`` when peer feedback is provided for a
+        non-team course, a recipient ID appears more than once, a recipient is not a
+        project teammate, bonus points are non-zero when the course has no peer-bonus
+        scheme, bonus points are negative or exceed ``2 × peer_bonus_budget``, or the
+        total bonus does not equal ``peer_bonus_budget × N_teammates`` on a final
+        submission.
         """
         row = await db_get_project(self._session, project_id)
         if row is None:
@@ -928,13 +929,28 @@ class ProjectsService:
                 " course evaluation cannot be edited."
             )
 
+        # Peer feedback is only meaningful on team courses; reject it for individual courses.
+        if course.project_type != ProjectType.TEAM and body.peer_feedback:
+            raise InvalidEvaluationDataError(
+                "Peer feedback can only be submitted for team courses."
+            )
+
         # Validate that peer feedback recipients are actual teammates.
         members_by_project = await get_project_members(self._session, [project_id])
         all_members = members_by_project.get(project_id, [])
         teammate_ids = {m.id for m in all_members if m.id is not None and m.id != user_id}
 
-        provided_recipient_ids = {fb.receiving_student_id for fb in body.peer_feedback}
-        invalid_recipients = provided_recipient_ids - teammate_ids
+        # Duplicate recipients would cause a DB integrity error; catch them early.
+        seen_recipient_ids: set[int] = set()
+        for fb in body.peer_feedback:
+            if fb.receiving_student_id in seen_recipient_ids:
+                raise InvalidEvaluationDataError(
+                    f"Duplicate peer feedback recipient id {fb.receiving_student_id}."
+                    " Each teammate may appear at most once."
+                )
+            seen_recipient_ids.add(fb.receiving_student_id)
+
+        invalid_recipients = seen_recipient_ids - teammate_ids
         if invalid_recipients:
             raise InvalidEvaluationDataError(
                 f"Invalid peer feedback recipient IDs: {sorted(invalid_recipients)}."

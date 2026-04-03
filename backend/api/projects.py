@@ -420,7 +420,7 @@ async def get_course_evaluation(
     """Return the course-evaluation form data for the calling student.
 
     Raises HTTP 401 when the caller is not authenticated.
-    Raises HTTP 403 when the caller is not a project member.
+    Raises HTTP 403 when the caller is not a student or not a project member.
     Raises HTTP 404 when the project does not exist.
     """
     try:
@@ -430,10 +430,10 @@ async def get_course_evaluation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project {project_id} not found.",
         ) from None
-    except PermissionDeniedError:
+    except PermissionDeniedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this project.",
+            detail=str(exc),
         ) from None
     except Exception:
         logger.exception(
@@ -468,11 +468,13 @@ async def save_course_evaluation(
     """Create or update the calling student's course evaluation for ``project_id``.
 
     Raises HTTP 401 when the caller is not authenticated.
-    Raises HTTP 403 when the caller is not a project member.
+    Raises HTTP 403 when the caller is not a student or not a project member.
     Raises HTTP 404 when the project does not exist.
     Raises HTTP 409 when the project results are already unlocked.
-    Raises HTTP 422 when a peer-feedback recipient is not a teammate, bonus points
-    are negative, or the total bonus does not match the course budget on a final
+    Raises HTTP 422 when peer feedback is provided for a non-team course, a recipient
+    ID is duplicated, a recipient is not a teammate, bonus points are non-zero when
+    the course has no peer-bonus scheme, bonus points are negative or exceed the
+    per-recipient cap, or the total bonus does not match the course budget on a final
     submission.
     """
     try:
@@ -482,10 +484,10 @@ async def save_course_evaluation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project {project_id} not found.",
         ) from None
-    except PermissionDeniedError:
+    except PermissionDeniedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this project.",
+            detail=str(exc),
         ) from None
     except EvaluationConflictError:
         raise HTTPException(

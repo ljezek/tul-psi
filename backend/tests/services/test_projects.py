@@ -2182,6 +2182,74 @@ async def test_save_course_evaluation_raises_invalid_data_for_unknown_recipient(
         await ProjectsService(session).save_course_evaluation(1, body, user)
 
 
+async def test_save_course_evaluation_raises_for_peer_feedback_on_individual_course() -> None:
+    """``save_course_evaluation`` must reject peer feedback on individual courses."""
+    from models.course import ProjectType as PT
+    from schemas.projects import CourseEvaluationUpsert, PeerFeedbackInput
+    from services.projects import InvalidEvaluationDataError
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    course.project_type = PT.INDIVIDUAL
+    session = MagicMock()
+    user = _make_student_user(user_id=5)
+
+    body = CourseEvaluationUpsert(
+        rating=4,
+        peer_feedback=[PeerFeedbackInput(receiving_student_id=7, bonus_points=0)],
+    )
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
+        pytest.raises(InvalidEvaluationDataError, match="team courses"),
+    ):
+        await ProjectsService(session).save_course_evaluation(1, body, user)
+
+
+async def test_save_course_evaluation_raises_for_duplicate_recipient_ids() -> None:
+    """``save_course_evaluation`` must raise ``InvalidEvaluationDataError`` for duplicate IDs."""
+    from models.user import User
+    from schemas.projects import CourseEvaluationUpsert, PeerFeedbackInput
+    from services.projects import InvalidEvaluationDataError
+
+    project, course = _make_project_and_course()
+    project.results_unlocked = False
+    session = MagicMock()
+    user = _make_student_user(user_id=5)
+
+    teammate = MagicMock(spec=User)
+    teammate.id = 7
+
+    body = CourseEvaluationUpsert(
+        rating=4,
+        peer_feedback=[
+            PeerFeedbackInput(receiving_student_id=7, bonus_points=0),
+            PeerFeedbackInput(receiving_student_id=7, bonus_points=0),
+        ],
+    )
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch("services.projects.is_project_member", new_callable=AsyncMock, return_value=True),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [teammate]},
+        ),
+        pytest.raises(InvalidEvaluationDataError, match="[Dd]uplicate"),
+    ):
+        await ProjectsService(session).save_course_evaluation(1, body, user)
+
+
 async def test_save_course_evaluation_raises_when_per_recipient_bonus_too_high() -> None:
     """``save_course_evaluation`` must raise ``InvalidEvaluationDataError`` for over-cap bonus."""
     from models.user import User

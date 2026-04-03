@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,7 +12,14 @@ from api.projects import get_projects_service
 from main import app
 from models.course import CourseTerm, ProjectType
 from models.user import UserRole
-from schemas.projects import CoursePublic, LecturerPublic, MemberPublic, ProjectPublic
+from schemas.projects import (
+    CourseEvaluationDetail,
+    CourseEvaluationFormResponse,
+    CoursePublic,
+    LecturerPublic,
+    MemberPublic,
+    ProjectPublic,
+)
 from services.projects import (
     AlreadyMemberError,
     PermissionDeniedError,
@@ -941,10 +949,6 @@ async def test_save_project_evaluation_returns_500_on_unexpected_error(
 # ---------------------------------------------------------------------------
 # GET /api/v1/projects/{project_id}/course-evaluation
 # ---------------------------------------------------------------------------
-
-from datetime import UTC, datetime  # noqa: E402
-
-from schemas.projects import CourseEvaluationDetail, CourseEvaluationFormResponse  # noqa: E402
 
 _NOW_CE = datetime(2025, 1, 15, 12, 0, tzinfo=UTC)
 

@@ -19,6 +19,10 @@ from schemas.courses import (
     CourseLecturerPublic,
     CourseListItem,
     CourseStats,
+    CriterionScoreSummary,
+    EvaluationOverviewResponse,
+    ProjectOverviewItem,
+    StudentBonusSummary,
 )
 from schemas.projects import CoursePublic, LecturerPublic, ProjectPublic
 from services.courses import (
@@ -837,13 +841,6 @@ async def test_remove_course_lecturer_returns_500_on_service_error(
 # ---------------------------------------------------------------------------
 # GET /api/v1/courses/{course_id}/evaluation-overview
 # ---------------------------------------------------------------------------
-
-from schemas.courses import (  # noqa: E402
-    CriterionScoreSummary,
-    EvaluationOverviewResponse,
-    ProjectOverviewItem,
-    StudentBonusSummary,
-)
 
 _OVERVIEW = EvaluationOverviewResponse(
     projects=[
