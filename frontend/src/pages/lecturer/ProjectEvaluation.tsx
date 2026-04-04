@@ -2,16 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { ArrowLeft, Save, Send, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getProject, getProjectEvaluation, submitProjectEvaluation } from '@/api';
+import { getProject, getProjectEvaluation, submitProjectEvaluation, ApiError } from '@/api';
 import { ProjectPublic, ProjectEvaluationDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-
-const getErrorMsg = (err: unknown, defaultMsg: string): string => {
-  const errorObj = err as { detail?: string | Array<{ msg?: string }> };
-  if (typeof errorObj?.detail === 'string') return errorObj.detail;
-  if (Array.isArray(errorObj?.detail)) return errorObj.detail.map(e => e.msg).filter(Boolean).join(', ');
-  return defaultMsg;
-};
 
 export const ProjectEvaluation = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +12,6 @@ export const ProjectEvaluation = () => {
   const { t } = useLanguage();
 
   const [project, setProject] = useState<ProjectPublic | null>(null);
-  const [evaluation, setEvaluation] = useState<ProjectEvaluationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,13 +29,13 @@ export const ProjectEvaluation = () => {
         const projectData = await getProject(projectId);
         setProject(projectData);
 
-        let evalData = null;
+        let evalData: ProjectEvaluationDetail | null = null;
         try {
           evalData = await getProjectEvaluation(projectId);
-          setEvaluation(evalData);
         } catch (err) {
-          const apiErr = err as { status?: number };
-          if (apiErr.status !== 404) {
+          if (err instanceof ApiError && err.status === 404) {
+            evalData = null;
+          } else {
             throw err;
           }
         }
@@ -51,7 +43,7 @@ export const ProjectEvaluation = () => {
         // Initialize form state
         const initialScores: typeof scores = {};
         projectData.course.evaluation_criteria.forEach((c) => {
-          const existing = evalData?.scores.find((s: {criterion_code: string, score: number, strengths: string, improvements: string}) => s.criterion_code === c.code);
+          const existing = evalData?.scores.find(s => s.criterion_code === c.code);
           initialScores[c.code] = {
             score: existing ? existing.score : '',
             strengths: existing ? existing.strengths : '',
@@ -60,7 +52,11 @@ export const ProjectEvaluation = () => {
         });
         setScores(initialScores);
       } catch (err) {
-        setError(getErrorMsg(err, t('projectDetail.error_fetching')));
+        if (err instanceof ApiError && typeof err.detail === 'string') {
+          setError(err.detail);
+        } else {
+          setError(t('projectDetail.error_fetching'));
+        }
       } finally {
         setLoading(false);
       }
@@ -68,44 +64,63 @@ export const ProjectEvaluation = () => {
     loadData();
   }, [id, t]);
 
+  const validateForm = () => {
+    if (!project) return false;
+    for (const criterion of project.course.evaluation_criteria) {
+      const val = scores[criterion.code];
+      if (val.score === '' || val.score < 0 || val.score > criterion.max_score) return false;
+      if (!val.strengths.trim() || !val.improvements.trim()) return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (submitFinal: boolean) => {
     if (!project || !id) return;
     
-    if (submitFinal && !window.confirm(t('lecturer.confirm_submit'))) {
-      return;
+    if (submitFinal) {
+      if (!validateForm()) {
+        setError(t('lecturer.error_validation'));
+        return;
+      }
+      if (!window.confirm(t('lecturer.confirm_submit'))) {
+        return;
+      }
     }
 
     setSaving(true);
     setError(null);
 
-    // Validation
-    const criteria = project.course.evaluation_criteria;
-    const items = criteria.map((c) => {
+    const items = project.course.evaluation_criteria.map((c) => {
       const s = scores[c.code];
       return {
         criterion_code: c.code,
         score: s.score === '' ? 0 : Number(s.score),
-        strengths: s.strengths,
-        improvements: s.improvements,
+        strengths: s.strengths.trim(),
+        improvements: s.improvements.trim(),
       };
     });
 
     try {
-      const res = await submitProjectEvaluation(parseInt(id, 10), {
+      await submitProjectEvaluation(parseInt(id, 10), {
         scores: items,
         submitted: submitFinal,
       });
-      setEvaluation(res);
       if (submitFinal) {
         navigate(`/lecturer/course/${project.course.id}`);
       }
     } catch (err) {
-      if ((err as Error & { status?: number }).status === 409) {
-        setError(t('lecturer.eval_locked'));
-      } else if ((err as Error & { status?: number }).status === 422) {
-        setError('Vyplňte prosím všechna povinná pole a zkuste to znovu.');
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setError(t('lecturer.eval_locked'));
+        } else if (err.status === 422) {
+          setError(t('lecturer.error_validation'));
+        } else if (typeof err.detail === 'string') {
+          setError(err.detail);
+        } else {
+          setError(t('login.error_unexpected'));
+        }
       } else {
-        setError(getErrorMsg(err, 'Error saving evaluation'));
+        setError(t('login.error_unexpected'));
       }
     } finally {
       setSaving(false);
@@ -123,10 +138,9 @@ export const ProjectEvaluation = () => {
   };
 
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
-  if (error && !project) return <div className="max-w-4xl mx-auto px-4 py-12"><div className="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-100 font-bold">{error}</div></div>;
-  if (!project) return null;
+  if (!project) return <div className="max-w-4xl mx-auto px-4 py-12"><div className="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-100 font-bold">{error || t('projectDetail.not_found')}</div></div>;
 
-  const isReadOnly = Boolean(project.results_unlocked) || Boolean(evaluation?.submitted && project.results_unlocked);
+  const isReadOnly = Boolean(project.results_unlocked);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
@@ -147,7 +161,7 @@ export const ProjectEvaluation = () => {
           <span className="text-slate-300">&bull;</span>
           <span className="flex items-center gap-2">
             {t('project.members')}: 
-            <span className="text-slate-700">{project.members.map(m => m.name || m.email).join(', ') || '—'}</span>
+            <span className="text-slate-700">{project.members.map(m => m.name || m.email).join(', ') || t('lecturer.no_members')}</span>
           </span>
         </div>
         
@@ -201,7 +215,7 @@ export const ProjectEvaluation = () => {
                     onChange={(e) => handleScoreChange(criterion.code, 'strengths', e.target.value)}
                     disabled={isReadOnly}
                     rows={4}
-                    placeholder="Popište silné stránky práce..."
+                    placeholder={t('lecturer.placeholder_strengths')}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium resize-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 disabled:opacity-70 disabled:bg-slate-50"
                   />
                 </div>
@@ -215,7 +229,7 @@ export const ProjectEvaluation = () => {
                     onChange={(e) => handleScoreChange(criterion.code, 'improvements', e.target.value)}
                     disabled={isReadOnly}
                     rows={4}
-                    placeholder="Kde vidíte prostor pro zlepšení..."
+                    placeholder={t('lecturer.placeholder_improvements')}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium resize-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 disabled:opacity-70 disabled:bg-slate-50"
                   />
                 </div>

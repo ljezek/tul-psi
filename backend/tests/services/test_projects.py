@@ -187,13 +187,23 @@ async def test_service_get_projects_optimizes_evaluation_fetching_for_members() 
             new_callable=AsyncMock,
             return_value={},
         ) as mock_get_evals,
-        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
         patch(
-            "services.projects.get_peer_feedback_received", new_callable=AsyncMock, return_value=[]
+            "services.projects.get_project_evaluations_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
         ),
-    ):
+        patch(
+            "services.projects.get_all_peer_feedback_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_all_peer_feedback_for_project",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        ):
         await ProjectsService(session).get_projects(user=user)
-
     # Optimization check: get_course_evaluations_for_student should be called with [1], not [1, 2].
     mock_get_evals.assert_called_once_with(session, [1], 5)
 
@@ -306,14 +316,14 @@ async def test_service_get_projects_calculates_total_points_when_unlocked() -> N
         ),  # Not used since we patch the mapping loop below
         patch("services.projects._to_project_evaluation_detail", side_effect=[peval1, peval2]),
         patch(
-            "services.projects.get_project_evaluations",
+            "services.projects.get_project_evaluations_for_projects",
             new_callable=AsyncMock,
-            return_value=["raw1", "raw2"],
+            return_value={1: ["raw1", "raw2"]},
         ),
         patch(
-            "services.projects.get_peer_feedback_received",
+            "services.projects.get_all_peer_feedback_for_projects",
             new_callable=AsyncMock,
-            return_value=["fraw1", "fraw2"],
+            return_value={1: ["fraw1", "fraw2"]},
         ),
         patch("services.projects._to_peer_feedback_detail", side_effect=[pfeed1, pfeed2]),
     ):
@@ -708,6 +718,11 @@ async def test_service_get_project_detail_lecturer_sees_all_evaluations() -> Non
             new_callable=AsyncMock,
             return_value=[course_eval],
         ),
+        patch(
+            "services.projects.get_all_peer_feedback_for_project",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
     ):
         result = await ProjectsService(session).get_project_detail(1, user)
 
@@ -716,7 +731,7 @@ async def test_service_get_project_detail_lecturer_sees_all_evaluations() -> Non
     assert len(result.project_evaluations) == 1
     assert result.course_evaluations is not None
     assert len(result.course_evaluations) == 1
-    assert result.received_peer_feedback is None
+    assert result.received_peer_feedback == []
     assert result.authored_peer_feedback is None
 
 
@@ -1033,6 +1048,11 @@ async def test_service_unlock_project_sets_results_unlocked() -> None:
         ),
         patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
         patch("services.projects.get_course_evaluations", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "services.projects.get_all_peer_feedback_for_project",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
         patch.object(session, "commit", new_callable=AsyncMock),
     ):
         result = await ProjectsService(session).unlock_project(5, user)

@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router';
 import { BookOpen, Users, FolderOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourses } from '@/api';
+import { getCourses, ApiError } from '@/api';
 import { CourseListItem } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
@@ -22,7 +22,11 @@ export const LecturerHome = () => {
       const data = await getCourses();
       setCourses(data);
     } catch (err) {
-      setError(t('courseList.error_fetching'));
+      if (err instanceof ApiError && typeof err.detail === 'string') {
+        setError(err.detail);
+      } else {
+        setError(t('courseList.error_fetching'));
+      }
     } finally {
       setLoading(false);
     }
@@ -30,13 +34,25 @@ export const LecturerHome = () => {
 
   useEffect(() => {
     fetchCourses();
-  }, [t]);
+  }, []);
+
+  const sortedCourses = useMemo(() => {
+    if (!user) return courses;
+    return [...courses].sort((a, b) => {
+      const aIsLecturer = a.lecturer_names.includes(user.name);
+      const bIsLecturer = b.lecturer_names.includes(user.name);
+      if (aIsLecturer && !bIsLecturer) return -1;
+      if (!aIsLecturer && bIsLecturer) return 1;
+      return a.code.localeCompare(b.code);
+    });
+  }, [courses, user]);
 
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
   if (error) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error} onRetry={fetchCourses} retryLabel={t('error.retry')} /></div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* TODO: Add evaluation overview table (stretch goal) */}
       <header className="mb-12">
         <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
           {t('lecturer.title')}
@@ -47,7 +63,7 @@ export const LecturerHome = () => {
         </div>
       </header>
 
-      {courses.length === 0 ? (
+      {sortedCourses.length === 0 ? (
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
           <div className="bg-white rounded-3xl p-12 shadow-xl shadow-slate-200/50 border border-slate-100">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -58,7 +74,7 @@ export const LecturerHome = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {courses.map((course) => {
+          {sortedCourses.map((course) => {
             const isLecturer = user && course.lecturer_names.includes(user.name);
             return (
               <div

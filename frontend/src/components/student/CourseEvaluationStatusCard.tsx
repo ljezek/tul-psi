@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, ClipboardCheck, BarChart3, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, ClipboardCheck, BarChart3, XCircle, Info } from 'lucide-react';
 import { ProjectPublic, UserPublic } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +34,11 @@ export const CourseEvaluationStatusCard = ({
 
   const isPass = project.total_points != null && project.total_points >= project.course.min_score;
   const maxPoints = project.course.evaluation_criteria.reduce((sum, c) => sum + c.max_score, 0) + (project.course.peer_bonus_budget || 0);
+
+  const totalLecturers = project.course.lecturers.length;
+  const totalStudents = project.members.length;
+  const submittedLecturers = project.submitted_lecturer_count || 0;
+  const submittedStudents = project.submitted_student_count || 0;
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -97,10 +102,42 @@ export const CourseEvaluationStatusCard = ({
               </span>
             </div>
           ) : (
-            <span className={`inline-flex items-center gap-1.5 text-slate-400 ${statusSize} font-bold`}>
-              <Clock size={iconSize} />
-              {t('student.locked')}
-            </span>
+            <div className="space-y-2 mt-1">
+              <span className={`inline-flex items-center gap-1.5 text-slate-400 ${statusSize} font-bold`}>
+                <Clock size={iconSize} />
+                {t('student.locked')}
+              </span>
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-slate-400">{t('lecturer.project_evaluation')}</span>
+                  <span className={submittedLecturers === totalLecturers ? 'text-green-600' : 'text-slate-500'}>
+                    {submittedLecturers}/{totalLecturers}
+                  </span>
+                </div>
+                <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-tul-blue transition-all duration-500" 
+                    style={{ width: `${(submittedLecturers / totalLecturers) * 100}%` }} 
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest pt-1">
+                  <span className="text-slate-400">{t('student.course_eval')}</span>
+                  <span className={submittedStudents === totalStudents ? 'text-green-600' : 'text-slate-500'}>
+                    {submittedStudents}/{totalStudents}
+                  </span>
+                </div>
+                <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500 transition-all duration-500" 
+                    style={{ width: `${(submittedStudents / totalStudents) * 100}%` }} 
+                  />
+                </div>
+                <div className="flex items-start gap-1.5 text-[9px] font-bold text-slate-400 leading-tight pt-1 italic">
+                  <Info size={10} className="shrink-0" />
+                  {t('student.unlock_hint')}
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
