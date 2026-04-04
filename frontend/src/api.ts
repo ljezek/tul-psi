@@ -6,10 +6,15 @@ import {
   AddMemberBody,
   CourseListItem,
   CourseDetail,
+  CourseCreate,
+  CourseUpdate,
+  CourseLecturerPublic,
   ProjectCreate,
   ProjectEvaluationDetail,
   ProjectEvaluationCreate,
   CourseEvaluationSubmit,
+  CourseEvaluationFormResponse,
+  EvaluationOverviewResponse,
   CourseTerm,
   MemberPublic
 } from './types';
@@ -136,6 +141,33 @@ export async function getCourse(id: number): Promise<CourseDetail> {
   return apiFetch<CourseDetail>(`/api/v1/courses/${id}`);
 }
 
+export async function createCourse(data: CourseCreate): Promise<CourseDetail> {
+  return apiFetch<CourseDetail>('/api/v1/courses', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateCourse(id: number, data: CourseUpdate): Promise<CourseDetail> {
+  return apiFetch<CourseDetail>(`/api/v1/courses/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function addCourseLecturer(courseId: number, data: AddMemberBody): Promise<CourseLecturerPublic> {
+  return apiFetch<CourseLecturerPublic>(`/api/v1/courses/${courseId}/lecturers`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCourseLecturer(courseId: number, userId: number): Promise<void> {
+  return apiFetch<void>(`/api/v1/courses/${courseId}/lecturers/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function createCourseProject(courseId: number, data: ProjectCreate): Promise<ProjectPublic> {
   return apiFetch<ProjectPublic>(`/api/v1/courses/${courseId}/projects`, {
     method: 'POST',
@@ -160,11 +192,8 @@ export async function unlockProject(projectId: number): Promise<ProjectPublic> {
   });
 }
 
-// TODO: The course-evaluation endpoints below are not yet implemented in the backend.
-// They will return 404 until the corresponding routes are added (tracked in a separate PR).
-
-export async function getCourseEvaluation(projectId: number): Promise<CourseEvaluationSubmit> {
-  return apiFetch<CourseEvaluationSubmit>(`/api/v1/projects/${projectId}/course-evaluation`);
+export async function getCourseEvaluation(projectId: number): Promise<CourseEvaluationFormResponse> {
+  return apiFetch<CourseEvaluationFormResponse>(`/api/v1/projects/${projectId}/course-evaluation`);
 }
 
 export async function submitCourseEvaluation(projectId: number, data: CourseEvaluationSubmit): Promise<void> {
@@ -172,4 +201,9 @@ export async function submitCourseEvaluation(projectId: number, data: CourseEval
     method: 'PUT',
     body: JSON.stringify(data),
   });
+}
+
+export async function getEvaluationOverview(courseId: number, year?: number): Promise<EvaluationOverviewResponse> {
+  const path = `/api/v1/courses/${courseId}/evaluation-overview${year ? `?year=${year}` : ''}`;
+  return apiFetch<EvaluationOverviewResponse>(path);
 }

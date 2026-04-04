@@ -3,6 +3,8 @@ import { ExternalLink, Users, Tag } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { ProjectPublic } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
 
 export interface ProjectCardProps {
   project: ProjectPublic;
@@ -10,8 +12,9 @@ export interface ProjectCardProps {
 
 export const ProjectCard = ({ project }: ProjectCardProps) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
 
-  // TODO: Add image/thumbnail support for project cards when backend supports it.
+  const isMember = project.members.some(m => m.id === user?.id);
 
   // Truncate members list
   const memberNames = project.members.map(m => m.name.split(' ')[0]);
@@ -27,10 +30,10 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
       />
 
       {/* Header Area */}
-      <div className="p-4 flex justify-between items-start gap-2">
+      <div className="p-4 flex justify-between items-start gap-2 relative z-10 pointer-events-none">
         <Link
           to={`/courses/${project.course.id}`}
-          className="relative z-10 px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider hover:bg-tul-blue/20 transition-colors"
+          className="pointer-events-auto px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider hover:bg-tul-blue/20 transition-colors"
         >
           {project.course.code}
         </Link>
@@ -40,18 +43,18 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-4 flex-grow">
+      <div className="px-4 pb-4 flex-grow relative z-10 pointer-events-none">
         <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-tul-blue transition-colors">
           {project.title}
         </h3>
-        <p className="text-slate-600 text-sm line-clamp-3 mb-4">
+        <p className="text-slate-600 text-sm line-clamp-2 mb-4">
           {project.description || t('project.no_description')}
         </p>
 
         {/* Technologies */}
         <div className="flex flex-wrap gap-1 mb-4">
           <Tag size={14} className="text-slate-400 mr-1" />
-          {project.technologies.slice(0, 5).map((tech, idx) => (
+          {project.technologies.slice(0, 3).map((tech, idx) => (
             <span 
               key={idx} 
               className="px-2 py-0.5 bg-slate-50 text-slate-500 text-[10px] font-semibold rounded-full border border-slate-100 uppercase"
@@ -59,22 +62,32 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
               {tech}
             </span>
           ))}
-          {project.technologies.length > 5 && (
+          {project.technologies.length > 3 && (
             <span className="text-[10px] font-semibold text-slate-400 self-center">
-              +{project.technologies.length - 5}
+              +{project.technologies.length - 3}
             </span>
           )}
         </div>
+
+        {/* Evaluation Status for Members */}
+        {isMember && (
+          <CourseEvaluationStatusCard 
+            project={project}
+            user={user}
+            isCompact={true}
+            className="pt-3 border-t border-slate-50 pointer-events-auto"
+          />
+        )}
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center mt-auto">
+      <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center mt-auto relative z-10 pointer-events-none">
         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
           <Users size={14} />
           <span>{displayedMembers}</span>
         </div>
         
-        <div className="relative z-10 flex items-center gap-3">
+        <div className="flex items-center gap-3 pointer-events-auto">
           {project.github_url && (
             <a 
               href={project.github_url} 

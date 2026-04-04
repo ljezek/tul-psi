@@ -4,14 +4,20 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Dashboard } from './Dashboard';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import * as api from '@/api';
 import { ProjectPublic, CourseListItem, CourseTerm, ProjectType } from '@/types';
 
 // Mock the API module
-vi.mock('@/api', () => ({
-  getProjects: vi.fn(),
-  getCourses: vi.fn(),
-}));
+vi.mock('@/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof api>();
+  return {
+    ...actual,
+    getProjects: vi.fn(),
+    getCourses: vi.fn(),
+    getCurrentUser: vi.fn(),
+  };
+});
 
 const mockProjects: ProjectPublic[] = [
   {
@@ -36,6 +42,8 @@ const mockProjects: ProjectPublic[] = [
       lecturers: []
     },
     members: [{ id: 1, name: 'John Doe', github_alias: 'jdoe', email: 'john@tul.cz' }],
+    submitted_lecturer_count: 0,
+    submitted_student_count: 0,
     results_unlocked: false,
     project_evaluations: [],
     course_evaluations: [],
@@ -64,6 +72,8 @@ const mockProjects: ProjectPublic[] = [
       lecturers: []
     },
     members: [{ id: 2, name: 'Jane Smith', github_alias: 'jsmith', email: 'jane@tul.cz' }],
+    submitted_lecturer_count: 1,
+    submitted_student_count: 1,
     results_unlocked: true,
     project_evaluations: [],
     course_evaluations: [],
@@ -101,9 +111,11 @@ describe('Dashboard', () => {
   const renderDashboard = () => {
     return render(
       <LanguageProvider>
-        <MemoryRouter>
-          <Dashboard />
-        </MemoryRouter>
+        <AuthProvider>
+          <MemoryRouter>
+            <Dashboard />
+          </MemoryRouter>
+        </AuthProvider>
       </LanguageProvider>
     );
   };

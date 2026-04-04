@@ -30,28 +30,34 @@ const mockProjects = [
     id: 101,
     title: 'Project Alpha',
     academic_year: 2024,
-    course: { id: 1, code: 'C1', name: 'Course 1', project_type: ProjectType.TEAM },
+    course: { id: 1, code: 'C1', name: 'Course 1', project_type: ProjectType.TEAM, lecturers: [{ name: 'L1' }] },
     members: [{ id: 1, name: 'Test Student' }, { id: 2, name: 'Other' }],
     results_unlocked: true,
     course_evaluations: [{ student_id: 1, submitted: true }],
+    submitted_lecturer_count: 1,
+    submitted_student_count: 2
   },
   {
     id: 102,
     title: 'Project Beta',
     academic_year: 2024,
-    course: { id: 2, code: 'C2', name: 'Course 2', project_type: ProjectType.INDIVIDUAL },
+    course: { id: 2, code: 'C2', name: 'Course 2', project_type: ProjectType.INDIVIDUAL, lecturers: [{ name: 'L1' }] },
     members: [{ id: 1, name: 'Test Student' }],
     results_unlocked: false,
     course_evaluations: [{ student_id: 1, submitted: false }],
+    submitted_lecturer_count: 0,
+    submitted_student_count: 0
   },
   {
     id: 103,
     title: 'Other Project',
     academic_year: 2024,
-    course: { id: 3, code: 'C3', name: 'Course 3', project_type: ProjectType.TEAM },
+    course: { id: 3, code: 'C3', name: 'Course 3', project_type: ProjectType.TEAM, lecturers: [{ name: 'L1' }] },
     members: [{ id: 3, name: 'Someone Else' }],
     results_unlocked: false,
     course_evaluations: [],
+    submitted_lecturer_count: 0,
+    submitted_student_count: 0
   }
 ];
 
@@ -96,9 +102,9 @@ describe('StudentHome', () => {
       const alphaCard = screen.getByText('Project Alpha').closest('div.group');
       expect(alphaCard).toHaveTextContent(/Odesláno/i);
       
-      // Project Beta: Draft
+      // Project Beta: Not Started
       const betaCard = screen.getByText('Project Beta').closest('div.group');
-      expect(betaCard).toHaveTextContent(/Koncept/i);
+      expect(betaCard).toHaveTextContent(/Nezahájeno/i);
     });
   });
 
@@ -113,6 +119,7 @@ describe('StudentHome', () => {
       // Project Beta: Pending
       const betaCard = screen.getByText('Project Beta').closest('div.group');
       expect(betaCard).toHaveTextContent(/Čeká se/i);
+      expect(betaCard).toHaveTextContent(/vyučující: 0\/1/i);
     });
   });
 
@@ -125,23 +132,11 @@ describe('StudentHome', () => {
     });
   });
 
-  it('shows View Results button when results_unlocked even if not yet submitted', async () => {
-    const unsubmittedUnlocked = [
-      {
-        id: 104,
-        title: 'Unlocked Project',
-        academic_year: 2024,
-        course: { id: 4, code: 'C4', name: 'Course 4', project_type: ProjectType.TEAM },
-        members: [{ id: 1, name: 'Test Student' }],
-        results_unlocked: true,
-        course_evaluations: [],
-      },
-    ];
-    (api.getProjects as Mock).mockResolvedValue(unsubmittedUnlocked);
+  it('shows SHOW RESULTS button when results_unlocked', async () => {
     await renderHome();
 
     await waitFor(() => {
-      expect(screen.getByText(/Zobrazit výsledky/i)).toBeInTheDocument();
+      expect(screen.getByText(/ZOBRAZIT VÝSLEDKY/i)).toBeInTheDocument();
     });
   });
 });
