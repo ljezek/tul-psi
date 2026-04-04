@@ -460,6 +460,7 @@ class ProjectsService:
         # Students always see their own course evaluation status (draft or submitted)
         # only if they are members of the project.
         if user.role == UserRole.STUDENT and user.id is not None:
+            members = members_by_project.get(p.id, [])
             is_member = any(m.id == user.id for m in members)
             if is_member:
                 raw_my_eval = await get_course_evaluation_by_student(self._session, project_id, user.id)
