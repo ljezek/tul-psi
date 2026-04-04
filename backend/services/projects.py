@@ -112,15 +112,17 @@ def _build_project(
             for ev in project_evaluations:
                 for score in ev.scores:
                     criterion_scores.setdefault(score.criterion_code, []).append(score.score)
-            
+
             for scores in criterion_scores.values():
                 if scores:
                     lecturer_avg += sum(scores) / len(scores)
-        
+
         peer_avg = 0.0
         if received_peer_feedback:
-            peer_avg = sum(f.bonus_points for f in received_peer_feedback) / len(received_peer_feedback)
-        
+            peer_avg = sum(f.bonus_points for f in received_peer_feedback) / len(
+                received_peer_feedback
+            )
+
         total_points = lecturer_avg + peer_avg
 
     return ProjectPublic(
@@ -387,13 +389,14 @@ class ProjectsService:
         peer_feedback: dict[int, list[PeerFeedbackDetail]] = {}
         if user is not None and user.id is not None:
             unlocked_member_project_ids = [
-                pid for pid, p_obj in {p.id: p for p, _ in rows}.items()
+                pid
+                for pid, p_obj in {p.id: p for p, _ in rows}.items()
                 if pid in member_project_ids and p_obj.results_unlocked
             ]
             for pid in unlocked_member_project_ids:
                 raw_pevals = await get_project_evaluations(self._session, pid)
                 project_evals[pid] = [_to_project_evaluation_detail(ev) for ev in raw_pevals]
-                
+
                 raw_pfeedback = await get_peer_feedback_received(self._session, pid, user.id)
                 peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in raw_pfeedback]
 
@@ -504,7 +507,9 @@ class ProjectsService:
             members = members_by_project.get(p.id, [])
             is_member = any(m.id == user.id for m in members)
             if is_member:
-                raw_my_eval = await get_course_evaluation_by_student(self._session, project_id, user.id)
+                raw_my_eval = await get_course_evaluation_by_student(
+                    self._session, project_id, user.id
+                )
                 if raw_my_eval:
                     course_evaluations = [_to_course_evaluation_detail(raw_my_eval)]
 

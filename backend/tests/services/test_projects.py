@@ -112,7 +112,7 @@ async def test_service_assembles_project_with_members_and_lecturers() -> None:
 
 
 async def test_service_get_projects_optimizes_evaluation_fetching_for_members() -> None:
-    """``get_projects`` must only fetch course evaluations for projects where the user is a member."""
+    """``get_projects`` must only fetch course evaluations for projects where the user is member."""
     from models.course import Course, ProjectType
     from models.project import Project
     from models.user import User
@@ -188,7 +188,9 @@ async def test_service_get_projects_optimizes_evaluation_fetching_for_members() 
             return_value={},
         ) as mock_get_evals,
         patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
-        patch("services.projects.get_peer_feedback_received", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "services.projects.get_peer_feedback_received", new_callable=AsyncMock, return_value=[]
+        ),
     ):
         await ProjectsService(session).get_projects(user=user)
 
@@ -197,12 +199,13 @@ async def test_service_get_projects_optimizes_evaluation_fetching_for_members() 
 
 
 async def test_service_get_projects_calculates_total_points_when_unlocked() -> None:
-    """``get_projects`` must calculate ``total_points`` (lecturer avg + peer avg) for member projects."""
+    """``get_projects`` must calculate total points (lecturer + peer avg) for member projects."""
     from datetime import datetime
+
     from models.course import Course, CourseTerm, ProjectType
     from models.project import Project
     from models.user import User
-    from schemas.projects import ProjectEvaluationDetail, EvaluationScoreDetail, PeerFeedbackDetail
+    from schemas.projects import EvaluationScoreDetail, PeerFeedbackDetail, ProjectEvaluationDetail
 
     course = MagicMock(spec=Course)
     course.id = 10
@@ -237,7 +240,7 @@ async def test_service_get_projects_calculates_total_points_when_unlocked() -> N
     member.github_alias = "alice"
     member.email = "alice@tul.cz"
 
-    # Lecturer evaluations: 
+    # Lecturer evaluations:
     # Lect 1: 40 points total across criteria
     # Lect 2: 50 points total across criteria
     # Avg Lecturer = 45.0
@@ -245,33 +248,73 @@ async def test_service_get_projects_calculates_total_points_when_unlocked() -> N
         lecturer_id=1,
         submitted=True,
         updated_at=datetime.now(),
-        scores=[EvaluationScoreDetail(criterion_code="C1", score=40, strengths="", improvements="")]
+        scores=[
+            EvaluationScoreDetail(criterion_code="C1", score=40, strengths="", improvements="")
+        ],
     )
     peval2 = ProjectEvaluationDetail(
         lecturer_id=2,
         submitted=True,
         updated_at=datetime.now(),
-        scores=[EvaluationScoreDetail(criterion_code="C1", score=50, strengths="", improvements="")]
+        scores=[
+            EvaluationScoreDetail(criterion_code="C1", score=50, strengths="", improvements="")
+        ],
     )
 
-    # Peer feedback: 
+    # Peer feedback:
     # Peer A: +5 points
     # Peer B: +15 points
     # Avg Peer = 10.0
-    pfeed1 = PeerFeedbackDetail(course_evaluation_id=1, receiving_student_id=5, bonus_points=5, strengths=None, improvements=None)
-    pfeed2 = PeerFeedbackDetail(course_evaluation_id=2, receiving_student_id=5, bonus_points=15, strengths=None, improvements=None)
+    pfeed1 = PeerFeedbackDetail(
+        course_evaluation_id=1,
+        receiving_student_id=5,
+        bonus_points=5,
+        strengths=None,
+        improvements=None,
+    )
+    pfeed2 = PeerFeedbackDetail(
+        course_evaluation_id=2,
+        receiving_student_id=5,
+        bonus_points=15,
+        strengths=None,
+        improvements=None,
+    )
 
     session = MagicMock()
     with (
         patch("services.projects.get_projects", new_callable=AsyncMock, return_value=[(p, course)]),
-        patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={1: [member]}),
-        patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={10: []}),
-        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={1: (2, 2)}),
-        patch("services.projects.get_course_evaluations_for_student", new_callable=AsyncMock, return_value={}),
-        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]), # Not used since we patch the mapping loop below
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [member]},
+        ),
+        patch(
+            "services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={10: []}
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={1: (2, 2)},
+        ),
+        patch(
+            "services.projects.get_course_evaluations_for_student",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]
+        ),  # Not used since we patch the mapping loop below
         patch("services.projects._to_project_evaluation_detail", side_effect=[peval1, peval2]),
-        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=["raw1", "raw2"]),
-        patch("services.projects.get_peer_feedback_received", new_callable=AsyncMock, return_value=["fraw1", "fraw2"]),
+        patch(
+            "services.projects.get_project_evaluations",
+            new_callable=AsyncMock,
+            return_value=["raw1", "raw2"],
+        ),
+        patch(
+            "services.projects.get_peer_feedback_received",
+            new_callable=AsyncMock,
+            return_value=["fraw1", "fraw2"],
+        ),
         patch("services.projects._to_peer_feedback_detail", side_effect=[pfeed1, pfeed2]),
     ):
         results = await ProjectsService(session).get_projects(user=user)
@@ -1132,8 +1175,17 @@ async def test_patch_project_member_can_update() -> None:
             new_callable=AsyncMock,
             return_value={10: []},
         ),
-        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={}),
-        patch("services.projects.get_course_evaluation_by_student", new_callable=AsyncMock, return_value=None),    ):
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+    ):
         from schemas.projects import ProjectUpdate
 
         result = await ProjectsService(session).patch_project(
@@ -1202,8 +1254,17 @@ async def test_patch_project_lecturer_can_update_without_membership() -> None:
             new_callable=AsyncMock,
             return_value={10: []},
         ),
-        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={}),
-        patch("services.projects.get_course_evaluation_by_student", new_callable=AsyncMock, return_value=None),    ):
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+    ):
         from schemas.projects import ProjectUpdate
 
         result = await ProjectsService(session).patch_project(
@@ -1276,8 +1337,17 @@ async def test_patch_project_grants_admin_write_access() -> None:
             new_callable=AsyncMock,
             return_value={10: []},
         ),
-        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={}),
-        patch("services.projects.get_course_evaluation_by_student", new_callable=AsyncMock, return_value=None),    ):
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+    ):
         from schemas.projects import ProjectUpdate
 
         result = await ProjectsService(session).patch_project(

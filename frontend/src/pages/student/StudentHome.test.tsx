@@ -30,10 +30,16 @@ const mockProjects = [
     id: 101,
     title: 'Project Alpha',
     academic_year: 2024,
-    course: { id: 1, code: 'C1', name: 'Course 1', project_type: ProjectType.TEAM, lecturers: [{ name: 'L1' }] },
+    course: { id: 1, code: 'C1', name: 'Course 1', project_type: ProjectType.TEAM, lecturers: [{ name: 'L1' }], evaluation_criteria: [{ code: 'C1', description: 'Crit', max_score: 100 }], min_score: 50 },
     members: [{ id: 1, name: 'Test Student' }, { id: 2, name: 'Other' }],
     results_unlocked: true,
     course_evaluations: [{ student_id: 1, submitted: true }],
+    project_evaluations: [{
+      lecturer_id: 1,
+      submitted: true,
+      updated_at: '2024-01-01T00:00:00Z',
+      scores: [{ criterion_code: 'C1', score: 80, strengths: '', improvements: '' }]
+    }],
     submitted_lecturer_count: 1,
     submitted_student_count: 2
   },
@@ -41,10 +47,11 @@ const mockProjects = [
     id: 102,
     title: 'Project Beta',
     academic_year: 2024,
-    course: { id: 2, code: 'C2', name: 'Course 2', project_type: ProjectType.INDIVIDUAL, lecturers: [{ name: 'L1' }] },
+    course: { id: 2, code: 'C2', name: 'Course 2', project_type: ProjectType.INDIVIDUAL, lecturers: [{ name: 'L1' }], evaluation_criteria: [{ code: 'C2', description: 'Crit', max_score: 100 }], min_score: 50 },
     members: [{ id: 1, name: 'Test Student' }],
     results_unlocked: false,
     course_evaluations: [{ student_id: 1, submitted: false }],
+    project_evaluations: [],
     submitted_lecturer_count: 0,
     submitted_student_count: 0
   },
@@ -52,10 +59,11 @@ const mockProjects = [
     id: 103,
     title: 'Other Project',
     academic_year: 2024,
-    course: { id: 3, code: 'C3', name: 'Course 3', project_type: ProjectType.TEAM, lecturers: [{ name: 'L1' }] },
+    course: { id: 3, code: 'C3', name: 'Course 3', project_type: ProjectType.TEAM, lecturers: [{ name: 'L1' }], evaluation_criteria: [] },
     members: [{ id: 3, name: 'Someone Else' }],
     results_unlocked: false,
     course_evaluations: [],
+    project_evaluations: [],
     submitted_lecturer_count: 0,
     submitted_student_count: 0
   }
@@ -112,14 +120,13 @@ describe('StudentHome', () => {
     await renderHome();
     
     await waitFor(() => {
-      // Project Alpha: Available
+      // Project Alpha: Passed
       const alphaCard = screen.getByText('Project Alpha').closest('div.group');
-      expect(alphaCard).toHaveTextContent(/Dostupné/i);
+      expect(alphaCard).toHaveTextContent(/SPLNĚNO/i);
       
       // Project Beta: Pending
       const betaCard = screen.getByText('Project Beta').closest('div.group');
-      expect(betaCard).toHaveTextContent(/Čeká se/i);
-      expect(betaCard).toHaveTextContent(/vyučující: 0\/1/i);
+      expect(betaCard).toHaveTextContent(/student\.locked/i);
     });
   });
 
