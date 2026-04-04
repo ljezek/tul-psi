@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { ArrowLeft, Save, Send, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Send, AlertTriangle, Mail, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getProject, getProjectEvaluation, submitProjectEvaluation, ApiError } from '@/api';
 import { ProjectPublic, ProjectEvaluationDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { GitHubLogo } from '@/components/icons/GitHubLogo';
 
 export const ProjectEvaluation = () => {
   const { id } = useParams<{ id: string }>();
@@ -143,26 +144,61 @@ export const ProjectEvaluation = () => {
   const isReadOnly = Boolean(project.results_unlocked);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
       {/* Back link */}
       <div>
-        <Link to={`/lecturer/course/${project.course.id}`} className="inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider">
+        <Link to={`/lecturer/course/${project.course.id}`} className="inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('lecturer.course_projects')} - {project.course.code}
         </Link>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm relative overflow-hidden">
-        <h1 className="text-3xl font-black text-slate-900 mb-4">{project.title}</h1>
-        <div className="flex flex-wrap items-center gap-4 text-slate-500 font-bold text-sm">
-          <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest">
-            {project.course.code}
-          </span>
-          <span className="text-slate-300">&bull;</span>
-          <span className="flex items-center gap-2">
-            {t('project.members')}: 
-            <span className="text-slate-700">{project.members.map(m => m.name || m.email).join(', ') || t('lecturer.no_members')}</span>
-          </span>
+      <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm relative overflow-hidden space-y-6">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title}</h1>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-slate-500 font-bold text-sm">
+            <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest">
+              {project.course.code}
+            </span>
+            <div className="flex gap-4">
+              {project.github_url && (
+                <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                  <GitHubLogo size={14} /> {t('common.repo')}
+                </a>
+              )}
+              {project.live_url && (
+                <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                  <Globe size={14} /> {t('common.app')}
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-slate-100">
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('project.members')}</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {project.members.map(member => (
+              <div key={member.id} className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 font-black shrink-0">
+                  {member.name.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
+                  <div className="flex flex-col gap-1 mt-1">
+                    <a href={`mailto:${member.email}`} className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
+                      <Mail size={10} /> {member.email}
+                    </a>
+                    {member.github_alias && (
+                      <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
+                        <GitHubLogo size={10} /> {member.github_alias}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         
         {isReadOnly && (
@@ -184,27 +220,35 @@ export const ProjectEvaluation = () => {
         {project.course.evaluation_criteria.map((criterion) => {
           const val = scores[criterion.code] || { score: '', strengths: '', improvements: '' };
           return (
-            <div key={criterion.code} className="bg-white border border-slate-200/60 rounded-3xl p-8 shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-6">
+            <div key={criterion.code} className="bg-white border border-slate-200/60 rounded-3xl p-8 shadow-sm space-y-8">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="flex-1">
-                  <h3 className="text-xl font-black text-slate-800 mb-2 whitespace-pre-line leading-tight">{t('lecturer.criterion')}: {criterion.code}</h3>
-                  <p className="text-sm font-medium text-slate-500 leading-relaxed">{criterion.description}</p>
+                  <h3 className="text-xl font-black text-slate-800 mb-2 whitespace-pre-line leading-tight">{criterion.description}</h3>
                 </div>
-                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 shrink-0">
-                  <input
-                    type="number"
-                    min="0"
-                    max={criterion.max_score}
-                    value={val.score}
-                    onChange={(e) => handleScoreChange(criterion.code, 'score', e.target.value)}
-                    disabled={isReadOnly}
-                    className="w-20 bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold text-center focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue disabled:opacity-50 disabled:bg-slate-50"
-                  />
-                  <span className="text-slate-400 font-black tracking-widest text-sm">/ {criterion.max_score}</span>
+                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 shrink-0 w-full md:w-auto">
+                   <div className="flex-1 md:w-32">
+                    <input
+                      type="range"
+                      min="0"
+                      max={criterion.max_score}
+                      step="1"
+                      value={val.score === '' ? 0 : val.score}
+                      disabled={isReadOnly}
+                      onChange={(e) => handleScoreChange(criterion.code, 'score', parseInt(e.target.value, 10))}
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-tul-blue disabled:opacity-50"
+                    />
+                    <div className="flex justify-between mt-2 text-[8px] font-black text-slate-300 uppercase tracking-widest">
+                      <span>0</span>
+                      <span>{criterion.max_score}</span>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 font-black text-lg min-w-[4rem] text-center">
+                    {val.score === '' ? 0 : val.score}
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <label className="block text-xs font-black text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500" />

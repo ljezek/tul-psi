@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, ClipboardCheck, BarChart3, XCircle, Info } from 'lucide-react';
+import { CheckCircle, Clock, ClipboardCheck, BarChart3, XCircle } from 'lucide-react';
 import { ProjectPublic, UserPublic } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/Button';
@@ -102,40 +102,18 @@ export const CourseEvaluationStatusCard = ({
               </span>
             </div>
           ) : (
-            <div className="space-y-2 mt-1">
+            <div className="space-y-2 mt-1 relative group/hint cursor-help">
               <span className={`inline-flex items-center gap-1.5 text-slate-400 ${statusSize} font-bold`}>
                 <Clock size={iconSize} />
-                {t('student.locked')}
+                {t('lecturer.pending_status')
+                  .replace('{s_curr}', submittedStudents.toString())
+                  .replace('{s_total}', totalStudents.toString())
+                  .replace('{l_curr}', submittedLecturers.toString())
+                  .replace('{l_total}', totalLecturers.toString())
+                }
               </span>
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                  <span className="text-slate-400">{t('lecturer.project_evaluation')}</span>
-                  <span className={submittedLecturers === totalLecturers ? 'text-green-600' : 'text-slate-500'}>
-                    {submittedLecturers}/{totalLecturers}
-                  </span>
-                </div>
-                <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-tul-blue transition-all duration-500" 
-                    style={{ width: `${(submittedLecturers / totalLecturers) * 100}%` }} 
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest pt-1">
-                  <span className="text-slate-400">{t('student.course_eval')}</span>
-                  <span className={submittedStudents === totalStudents ? 'text-green-600' : 'text-slate-500'}>
-                    {submittedStudents}/{totalStudents}
-                  </span>
-                </div>
-                <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-green-500 transition-all duration-500" 
-                    style={{ width: `${(submittedStudents / totalStudents) * 100}%` }} 
-                  />
-                </div>
-                <div className="flex items-start gap-1.5 text-[9px] font-bold text-slate-400 leading-tight pt-1 italic">
-                  <Info size={10} className="shrink-0" />
-                  {t('student.unlock_hint')}
-                </div>
+              <div className="absolute bottom-full left-0 mb-2 w-64 bg-slate-800 text-white text-[10px] p-2 rounded-lg opacity-0 group-hover/hint:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl font-bold">
+                {t('student.unlock_hint')}
               </div>
             </div>
           )}

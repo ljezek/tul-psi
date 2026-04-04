@@ -19,6 +19,7 @@ export const CourseProjects = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [yearFilter, setYearFilter] = useState<string>('all');
+  const [expandedResults, setExpandedResults] = useState<number | null>(null);
   
   // Add Project Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -133,7 +134,7 @@ export const CourseProjects = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
       {/* Back link */}
       <div>
-        <Link to="/lecturer" className="inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider">
+        <Link to="/lecturer" className="inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('nav.lecturer_panel')}
         </Link>
@@ -200,7 +201,7 @@ export const CourseProjects = () => {
             <div className="grid grid-cols-2 gap-4">
               {course.evaluation_criteria.map(c => (
                 <div key={c.code} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{c.code}</div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-tight">{c.description}</div>
                   <div className="text-sm font-black text-slate-700">{c.max_score} {t('label.points')}</div>
                 </div>
               ))}
@@ -336,15 +337,18 @@ export const CourseProjects = () => {
                     {!project.results_unlocked && (
                       <div className="pt-2">
                         {addingMemberTo === project.id ? (
-                          <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                            <input 
-                              type="email" 
-                              required 
-                              placeholder={t('form.email_placeholder')}
-                              value={memberEmail}
-                              onChange={e => setMemberEmail(e.target.value)}
-                              className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1 flex-1"
-                            />
+                          <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-100 max-w-sm">
+                            <div className="relative flex-1">
+                              <input 
+                                type="text" 
+                                required 
+                                placeholder={t('form.email_placeholder')}
+                                value={memberEmail}
+                                onChange={e => setMemberEmail(e.target.value.split('@')[0])}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1 flex-1"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
+                            </div>
                             <button type="submit" className="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold transition-colors">
                               {t('form.add')}
                             </button>
@@ -360,6 +364,23 @@ export const CourseProjects = () => {
                             <Plus size={14} className="mr-1 group-hover/add:scale-110 transition-transform"/> {t('lecturer.add_member')}
                           </button>
                         )}
+                      </div>
+                    )}
+
+                    {!project.results_unlocked && (
+                      <div className="flex items-center gap-2 group/hint relative cursor-help w-fit">
+                        <Clock size={14} className="text-slate-400" />
+                        <span className="text-xs font-bold text-slate-400">
+                          {t('lecturer.pending_status')
+                            .replace('{s_curr}', (project.submitted_student_count || 0).toString())
+                            .replace('{s_total}', project.members.length.toString())
+                            .replace('{l_curr}', (project.submitted_lecturer_count || 0).toString())
+                            .replace('{l_total}', (course?.lecturers.length || 0).toString())
+                          }
+                        </span>
+                        <div className="absolute bottom-full left-0 mb-2 w-64 bg-slate-800 text-white text-[10px] p-2 rounded-lg opacity-0 group-hover/hint:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl font-bold">
+                          {t('student.unlock_hint')}
+                        </div>
                       </div>
                     )}
 
@@ -398,7 +419,7 @@ export const CourseProjects = () => {
                             to={`/lecturer/project/${project.id}/evaluate`}
                             className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
                           >
-                            {t('lecturer.evaluate')}
+                            {userEval ? t('lecturer.edit_evaluation') : t('lecturer.evaluate')}
                           </Link>
                         )}
                       </div>
@@ -408,31 +429,43 @@ export const CourseProjects = () => {
                   {project.results_unlocked && (() => {
                     const criteria = course?.evaluation_criteria || [];
                     const evaluations = project.project_evaluations || [];
-                    const lecturerAvg = criteria.reduce((sum, criterion) => {
+                    
+                    const criteriaAverages = criteria.map(criterion => {
                       const scores = evaluations.map(e => e.scores.find(s => s.criterion_code === criterion.code)?.score || 0);
                       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-                      return sum + avg;
-                    }, 0);
+                      return { ...criterion, avg };
+                    });
 
+                    const totalLecturerAvg = criteriaAverages.reduce((sum, c) => sum + c.avg, 0);
                     const peerFeedback = project.received_peer_feedback || [];
 
                     return (
                       <div className="w-full md:w-96 bg-slate-50/50 border-l border-slate-100 p-8 flex flex-col gap-6">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('student.results_status')}</h4>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400">{t('results.avg_score')}: {Math.round(lecturerAvg * 10) / 10}</span>
+                        <div>
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('lecturer.avg_score')}</h4>
+                          <div className="space-y-3">
+                            {criteriaAverages.map(c => (
+                              <div key={c.code} className="flex justify-between items-center text-xs">
+                                <span className="text-slate-500 font-medium truncate mr-4">{c.description}</span>
+                                <span className="font-black text-slate-700 whitespace-nowrap">{Math.round(c.avg * 10) / 10} / {c.max_score}</span>
+                              </div>
+                            ))}
+                            <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-xs font-black">
+                              <span className="text-slate-900 uppercase tracking-wider">{t('lecturer.lecturer_scores')}</span>
+                              <span className="text-tul-blue">{Math.round(totalLecturerAvg * 10) / 10}</span>
+                            </div>
                           </div>
                         </div>
 
                         <div className="space-y-3">
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('student.results_status')}</h4>
                           {project.members.map(member => {
                             const receivedFeedback = peerFeedback.filter(f => f.receiving_student_id === member.id);
                             const memberBonus = receivedFeedback.length > 0 
                                 ? receivedFeedback.reduce((sum, f) => sum + f.bonus_points, 0) / receivedFeedback.length
                                 : 0;
                             
-                            const totalPoints = lecturerAvg + memberBonus;
+                            const totalPoints = totalLecturerAvg + memberBonus;
                             const isPass = totalPoints >= (course?.min_score || 0);
 
                             return (
@@ -453,17 +486,110 @@ export const CourseProjects = () => {
                             );
                           })}
                         </div>
-
-                        <div className="mt-auto pt-4 border-t border-slate-200/60">
-                           <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                              <span>{t('courseDetail.min_score')}</span>
-                              <span className="text-slate-600">{course?.min_score} {t('label.points')}</span>
-                           </div>
+                        
+                        <div className="mt-auto pt-6 border-t border-slate-200/60">
+                          <button
+                            onClick={() => setExpandedResults(expandedResults === project.id ? null : project.id)}
+                            className="w-full py-3 bg-white hover:bg-slate-50 text-tul-blue border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2"
+                          >
+                            <ListChecks size={14} />
+                            {expandedResults === project.id ? t('lecturer.hide_results') : t('lecturer.show_results')}
+                          </button>
                         </div>
                       </div>
                     );
                   })()}
                 </div>
+
+                {/* Expanded Results View */}
+                {expandedResults === project.id && project.results_unlocked && (
+                  <div className="bg-slate-50/80 border-x border-b border-slate-200/60 rounded-b-3xl -mt-6 p-8 space-y-8 animate-slide-down">
+                    {/* Lecturer Feedback */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                        <Users size={16} className="text-tul-blue" />
+                        {t('lecturer.lecturer_scores')}
+                      </h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {project.project_evaluations?.map((ev) => (
+                          <div key={ev.lecturer_id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                              <span className="font-black text-slate-800">{ev.lecturer_name}</span>
+                              <span className="bg-tul-blue/5 text-tul-blue px-3 py-1 rounded-lg text-xs font-black">
+                                {ev.scores.reduce((sum, s) => sum + s.score, 0)} {t('label.points')}
+                              </span>
+                            </div>
+                            <div className="space-y-4">
+                              {ev.scores.map((s) => {
+                                const criterion = course?.evaluation_criteria.find(c => c.code === s.criterion_code);
+                                return (
+                                  <div key={s.criterion_code} className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{criterion?.description || s.criterion_code}</span>
+                                      <span className="text-xs font-black text-slate-700">{s.score} / {criterion?.max_score}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      <div className="bg-green-50/50 p-3 rounded-xl border border-green-100/50">
+                                        <div className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">{t('student.label_strengths')}</div>
+                                        <p className="text-xs text-slate-600 italic whitespace-pre-line">{s.strengths}</p>
+                                      </div>
+                                      <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/50">
+                                        <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">{t('student.label_improvements')}</div>
+                                        <p className="text-xs text-slate-600 italic whitespace-pre-line">{s.improvements}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Peer Feedback */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                        <Users size={16} className="text-purple-500" />
+                        {t('lecturer.peer_feedback')}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {project.members.map((member) => {
+                          const receivedFeedback = project.received_peer_feedback?.filter(f => f.receiving_student_id === member.id) || [];
+                          if (receivedFeedback.length === 0) return null;
+
+                          return (
+                            <div key={member.id} className="space-y-3">
+                              <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{member.name || member.email}</h5>
+                              <div className="space-y-3">
+                                {receivedFeedback.map((f, i) => (
+                                  <div key={i} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                                    <div className="flex justify-between items-center text-[10px] font-black border-b border-slate-50 pb-2">
+                                      <span className="text-slate-400 uppercase tracking-widest">{t('student.anonymous_notice')}</span>
+                                      <span className={f.bonus_points >= 0 ? 'text-purple-500' : 'text-red-500'}>
+                                        {f.bonus_points >= 0 ? '+' : ''}{f.bonus_points} {t('label.points')}
+                                      </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="bg-slate-50 p-2 rounded-xl">
+                                        <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('student.label_strengths')}</div>
+                                        <p className="text-[11px] text-slate-600 italic leading-relaxed">{f.strengths}</p>
+                                      </div>
+                                      <div className="bg-slate-50 p-2 rounded-xl">
+                                        <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('student.label_improvements')}</div>
+                                        <p className="text-[11px] text-slate-600 italic leading-relaxed">{f.improvements}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
