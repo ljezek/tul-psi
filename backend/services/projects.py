@@ -342,14 +342,21 @@ class ProjectsService:
         eval_counts = await get_evaluation_counts_for_projects(self._session, project_ids)
 
         # If an authenticated user is provided, fetch their evaluations for these projects.
+        # We only need to check projects where the user is actually a member.
         user_evals: dict[int, CourseEvaluationDetail] = {}
         if user is not None and user.id is not None:
-            raw_user_evals = await get_course_evaluations_for_student(
-                self._session, project_ids, user.id
-            )
-            user_evals = {
-                pid: _to_course_evaluation_detail(ev) for pid, ev in raw_user_evals.items()
-            }
+            member_project_ids = [
+                pid
+                for pid in project_ids
+                if any(m.id == user.id for m in members_by_project.get(pid, []))
+            ]
+            if member_project_ids:
+                raw_user_evals = await get_course_evaluations_for_student(
+                    self._session, member_project_ids, user.id
+                )
+                user_evals = {
+                    pid: _to_course_evaluation_detail(ev) for pid, ev in raw_user_evals.items()
+                }
 
         return [
             _build_project(
@@ -359,7 +366,9 @@ class ProjectsService:
                 lecturers_by_course.get(c.id, []) if c.id is not None else [],
                 authenticated=(user is not None),
                 course_evaluations=[user_evals[p.id]] if p.id in user_evals else [],
-                submitted_lecturer_count=eval_counts.get(p.id, (0, 0))[0] if p.id is not None else 0,
+                submitted_lecturer_count=eval_counts.get(p.id, (0, 0))[0]
+                if p.id is not None
+                else 0,
                 submitted_student_count=eval_counts.get(p.id, (0, 0))[1] if p.id is not None else 0,
             )
             for p, c in rows
@@ -447,22 +456,15 @@ class ProjectsService:
                 authored_peer_feedback = [
                     _to_peer_feedback_detail(feedback) for feedback in raw_authored_peer_feedback
                 ]
-                
-                # Also include the student's own course evaluation row
-                course_evaluations = []
-                raw_my_eval = await get_course_evaluation_by_student(
-                    self._session, project_id, user.id
-                )
+
+        # Students always see their own course evaluation status (draft or submitted)
+        # only if they are members of the project.
+        if user.role == UserRole.STUDENT and user.id is not None:
+            is_member = any(m.id == user.id for m in members)
+            if is_member:
+                raw_my_eval = await get_course_evaluation_by_student(self._session, project_id, user.id)
                 if raw_my_eval:
                     course_evaluations = [_to_course_evaluation_detail(raw_my_eval)]
-        elif user.role == UserRole.STUDENT and user.id is not None:
-            # When results are locked, a student should still see their own evaluation status.
-            course_evaluations = []
-            raw_my_eval = await get_course_evaluation_by_student(
-                self._session, project_id, user.id
-            )
-            if raw_my_eval:
-                course_evaluations = [_to_course_evaluation_detail(raw_my_eval)]
 
         return _build_project(
             p,

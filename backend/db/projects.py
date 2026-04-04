@@ -806,6 +806,4 @@ async def get_evaluation_counts_for_projects(
     )
     student_counts = {row[0]: row[1] for row in (await session.execute(student_stmt)).all()}
 
-    return {
-        pid: (lecturer_counts.get(pid, 0), student_counts.get(pid, 0)) for pid in project_ids
-    }
+    return {pid: (lecturer_counts.get(pid, 0), student_counts.get(pid, 0)) for pid in project_ids}

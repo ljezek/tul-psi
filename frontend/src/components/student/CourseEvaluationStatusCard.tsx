@@ -30,7 +30,7 @@ export const CourseEvaluationStatusCard = ({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Evaluation Status */}
-      <div className="flex items-center justify-between">
+      <div className={isCompact ? "flex items-center justify-between" : "flex flex-col gap-3"}>
         <div className="flex flex-col gap-1">
           <span className={`${labelSize} font-black text-slate-400 uppercase tracking-widest`}>
             {t('student.evaluation_status')}
@@ -49,9 +49,9 @@ export const CourseEvaluationStatusCard = ({
         </div>
         
         {!project.results_unlocked && (
-          <Link to={`/student/project/${project.id}/evaluate`}>
-            <Button variant="outline" size={buttonSize} className={`rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold ${isCompact ? 'text-[10px] h-7 px-2' : 'text-xs'}`}>
-              <ClipboardCheck size={iconSize} className="mr-1" />
+          <Link to={`/student/project/${project.id}/evaluate`} className={isCompact ? '' : 'block w-full'}>
+            <Button variant="outline" size={buttonSize} className={`rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold ${isCompact ? 'text-[10px] h-7 px-2 gap-1' : 'w-full text-sm py-2 gap-2'}`}>
+              <ClipboardCheck size={isCompact ? iconSize : 18} />
               {isSubmitted ? t('student.update_evaluation') : t('student.create_evaluation')}
             </Button>
           </Link>
@@ -59,7 +59,7 @@ export const CourseEvaluationStatusCard = ({
       </div>
 
       {/* Results Status */}
-      <div className="flex items-center justify-between">
+      <div className={isCompact ? "flex items-center justify-between" : "flex flex-col gap-3"}>
         <div className="flex flex-col gap-1">
           <span className={`${labelSize} font-black text-slate-400 uppercase tracking-widest`}>
             {t('student.results_status')}
@@ -83,9 +83,9 @@ export const CourseEvaluationStatusCard = ({
         </div>
 
         {project.results_unlocked && (
-          <Link to={`/student/project/${project.id}/results`}>
-            <Button variant="outline" size={buttonSize} className={`rounded-xl border-tul-blue text-tul-blue hover:bg-tul-blue/5 font-black tracking-wider ${isCompact ? 'text-[10px] h-7 px-2' : 'text-xs'}`}>
-              <BarChart3 size={iconSize} className="mr-1" />
+          <Link to={`/student/project/${project.id}/results`} className={isCompact ? '' : 'block w-full mt-3'}>
+            <Button variant="outline" size={buttonSize} className={`rounded-xl border-tul-blue text-tul-blue hover:bg-tul-blue/5 font-black tracking-wider ${isCompact ? 'text-[10px] h-7 px-2 gap-1' : 'w-full text-xs py-2 gap-2'}`}>
+              <BarChart3 size={isCompact ? iconSize : 18} />
               {t('student.show_results')}
             </Button>
           </Link>

@@ -96,6 +96,11 @@ async def test_service_assembles_project_with_members_and_lecturers() -> None:
             new_callable=AsyncMock,
             return_value={10: [lecturer]},
         ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
     ):
         results = await ProjectsService(session).get_projects()
 
@@ -104,6 +109,89 @@ async def test_service_assembles_project_with_members_and_lecturers() -> None:
     assert result.title == "My Project"
     assert result.members[0].name == "Alice"
     assert result.course.lecturers[0].name == "Prof. Smith"
+
+
+async def test_service_get_projects_optimizes_evaluation_fetching_for_members() -> None:
+    """``get_projects`` must only fetch course evaluations for projects where the user is a member."""
+    from models.course import Course, ProjectType
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "Projektový seminář informatiky"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    # Two projects: user is a member of project 1, but not project 2.
+    p1 = MagicMock(spec=Project)
+    p1.id = 1
+    p1.course_id = 10
+    p1.title = "Project 1"
+    p1.description = None
+    p1.github_url = None
+    p1.live_url = None
+    p1.technologies = []
+    p1.academic_year = 2025
+
+    p2 = MagicMock(spec=Project)
+    p2.id = 2
+    p2.course_id = 10
+    p2.title = "Project 2"
+    p2.description = None
+    p2.github_url = None
+    p2.live_url = None
+    p2.technologies = []
+    p2.academic_year = 2025
+
+    user = MagicMock(spec=User)
+    user.id = 5
+
+    member = MagicMock(spec=User)
+    member.id = 5
+    member.name = "Alice"
+    member.github_alias = "alice"
+    member.email = "alice@tul.cz"
+
+    session = MagicMock()
+    with (
+        patch(
+            "services.projects.get_projects",
+            new_callable=AsyncMock,
+            return_value=[(p1, course), (p2, course)],
+        ),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            # User is only member of project 1
+            return_value={1: [member], 2: []},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: []},
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluations_for_student",
+            new_callable=AsyncMock,
+            return_value={},
+        ) as mock_get_evals,
+    ):
+        await ProjectsService(session).get_projects(user=user)
+
+    # Optimization check: get_course_evaluations_for_student should be called with [1], not [1, 2].
+    mock_get_evals.assert_called_once_with(session, [1], 5)
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +261,16 @@ async def test_service_get_project_assembles_full_response() -> None:
             new_callable=AsyncMock,
             return_value={10: [lecturer]},
         ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
     ):
         result = await ProjectsService(session).get_project(1)
 
@@ -212,6 +310,21 @@ async def test_service_get_project_raises_when_project_id_is_none() -> None:
         ),
         patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
         patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
         pytest.raises(ValueError, match="no id"),
     ):
         await ProjectsService(session).get_project(1)
@@ -343,9 +456,18 @@ async def test_service_get_project_detail_includes_emails() -> None:
             new_callable=AsyncMock,
             return_value={10: [lecturer]},
         ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
     ):
         result = await ProjectsService(session).get_project_detail(1, user)
-
     assert result is not None
     assert result.members[0].email == "alice@tul.cz"
     assert result.course.lecturers[0].email == "smith@tul.cz"
@@ -379,6 +501,16 @@ async def test_service_get_project_detail_no_evaluations_when_not_unlocked() -> 
             "services.projects.get_course_lecturers",
             new_callable=AsyncMock,
             return_value={},
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
         ),
     ):
         result = await ProjectsService(session).get_project_detail(1, user)
@@ -426,6 +558,21 @@ async def test_service_get_project_detail_lecturer_sees_all_evaluations() -> Non
         ),
         patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
         patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
         patch(
             "services.projects.get_project_evaluations",
             new_callable=AsyncMock,
@@ -494,6 +641,21 @@ async def test_service_get_project_detail_student_sees_peer_feedback_not_course_
         ),
         patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
         patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
         patch(
             "services.projects.get_project_evaluations",
             new_callable=AsyncMock,
@@ -588,6 +750,21 @@ async def test_service_create_project_succeeds_for_admin() -> None:
         ),
         patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
         patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
         patch.object(session, "commit", new_callable=AsyncMock),
         patch.object(session, "refresh", new_callable=AsyncMock),
     ):
@@ -714,6 +891,21 @@ async def test_service_unlock_project_sets_results_unlocked() -> None:
         ),
         patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
         patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
         patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
         patch("services.projects.get_course_evaluations", new_callable=AsyncMock, return_value=[]),
         patch.object(session, "commit", new_callable=AsyncMock),
@@ -853,7 +1045,8 @@ async def test_patch_project_member_can_update() -> None:
             new_callable=AsyncMock,
             return_value={10: []},
         ),
-    ):
+        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_evaluation_by_student", new_callable=AsyncMock, return_value=None),    ):
         from schemas.projects import ProjectUpdate
 
         result = await ProjectsService(session).patch_project(
@@ -922,7 +1115,8 @@ async def test_patch_project_lecturer_can_update_without_membership() -> None:
             new_callable=AsyncMock,
             return_value={10: []},
         ),
-    ):
+        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_evaluation_by_student", new_callable=AsyncMock, return_value=None),    ):
         from schemas.projects import ProjectUpdate
 
         result = await ProjectsService(session).patch_project(
@@ -995,7 +1189,8 @@ async def test_patch_project_grants_admin_write_access() -> None:
             new_callable=AsyncMock,
             return_value={10: []},
         ),
-    ):
+        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_evaluation_by_student", new_callable=AsyncMock, return_value=None),    ):
         from schemas.projects import ProjectUpdate
 
         result = await ProjectsService(session).patch_project(
@@ -1206,6 +1401,21 @@ async def test_service_create_project_with_owner_sends_invite_email() -> None:
         ),
         patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
         patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
         patch(
             "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
