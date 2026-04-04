@@ -197,6 +197,8 @@ const translations: Record<string, Record<Language, string>> = {
   'student.submit_error': { cs: 'Odeslání se nezdařilo. Zkuste to prosím znovu.', en: 'Submission failed. Please try again.' },
   'student.unsaved_changes': { cs: 'Máte neuložené změny. Opravdu chcete odejít?', en: 'You have unsaved changes. Are you sure you want to leave?' },
 
+  'label.points': { cs: 'bodů', en: 'points' },
+  'label.min_required': { cs: 'minimum k splnění', en: 'minimum required' },
   // Results
   'results.title': { cs: 'Výsledky hodnocení', en: 'Evaluation Results' },
   'results.not_available': { cs: 'Výsledky zatím nejsou k dispozici.', en: 'Results are not available yet.' },

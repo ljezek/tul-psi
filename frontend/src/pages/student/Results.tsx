@@ -110,7 +110,7 @@ export const Results = () => {
               </div>
             </div>
             <p className="text-slate-500 font-medium text-lg">
-              {project.title} <span className="text-slate-300 mx-2">|</span> <span className="text-tul-blue">{project.course.code}</span>
+              {project.title} <span className="text-slate-300 mx-2">|</span> <Link to={`/courses/${project.course.id}`} className="text-tul-blue hover:underline underline-offset-4">{project.course.code}</Link>
             </p>
 
             <div className="flex flex-wrap gap-x-8 gap-y-2 mt-4 pt-4 border-t border-slate-50">
@@ -163,9 +163,14 @@ export const Results = () => {
       <div className="space-y-12">
         {/* Lecturer Feedback */}
         <section className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-          <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center gap-3">
-            <Award className="text-tul-blue" size={24} />
-            <h2 className="text-xl font-black text-slate-800">{t('results.lecturer_eval')}</h2>
+          <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Award className="text-tul-blue" size={24} />
+              <h2 className="text-xl font-black text-slate-800">{t('results.lecturer_eval')}</h2>
+            </div>
+            <div className="bg-tul-blue/5 text-tul-blue px-4 py-2 rounded-2xl border border-tul-blue/10 text-xs font-black uppercase">
+              {t('results.avg_score')}: {Math.round(lecturerTotal * 10) / 10}
+            </div>
           </div>
           <div className="p-8 space-y-12">
             {avgScores.map(c => (

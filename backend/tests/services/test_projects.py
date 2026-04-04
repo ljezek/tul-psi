@@ -187,11 +187,98 @@ async def test_service_get_projects_optimizes_evaluation_fetching_for_members() 
             new_callable=AsyncMock,
             return_value={},
         ) as mock_get_evals,
+        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
+        patch("services.projects.get_peer_feedback_received", new_callable=AsyncMock, return_value=[]),
     ):
         await ProjectsService(session).get_projects(user=user)
 
     # Optimization check: get_course_evaluations_for_student should be called with [1], not [1, 2].
     mock_get_evals.assert_called_once_with(session, [1], 5)
+
+
+async def test_service_get_projects_calculates_total_points_when_unlocked() -> None:
+    """``get_projects`` must calculate ``total_points`` (lecturer avg + peer avg) for member projects."""
+    from datetime import datetime
+    from models.course import Course, CourseTerm, ProjectType
+    from models.project import Project
+    from models.user import User
+    from schemas.projects import ProjectEvaluationDetail, EvaluationScoreDetail, PeerFeedbackDetail
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "Test Course"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = 10
+    course.evaluation_criteria = []
+    course.links = []
+
+    p = MagicMock(spec=Project)
+    p.id = 1
+    p.course_id = 10
+    p.title = "My Project"
+    p.description = None
+    p.github_url = None
+    p.live_url = None
+    p.technologies = []
+    p.academic_year = 2025
+    p.results_unlocked = True
+
+    user = MagicMock(spec=User)
+    user.id = 5
+    user.name = "Alice"
+
+    member = MagicMock(spec=User)
+    member.id = 5
+    member.name = "Alice"
+    member.github_alias = "alice"
+    member.email = "alice@tul.cz"
+
+    # Lecturer evaluations: 
+    # Lect 1: 40 points total across criteria
+    # Lect 2: 50 points total across criteria
+    # Avg Lecturer = 45.0
+    peval1 = ProjectEvaluationDetail(
+        lecturer_id=1,
+        submitted=True,
+        updated_at=datetime.now(),
+        scores=[EvaluationScoreDetail(criterion_code="C1", score=40, strengths="", improvements="")]
+    )
+    peval2 = ProjectEvaluationDetail(
+        lecturer_id=2,
+        submitted=True,
+        updated_at=datetime.now(),
+        scores=[EvaluationScoreDetail(criterion_code="C1", score=50, strengths="", improvements="")]
+    )
+
+    # Peer feedback: 
+    # Peer A: +5 points
+    # Peer B: +15 points
+    # Avg Peer = 10.0
+    pfeed1 = PeerFeedbackDetail(course_evaluation_id=1, receiving_student_id=5, bonus_points=5, strengths=None, improvements=None)
+    pfeed2 = PeerFeedbackDetail(course_evaluation_id=2, receiving_student_id=5, bonus_points=15, strengths=None, improvements=None)
+
+    session = MagicMock()
+    with (
+        patch("services.projects.get_projects", new_callable=AsyncMock, return_value=[(p, course)]),
+        patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={1: [member]}),
+        patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={10: []}),
+        patch("services.projects.get_evaluation_counts_for_projects", new_callable=AsyncMock, return_value={1: (2, 2)}),
+        patch("services.projects.get_course_evaluations_for_student", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]), # Not used since we patch the mapping loop below
+        patch("services.projects._to_project_evaluation_detail", side_effect=[peval1, peval2]),
+        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=["raw1", "raw2"]),
+        patch("services.projects.get_peer_feedback_received", new_callable=AsyncMock, return_value=["fraw1", "fraw2"]),
+        patch("services.projects._to_peer_feedback_detail", side_effect=[pfeed1, pfeed2]),
+    ):
+        results = await ProjectsService(session).get_projects(user=user)
+
+    assert len(results) == 1
+    # Total = 45.0 (lecturer avg) + 10.0 (peer avg) = 55.0
+    assert results[0].total_points == 55.0
 
 
 # ---------------------------------------------------------------------------

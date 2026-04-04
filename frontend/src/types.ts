@@ -110,8 +110,10 @@ export interface ProjectPublic {
   project_evaluations: ProjectEvaluationDetail[] | null;
   course_evaluations: CourseEvaluationDetail[] | null;
   received_peer_feedback: PeerFeedbackDetail[] | null;
-  authored_peer_feedback: PeerFeedbackDetail[] | null;
-}
+  authored_peer_feedback?: PeerFeedbackDetail[] | null;
+  total_points?: number | null;
+  }
+
 
 export interface CriterionScoreSummary {
   criterion_code: string;

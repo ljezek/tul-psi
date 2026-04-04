@@ -209,6 +209,8 @@ class ProjectPublic(BaseModel):
     received_peer_feedback: list[PeerFeedbackDetail] | None = None
     # Populated for student when results_unlocked is True.
     authored_peer_feedback: list[PeerFeedbackDetail] | None = None
+    # Calculated total points (lecturer avg + peer avg), only when results_unlocked is True.
+    total_points: float | None = None
 
 
 class PeerFeedbackInput(BaseModel):

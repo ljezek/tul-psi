@@ -101,6 +101,28 @@ def _build_project(
         raise ValueError(f"Project returned from DB has no id: {p!r}")
     if c.id is None:
         raise ValueError(f"Course returned from DB has no id: {c!r}")
+
+    total_points: float | None = None
+    if p.results_unlocked and authenticated:
+        # Total points = Lecturer avg + Peer avg (bonus)
+        lecturer_avg = 0.0
+        if project_evaluations:
+            # Group by criterion to get averages
+            criterion_scores: dict[str, list[int]] = {}
+            for ev in project_evaluations:
+                for score in ev.scores:
+                    criterion_scores.setdefault(score.criterion_code, []).append(score.score)
+            
+            for scores in criterion_scores.values():
+                if scores:
+                    lecturer_avg += sum(scores) / len(scores)
+        
+        peer_avg = 0.0
+        if received_peer_feedback:
+            peer_avg = sum(f.bonus_points for f in received_peer_feedback) / len(received_peer_feedback)
+        
+        total_points = lecturer_avg + peer_avg
+
     return ProjectPublic(
         id=p.id,
         title=p.title,
@@ -145,6 +167,7 @@ def _build_project(
         course_evaluations=(course_evaluations if authenticated else None),
         received_peer_feedback=(received_peer_feedback if authenticated else None),
         authored_peer_feedback=(authored_peer_feedback if authenticated else None),
+        total_points=(total_points if authenticated else None),
     )
 
 
@@ -358,6 +381,22 @@ class ProjectsService:
                     pid: _to_course_evaluation_detail(ev) for pid, ev in raw_user_evals.items()
                 }
 
+        # For member projects with unlocked results, we need lecturer and peer feedback
+        # to calculate total_points for the dashboard.
+        project_evals: dict[int, list[ProjectEvaluationDetail]] = {}
+        peer_feedback: dict[int, list[PeerFeedbackDetail]] = {}
+        if user is not None and user.id is not None:
+            unlocked_member_project_ids = [
+                pid for pid, p_obj in {p.id: p for p, _ in rows}.items()
+                if pid in member_project_ids and p_obj.results_unlocked
+            ]
+            for pid in unlocked_member_project_ids:
+                raw_pevals = await get_project_evaluations(self._session, pid)
+                project_evals[pid] = [_to_project_evaluation_detail(ev) for ev in raw_pevals]
+                
+                raw_pfeedback = await get_peer_feedback_received(self._session, pid, user.id)
+                peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in raw_pfeedback]
+
         return [
             _build_project(
                 p,
@@ -365,7 +404,9 @@ class ProjectsService:
                 members_by_project.get(p.id, []) if p.id is not None else [],
                 lecturers_by_course.get(c.id, []) if c.id is not None else [],
                 authenticated=(user is not None),
+                project_evaluations=project_evals.get(p.id) if p.id is not None else None,
                 course_evaluations=[user_evals[p.id]] if p.id in user_evals else [],
+                received_peer_feedback=peer_feedback.get(p.id) if p.id is not None else None,
                 submitted_lecturer_count=eval_counts.get(p.id, (0, 0))[0]
                 if p.id is not None
                 else 0,
