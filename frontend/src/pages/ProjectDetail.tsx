@@ -8,7 +8,6 @@ import {
   Calendar, 
   Mail,
   CheckCircle,
-  BarChart3,
   Award
 } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
@@ -19,6 +18,7 @@ import { ProjectPublic, UserRole } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Button } from '@/components/ui/Button';
+import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -262,28 +262,22 @@ export const ProjectDetail = () => {
 
           {/* Role-based Action Links */}
           {(isMember || isLecturerOrAdmin) && (
-            <div className="space-y-3">
-              <p className="text-xs text-slate-400 uppercase font-bold px-2 tracking-widest">
+            <div className="space-y-6">
+              <p className="text-xs text-slate-400 uppercase font-bold px-2 tracking-widest border-b border-slate-100 pb-2">
                 {isLecturerOrAdmin ? t('project.lecturer_links') : t('project.student_links')}
               </p>
+              
               {isMember && (
-                <>
-                  <Link to={`/student/project/${project.id}/evaluate`} className="block">
-                    <Button variant="outline" className="w-full justify-start gap-3">
-                      <CheckCircle size={18} className="text-green-500" />
-                      {t('project.evaluate')}
-                    </Button>
-                  </Link>
-                  {project.results_unlocked && (
-                    <Link to={`/student/project/${project.id}/results`} className="block">
-                      <Button variant="outline" className="w-full justify-start gap-3">
-                        <BarChart3 size={18} className="text-tul-blue" />
-                        {t('project.view_results')}
-                      </Button>
-                    </Link>
-                  )}
-                </>
+                <div className="space-y-4">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                    <CourseEvaluationStatusCard 
+                      project={project}
+                      user={user}
+                    />
+                  </div>
+                </div>
               )}
+
               {isLecturerOrAdmin && (
                 <Link to={`/lecturer/project/${project.id}/evaluate`} className="block">
                   <Button variant="outline" className="w-full justify-start gap-3">

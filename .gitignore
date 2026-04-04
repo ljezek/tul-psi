@@ -149,3 +149,6 @@ venv/
 .ruff_cache/
 *.egg-info/
 examples/monitoring/.env
+
+.gemini/
+gha-creds-*.json

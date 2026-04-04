@@ -78,7 +78,7 @@ export interface ProjectEvaluationDetail {
 export interface CourseEvaluationDetail {
   id: number;
   student_id: number;
-  rating: number;
+  rating: number | null;
   strengths: string | null;
   improvements: string | null;
   submitted: boolean;
@@ -103,11 +103,58 @@ export interface ProjectPublic {
   academic_year: number;
   course: CoursePublic;
   members: MemberPublic[];
+  submitted_lecturer_count: number | null;
+  submitted_student_count: number | null;
   results_unlocked: boolean | null;
   project_evaluations: ProjectEvaluationDetail[] | null;
   course_evaluations: CourseEvaluationDetail[] | null;
   received_peer_feedback: PeerFeedbackDetail[] | null;
-  authored_peer_feedback: PeerFeedbackDetail[] | null;
+  authored_peer_feedback?: PeerFeedbackDetail[] | null;
+  total_points?: number | null;
+  }
+
+
+export interface CriterionScoreSummary {
+  criterion_code: string;
+  score: number;
+  strengths: string | null;
+  improvements: string | null;
+}
+
+export interface ProjectEvaluationSummary {
+  lecturer_id: number;
+  criterion_scores: CriterionScoreSummary[];
+}
+
+export interface CourseEvaluationSummary {
+  rating: number | null;
+  strengths: string | null;
+  improvements: string | null;
+}
+
+export interface ReceivedPeerFeedback {
+  bonus_points: number;
+  strengths: string | null;
+  improvements: string | null;
+}
+
+export interface StudentBonusSummary {
+  student_id: number;
+  student_name: string;
+  feedback: ReceivedPeerFeedback[];
+}
+
+export interface ProjectOverviewItem {
+  project_id: number;
+  project_title: string;
+  academic_year: number;
+  project_evaluations: ProjectEvaluationSummary[];
+  course_evaluations: CourseEvaluationSummary[];
+  student_bonus_points: StudentBonusSummary[];
+}
+
+export interface EvaluationOverviewResponse {
+  projects: ProjectOverviewItem[];
 }
 
 export interface CourseStats {
@@ -129,6 +176,13 @@ export interface CourseDetail extends CoursePublic {
   course_evaluations?: CourseEvaluationDetail[] | null;
 }
 
+export interface CourseLecturerPublic {
+  id: number;
+  name: string;
+  github_alias: string | null;
+  email: string;
+}
+
 export interface ProjectEvaluationCreate {
   scores: {
     criterion_code: string;
@@ -139,12 +193,36 @@ export interface ProjectEvaluationCreate {
   submitted: boolean;
 }
 
+export interface CourseCreate {
+  code: string;
+  name: string;
+  term: CourseTerm;
+  project_type: ProjectType;
+  min_score: number;
+  syllabus?: string | null;
+  peer_bonus_budget?: number | null;
+  evaluation_criteria?: EvaluationCriterion[];
+  links?: CourseLink[];
+}
+
+export interface CourseUpdate {
+  code?: string;
+  name?: string;
+  term?: CourseTerm;
+  project_type?: ProjectType;
+  min_score?: number;
+  syllabus?: string | null;
+  peer_bonus_budget?: number | null;
+  evaluation_criteria?: EvaluationCriterion[];
+  links?: CourseLink[];
+}
+
 export interface ProjectCreate {
   title: string;
   description?: string | null;
   github_url?: string | null;
   live_url?: string | null;
-  technologies?: string[];
+  technologies: string[];
   academic_year: number;
   owner_email?: string | null;
 }
@@ -163,15 +241,23 @@ export interface AddMemberBody {
   github_alias?: string | null;
 }
 
+export interface CourseEvaluationFormResponse {
+  teammates: MemberPublic[];
+  peer_bonus_budget: number | null;
+  current_evaluation: CourseEvaluationDetail | null;
+  authored_peer_feedback: PeerFeedbackDetail[];
+  results_unlocked: boolean;
+}
+
 export interface CourseEvaluationSubmit {
   submitted: boolean;
-  rating: number;
-  strengths: string;
-  improvements: string;
-  peer_evaluations: {
+  rating: number | null;
+  strengths: string | null;
+  improvements: string | null;
+  peer_feedback: {
     receiving_student_id: number;
-    strengths: string;
-    improvements: string;
+    strengths: string | null;
+    improvements: string | null;
     bonus_points: number;
   }[];
 }

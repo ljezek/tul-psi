@@ -55,6 +55,7 @@ async def list_projects(
     term: CourseTerm | None = None,
     lecturer: str | None = None,
     technology: str | None = None,
+    current_user: User | None = Depends(get_optional_current_user),
     service: ProjectsService = Depends(get_projects_service),
 ) -> list[ProjectPublic]:
     """Return projects filtered by the supplied query parameters.
@@ -76,6 +77,7 @@ async def list_projects(
             term=term,
             lecturer=lecturer,
             technology=technology,
+            user=current_user,
         )
     except Exception:
         logger.exception(

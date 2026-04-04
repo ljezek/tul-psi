@@ -555,6 +555,25 @@ async def get_course_evaluation_by_student(
     return (await session.execute(stmt)).scalars().first()
 
 
+async def get_course_evaluations_for_student(
+    session: AsyncSession,
+    project_ids: list[int],
+    student_id: int,
+) -> dict[int, CourseEvaluation]:
+    """Return course evaluations for *student_id* on the given *project_ids*.
+
+    Returns a dict mapping project ID to the student's ``CourseEvaluation`` row.
+    """
+    if not project_ids:
+        return {}
+
+    stmt = select(CourseEvaluation).where(
+        CourseEvaluation.project_id.in_(project_ids),
+        CourseEvaluation.student_id == student_id,
+    )
+    return {ev.project_id: ev for ev in (await session.execute(stmt)).scalars().all()}
+
+
 async def upsert_course_evaluation(
     session: AsyncSession,
     project_id: int,
@@ -752,3 +771,39 @@ async def unlock_project_results(session: AsyncSession, project_id: int) -> Proj
     session.add(project)
     await session.flush()
     return project
+
+
+async def get_evaluation_counts_for_projects(
+    session: AsyncSession,
+    project_ids: list[int],
+) -> dict[int, tuple[int, int]]:
+    """Return counts of submitted lecturer and student evaluations for *project_ids*.
+
+    Returns a dict mapping project ID to ``(submitted_lecturer_count, submitted_student_count)``.
+    """
+    if not project_ids:
+        return {}
+
+    # Count submitted project (lecturer) evaluations
+    lecturer_stmt = (
+        select(ProjectEvaluation.project_id, func.count(ProjectEvaluation.project_id))
+        .where(
+            ProjectEvaluation.project_id.in_(project_ids),
+            ProjectEvaluation.submitted.is_(True),
+        )
+        .group_by(ProjectEvaluation.project_id)
+    )
+    lecturer_counts = {row[0]: row[1] for row in (await session.execute(lecturer_stmt)).all()}
+
+    # Count submitted course (student) evaluations
+    student_stmt = (
+        select(CourseEvaluation.project_id, func.count(CourseEvaluation.project_id))
+        .where(
+            CourseEvaluation.project_id.in_(project_ids),
+            CourseEvaluation.submitted.is_(True),
+        )
+        .group_by(CourseEvaluation.project_id)
+    )
+    student_counts = {row[0]: row[1] for row in (await session.execute(student_stmt)).all()}
+
+    return {pid: (lecturer_counts.get(pid, 0), student_counts.get(pid, 0)) for pid in project_ids}

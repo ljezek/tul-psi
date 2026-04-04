@@ -196,6 +196,9 @@ class ProjectPublic(BaseModel):
     academic_year: int
     course: CoursePublic
     members: list[MemberPublic]
+    # Counts of submitted evaluations, always visible to authenticated users.
+    submitted_lecturer_count: int | None = None
+    submitted_student_count: int | None = None
     # Null for unauthenticated users.
     results_unlocked: bool | None = None
     # Populated for all roles when results_unlocked is True.
@@ -206,6 +209,8 @@ class ProjectPublic(BaseModel):
     received_peer_feedback: list[PeerFeedbackDetail] | None = None
     # Populated for student when results_unlocked is True.
     authored_peer_feedback: list[PeerFeedbackDetail] | None = None
+    # Calculated total points (lecturer avg + peer avg), only when results_unlocked is True.
+    total_points: float | None = None
 
 
 class PeerFeedbackInput(BaseModel):

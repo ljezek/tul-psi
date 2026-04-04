@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, BookOpen, Calendar, Tag, AlertCircle, User } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { getProjects, getCourses } from '@/api';
 import { ProjectPublic, CourseListItem } from '@/types';
 import { ProjectCard } from '@/components/ProjectCard';
@@ -10,6 +11,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 export const Dashboard = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [projects, setProjects] = useState<ProjectPublic[]>([]);
@@ -58,7 +60,7 @@ export const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [user]);
 
   // Extract distinct years, technologies, and lecturers for filters
   const years = useMemo(() => {

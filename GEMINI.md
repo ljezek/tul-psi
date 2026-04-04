@@ -102,7 +102,9 @@ npm run dev                # Starts on http://localhost:3000
     *   Maintain parity between backend schemas and frontend types (use `snake_case` matching the API).
     *   Avoid `any` types or `as` casts without a valid `// TODO:` justification.
 *   **UI Components:**
-    *   Be version-aware regarding libraries. For `lucide-react` (v1.7.0), use available icons or logical fallbacks (e.g., `Code` instead of `Github`).
+    *   Be version-aware regarding libraries. For `lucide-react`, use available icons or logical fallbacks.
+    *   **Icon Policy:** For the GitHub logo, always use the custom `<GitHubLogo />` component from `@/components/icons/GitHubLogo` to ensure brand consistency.
+    *   **User Profile:** Profile editing is handled via a dedicated `/profile` route and a unified `<ProfileForm />` component. Always link to `/profile` for user settings.
 
 #### Backend
 *   **Security:** JWT in HttpOnly/Secure cookies. Configure `CORSMiddleware` to strictly allow required origins (e.g., `localhost:3000`).

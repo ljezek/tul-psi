@@ -171,7 +171,7 @@ async def test_list_projects_no_params_passes_defaults_to_service(client: AsyncC
     app.dependency_overrides[get_projects_service] = lambda: mock_service
     await client.get("/api/v1/projects")
     mock_service.get_projects.assert_called_once_with(
-        q=None, course=None, year=None, term=None, lecturer=None, technology=None
+        q=None, course=None, year=None, term=None, lecturer=None, technology=None, user=None
     )
 
 
@@ -189,6 +189,7 @@ async def test_list_projects_all_params_forwarded_to_service(client: AsyncClient
         term=CourseTerm.WINTER,
         lecturer="Novak",
         technology="FastAPI",
+        user=None,
     )
 
 
