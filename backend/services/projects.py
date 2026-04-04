@@ -364,12 +364,13 @@ class ProjectsService:
         course_ids = list({c.id for _, c in rows if c.id is not None})
         members_by_project = await get_project_members(self._session, project_ids)
         lecturers_by_course = await get_course_lecturers(self._session, course_ids)
-        eval_counts = await get_evaluation_counts_for_projects(self._session, project_ids)
 
         # If an authenticated user is provided, fetch their evaluations for these projects.
         # We only need to check projects where the user is actually a member.
         user_evals: dict[int, CourseEvaluationDetail] = {}
+        eval_counts: dict[int, tuple[int, int]] = {}
         if user is not None and user.id is not None:
+            eval_counts = await get_evaluation_counts_for_projects(self._session, project_ids)
             member_project_ids = [
                 pid
                 for pid in project_ids

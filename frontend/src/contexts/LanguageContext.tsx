@@ -106,6 +106,9 @@ const translations: Record<string, Record<Language, string>> = {
   // Error / loading states
   'error.retry': { cs: 'Zkusit znovu', en: 'Retry' },
   'common.confirm_action': { cs: 'Jste si jisti? Tuto akci nelze vrátit zpět.', en: 'Are you sure? This cannot be undone.' },
+  'common.rate_star': { cs: 'Hodnotit {star} hvězdičkami', en: 'Rate {star} stars' },
+  'common.repo': { cs: 'Repo', en: 'Repo' },
+  'common.app': { cs: 'Aplikace', en: 'App' },
   
   // Admin Panel
   'admin.title': { cs: 'Administrace Lektora', en: 'Lecturer Administration' },

@@ -77,7 +77,6 @@ export interface ProjectEvaluationDetail {
 
 export interface CourseEvaluationDetail {
   id: number;
-  project_id: number;
   student_id: number;
   rating: number | null;
   strengths: string | null;

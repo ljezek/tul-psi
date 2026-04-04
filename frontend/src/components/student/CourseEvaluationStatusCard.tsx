@@ -25,6 +25,7 @@ export const CourseEvaluationStatusCard = ({
 
   const userEval = project.course_evaluations?.[0];
   const isSubmitted = userEval?.submitted || false;
+  const hasDraft = userEval !== undefined;
   
   const labelSize = isCompact ? 'text-[9px]' : 'text-[10px]';
   const statusSize = isCompact ? 'text-[11px]' : 'text-xs';
@@ -47,6 +48,11 @@ export const CourseEvaluationStatusCard = ({
               <CheckCircle size={iconSize} />
               {t('student.submitted')}
             </span>
+          ) : hasDraft ? (
+            <span className={`inline-flex items-center gap-1.5 text-amber-500 ${statusSize} font-bold`}>
+              <Clock size={iconSize} />
+              {t('student.draft')}
+            </span>
           ) : (
             <span className={`inline-flex items-center gap-1.5 text-slate-400 ${statusSize} font-bold`}>
               <Clock size={iconSize} />
@@ -59,7 +65,7 @@ export const CourseEvaluationStatusCard = ({
           <Link to={`/student/project/${project.id}/evaluate`} className={isCompact ? '' : 'block w-full'}>
             <Button variant="outline" size={buttonSize} className={`rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold ${isCompact ? 'text-[10px] h-7 px-2 gap-1' : 'w-full text-sm py-2 gap-2'}`}>
               <ClipboardCheck size={isCompact ? iconSize : 18} />
-              {isSubmitted ? t('student.update_evaluation') : t('student.create_evaluation')}
+              {hasDraft ? t('student.edit_evaluation') : t('student.create_evaluation')}
             </Button>
           </Link>
         )}

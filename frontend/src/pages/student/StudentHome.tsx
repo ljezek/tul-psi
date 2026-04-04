@@ -123,7 +123,7 @@ export const StudentHome = () => {
                       className="inline-flex items-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider"
                     >
                       <GitHubLogo size={14} />
-                      Repo
+                      {t('common.repo')}
                     </a>
                   )}
                   {project.live_url && (
@@ -134,7 +134,7 @@ export const StudentHome = () => {
                       className="inline-flex items-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider"
                     >
                       <Globe size={14} />
-                      App
+                      {t('common.app')}
                     </a>
                   )}
                 </div>

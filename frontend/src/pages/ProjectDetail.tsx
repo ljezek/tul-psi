@@ -68,7 +68,7 @@ export const ProjectDetail = () => {
     );
   }
 
-  const isMember = user && project.members.some(m => m.id == user.id);
+  const isMember = user && project.members.some(m => m.id === user.id);
   const isLecturerOrAdmin = user && (user.role === UserRole.LECTURER || user.role === UserRole.ADMIN);
 
   return (

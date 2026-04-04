@@ -26,7 +26,14 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 type NotificationState = { type: 'success' | 'error'; message: string } | null;
 
-const StarRating = ({ rating, onChange, disabled }: { rating: number, onChange: (r: number) => void, disabled?: boolean }) => {
+interface StarRatingProps {
+  rating: number;
+  onChange: (rating: number) => void;
+  disabled?: boolean;
+}
+
+const StarRating = ({ rating, onChange, disabled }: StarRatingProps) => {
+  const { t } = useLanguage();
   return (
     <div className="flex gap-2">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -34,7 +41,7 @@ const StarRating = ({ rating, onChange, disabled }: { rating: number, onChange: 
           key={star}
           type="button"
           disabled={disabled}
-          aria-label={`Rate ${star}`}
+          aria-label={t('common.rate_star').replace('{star}', star.toString())}
           onClick={() => onChange(star)}
           className={`transition-all ${star <= rating ? 'text-amber-400 scale-110' : 'text-slate-200 hover:text-slate-300'} ${disabled ? 'cursor-default' : 'cursor-pointer hover:scale-125'}`}
         >

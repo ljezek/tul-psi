@@ -260,7 +260,7 @@ export const Results = () => {
                         {project.course.peer_bonus_budget !== null && (
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">{t('student.points_allocation')}</span>
-                            <span className="text-lg font-black text-purple-600">+{f.bonus_points} pts</span>
+                            <span className="text-lg font-black text-purple-600">+{f.bonus_points} {t('courseDetail.points')}</span>
                           </div>
                         )}
                       </div>
