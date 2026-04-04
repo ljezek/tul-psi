@@ -114,7 +114,7 @@ describe('CourseEvaluation', () => {
       expect(screen.queryAllByPlaceholderText(/Co se vám na předmětu líbilo/i)).toHaveLength(1);
     });
     // Set rating
-    await user.click(screen.getByRole('button', { name: 'Rate 3' }));
+    await user.click(screen.getByRole('button', { name: /Hodnotit 3 hvězdičkami/i }));
     // Fill course eval
     const strengthsInput = screen.getByLabelText(/Silné stránky předmětu/i);
     await user.type(strengthsInput, 'Great course');

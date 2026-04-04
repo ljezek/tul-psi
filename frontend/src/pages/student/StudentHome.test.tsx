@@ -110,9 +110,9 @@ describe('StudentHome', () => {
       const alphaCard = screen.getByText('Project Alpha').closest('div.group');
       expect(alphaCard).toHaveTextContent(/Odesláno/i);
       
-      // Project Beta: Not Started
+      // Project Beta: Draft (Koncept)
       const betaCard = screen.getByText('Project Beta').closest('div.group');
-      expect(betaCard).toHaveTextContent(/Nezahájeno/i);
+      expect(betaCard).toHaveTextContent(/Koncept/i);
     });
   });
 
