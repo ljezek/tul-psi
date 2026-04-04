@@ -30,9 +30,9 @@ export const CourseEvaluationStatusCard = ({
   const labelSize = isCompact ? 'text-[9px]' : 'text-[10px]';
   const statusSize = isCompact ? 'text-[11px]' : 'text-xs';
   const iconSize = isCompact ? 14 : 16;
-  const buttonSize = isCompact ? 'sm' : 'default';
+  const buttonSize = isCompact ? 'sm' : 'md';
 
-  const isPass = project.total_points !== null && project.total_points >= project.course.min_score;
+  const isPass = project.total_points != null && project.total_points >= project.course.min_score;
   const maxPoints = project.course.evaluation_criteria.reduce((sum, c) => sum + c.max_score, 0) + (project.course.peer_bonus_budget || 0);
 
   return (
@@ -89,7 +89,7 @@ export const CourseEvaluationStatusCard = ({
           {project.results_unlocked ? (
             <div className="flex items-center gap-2 mt-1">
               <span className={`font-black ${statusSize} text-slate-700`}>
-                {project.total_points !== null ? Math.round(project.total_points * 10) / 10 : 0}/{maxPoints} {t('label.points')}
+                {project.total_points != null ? Math.round(project.total_points * 10) / 10 : 0}/{maxPoints} {t('label.points')}
               </span>
               <span className="text-slate-300 font-bold">•</span>
               <span className="text-slate-400 text-[10px] font-bold">

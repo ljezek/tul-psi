@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Award, 
@@ -21,6 +21,7 @@ export const Results = () => {
   const { id } = useParams<{ id: string }>();
   const projectId = Number(id);
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   const [project, setProject] = useState<ProjectPublic | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,10 +56,10 @@ export const Results = () => {
             <ShieldAlert size={40} />
           </div>
           <h2 className="text-2xl font-black text-slate-800 mb-2">{t('results.not_available')}</h2>
-          <Link to="/student" className="mt-8 block">
+          <button onClick={() => navigate(-1)} className="mt-8 inline-block">
             <ArrowLeft size={16} className="inline mr-2" />
             {t('project.back_to_projects')}
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -88,13 +89,13 @@ export const Results = () => {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Header */}
       <div className="mb-10">
-        <Link 
-          to="/student"
+        <button 
+          onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-tul-blue transition-colors mb-6 group"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           {t('project.back_to_projects')}
-        </Link>
+        </button>
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
           <div>
