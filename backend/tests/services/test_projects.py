@@ -202,7 +202,7 @@ async def test_service_get_projects_optimizes_evaluation_fetching_for_members() 
             new_callable=AsyncMock,
             return_value=[],
         ),
-        ):
+    ):
         await ProjectsService(session).get_projects(user=user)
     # Optimization check: get_course_evaluations_for_student should be called with [1], not [1, 2].
     mock_get_evals.assert_called_once_with(session, [1], 5)

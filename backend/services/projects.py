@@ -10,12 +10,12 @@ from db.courses import get_course as db_get_course
 from db.courses import get_course_lecturers
 from db.projects import (
     add_project_member,
+    get_all_peer_feedback_for_project,
+    get_all_peer_feedback_for_projects,
     get_course_evaluation_by_student,
     get_course_evaluations,
     get_course_evaluations_for_student,
     get_evaluation_counts_for_projects,
-    get_all_peer_feedback_for_project,
-    get_all_peer_feedback_for_projects,
     get_lecturer_evaluation_statuses,
     get_member_evaluation_statuses,
     get_peer_feedback_authored,
@@ -418,32 +418,37 @@ class ProjectsService:
                 for pid, fbs in raw_pfeedback_map.items():
                     peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in fbs]
 
-            # 2. Lecturer logic: fetch own evaluations for projects in courses where user is a lecturer
+            # 2. Lecturer logic: fetch own evaluations for projects where user is a lecturer
             if user.role in (UserRole.ADMIN, UserRole.LECTURER):
                 # Identify which projects the user is a lecturer for
                 lecturer_project_ids = []
                 for p, c in rows:
                     if p.id is not None and c.id is not None:
                         # Check if user is in lecturers_by_course[c.id]
-                        if any(l.id == user.id for l in lecturers_by_course.get(c.id, [])):
+                        if any(lect.id == user.id for lect in lecturers_by_course.get(c.id, [])):
                             lecturer_project_ids.append(p.id)
 
                 if lecturer_project_ids:
                     # Bulk fetch for lecturers
-                    raw_lecturer_pevals_map = await get_project_evaluations_by_lecturer_for_projects(
-                        self._session, lecturer_project_ids, user.id
+                    raw_lecturer_pevals_map = (
+                        await get_project_evaluations_by_lecturer_for_projects(
+                            self._session, lecturer_project_ids, user.id
+                        )
                     )
                     for pid, ev in raw_lecturer_pevals_map.items():
                         # Only override if not already present from member logic (unlikely case)
                         if pid not in project_evals:
                             project_evals[pid] = [_to_project_evaluation_detail(ev)]
 
-                        
-                        # Also fetch all peer feedback if results are unlocked for these lecturer projects
+                        # Fetch peer feedback if results are unlocked for these lecturer projects.
                         p_obj = next((p for p, _ in rows if p.id == pid), None)
                         if p_obj and p_obj.results_unlocked and pid not in peer_feedback:
-                             raw_pfeedback = await get_all_peer_feedback_for_project(self._session, pid)
-                             peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in raw_pfeedback]
+                            raw_pfeedback = await get_all_peer_feedback_for_project(
+                                self._session, pid
+                            )
+                            peer_feedback[pid] = [
+                                _to_peer_feedback_detail(fb) for fb in raw_pfeedback
+                            ]
 
         return [
             _build_project(
@@ -455,9 +460,12 @@ class ProjectsService:
                 project_evaluations=project_evals.get(p.id) if p.id is not None else None,
                 course_evaluations=[user_evals[p.id]] if p.id in user_evals else [],
                 received_peer_feedback=[
-                    fb for fb in peer_feedback.get(p.id, [])
+                    fb
+                    for fb in peer_feedback.get(p.id, [])
                     if user is not None and fb.receiving_student_id == user.id
-                ] if p.id is not None else None,
+                ]
+                if p.id is not None
+                else None,
                 submitted_lecturer_count=eval_counts.get(p.id, (0, 0))[0]
                 if p.id is not None
                 else 0,
@@ -535,7 +543,7 @@ class ProjectsService:
                     course_evaluations = [
                         _to_course_evaluation_detail(ev) for ev in raw_course_evaluations
                     ]
-                
+
                 # Fetch ALL peer feedback for the project
                 raw_received_peer_feedback = await get_all_peer_feedback_for_project(
                     self._session, project_id
