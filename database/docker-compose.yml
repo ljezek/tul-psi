@@ -21,7 +21,7 @@ services:
       POSTGRES_USER: ${POSTGRES_ADMIN_USER:-tul_psi_admin}
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-tul_psi_admin}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       # init-db.sh is executed once on first container start to create the
