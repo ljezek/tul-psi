@@ -82,6 +82,7 @@ const translations: Record<string, Record<Language, string>> = {
   'project.student_links': { cs: 'Odkazy pro studenta', en: 'Student links' },
   'project.technologies': { cs: 'Použité technologie', en: 'Technologies' },
   'project.members': { cs: 'Členové týmu', en: 'Team Members' },
+  'project.contributors': { cs: 'Přispěvatelé', en: 'Contributors' },
   'project.course_info': { cs: 'Informace o předmětu', en: 'Course Information' },
   'project.term': { cs: 'Semestr', en: 'Term' },
   'project.type': { cs: 'Typ projektu', en: 'Project Type' },
@@ -128,6 +129,9 @@ const translations: Record<string, Record<Language, string>> = {
   'lecturer.placeholder_strengths': { cs: 'Popište silné stránky práce...', en: 'Describe the strengths of the work...' },
   'lecturer.placeholder_improvements': { cs: 'Kde vidíte prostor pro zlepšení...', en: 'Where do you see room for improvement...' },
   'lecturer.error_validation': { cs: 'Vyplňte prosím všechna povinná pole a zkuste to znovu.', en: 'Please fill in all required fields and try again.' },
+  'lecturer.error_invalid_score': { cs: 'Zadané skóre je neplatné nebo mimo rozsah.', en: 'The score entered is invalid or out of range.' },
+  'lecturer.error_missing_strengths': { cs: 'Chybí popis silných stránek.', en: 'Description of strengths is missing.' },
+  'lecturer.error_missing_improvements': { cs: 'Chybí popis prostoru pro zlepšení.', en: 'Description of areas for improvement is missing.' },
   'lecturer.no_members': { cs: 'žádní členové', en: 'no members' },
   'lecturer.cancel': { cs: 'Zrušit', en: 'Cancel' },
 
@@ -164,6 +168,7 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Error / loading states
   'error.retry': { cs: 'Zkusit znovu', en: 'Retry' },
+  'common.back': { cs: 'Zpět', en: 'Back' },
   'common.confirm_action': { cs: 'Jste si jisti? Tuto akci nelze vrátit zpět.', en: 'Are you sure? This cannot be undone.' },
   'common.rate_star': { cs: 'Hodnotit {star} hvězdičkami', en: 'Rate {star} stars' },
   'common.repo': { cs: 'Repo', en: 'Repo' },

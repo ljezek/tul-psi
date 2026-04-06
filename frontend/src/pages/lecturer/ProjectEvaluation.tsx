@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { ArrowLeft, Save, Send, AlertTriangle, Mail, Globe } from 'lucide-react';
+import { ArrowLeft, Save, Send, AlertTriangle, Mail, Globe, Users, XCircle, CheckCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getProject, getProjectEvaluation, submitProjectEvaluation, ApiError } from '@/api';
 import { ProjectPublic, ProjectEvaluationDetail } from '@/types';
@@ -19,6 +19,7 @@ export const ProjectEvaluation = () => {
 
   // Form state
   const [scores, setScores] = useState<Record<string, { score: number | ''; strengths: string; improvements: string }>>({});
+  const formRefs = useRef<Record<string, { score: HTMLInputElement | null; strengths: HTMLTextAreaElement | null; improvements: HTMLTextAreaElement | null }>>({});
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,7 +42,7 @@ export const ProjectEvaluation = () => {
           }
         }
 
-        // Initialize form state
+        // Initialize form state and refs
         const initialScores: typeof scores = {};
         projectData.course.evaluation_criteria.forEach((c) => {
           const existing = evalData?.scores.find(s => s.criterion_code === c.code);
@@ -50,6 +51,7 @@ export const ProjectEvaluation = () => {
             strengths: existing ? existing.strengths : '',
             improvements: existing ? existing.improvements : '',
           };
+          formRefs.current[c.code] = { score: null, strengths: null, improvements: null };
         });
         setScores(initialScores);
       } catch (err) {
@@ -66,21 +68,43 @@ export const ProjectEvaluation = () => {
   }, [id, t]);
 
   const validateForm = () => {
-    if (!project) return false;
+    if (!project) return { valid: false, field: null, message: '' };
     for (const criterion of project.course.evaluation_criteria) {
       const val = scores[criterion.code];
-      if (val.score === '' || val.score < 0 || val.score > criterion.max_score) return false;
-      if (!val.strengths.trim() || !val.improvements.trim()) return false;
+      if (val.score === '' || val.score < 0 || val.score > criterion.max_score) {
+        return { 
+          valid: false, 
+          field: formRefs.current[criterion.code].score, 
+          message: `${criterion.description}: ${t('lecturer.error_invalid_score')}` 
+        };
+      }
+      if (!val.strengths.trim()) {
+        return { 
+          valid: false, 
+          field: formRefs.current[criterion.code].strengths, 
+          message: `${criterion.description}: ${t('lecturer.error_missing_strengths')}` 
+        };
+      }
+      if (!val.improvements.trim()) {
+        return { 
+          valid: false, 
+          field: formRefs.current[criterion.code].improvements, 
+          message: `${criterion.description}: ${t('lecturer.error_missing_improvements')}` 
+        };
+      }
     }
-    return true;
+    return { valid: true, field: null, message: '' };
   };
 
   const handleSubmit = async (submitFinal: boolean) => {
     if (!project || !id) return;
     
     if (submitFinal) {
-      if (!validateForm()) {
-        setError(t('lecturer.error_validation'));
+      const validation = validateForm();
+      if (!validation.valid) {
+        alert(validation.message);
+        validation.field?.focus();
+        validation.field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
       if (!window.confirm(t('lecturer.confirm_submit'))) {
@@ -138,10 +162,28 @@ export const ProjectEvaluation = () => {
     }));
   };
 
+  const getScoreColor = (score: number | '', max: number) => {
+    if (score === '') return 'text-slate-400';
+    const ratio = score / max;
+    if (ratio < 0.5) return 'text-red-500';
+    if (ratio < 0.75) return 'text-amber-500';
+    return 'text-green-500';
+  };
+
+  const getBgColor = (score: number | '', max: number) => {
+    if (score === '') return 'bg-slate-50 border-slate-100';
+    const ratio = score / max;
+    if (ratio < 0.5) return 'bg-red-50 border-red-100';
+    if (ratio < 0.75) return 'bg-amber-50 border-amber-100';
+    return 'bg-green-50 border-green-100';
+  };
+
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
   if (!project) return <div className="max-w-4xl mx-auto px-4 py-12"><div className="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-100 font-bold">{error || t('projectDetail.not_found')}</div></div>;
 
   const isReadOnly = Boolean(project.results_unlocked);
+  const totalPoints = Object.values(scores).reduce((sum, s) => sum + (Number(s.score) || 0), 0);
+  const isPass = totalPoints >= project.course.min_score;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
@@ -154,23 +196,48 @@ export const ProjectEvaluation = () => {
       </div>
 
       <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm relative overflow-hidden space-y-6">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title}</h1>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-slate-500 font-bold text-sm">
-            <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest">
-              {project.course.code}
-            </span>
-            <div className="flex gap-4">
-              {project.github_url && (
-                <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
-                  <GitHubLogo size={14} /> {t('common.repo')}
-                </a>
-              )}
-              {project.live_url && (
-                <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
-                  <Globe size={14} /> {t('common.app')}
-                </a>
-              )}
+        <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+          <div className="flex-1">
+            <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title}</h1>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-slate-500 font-bold text-sm">
+              <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest">
+                {project.course.code}
+              </span>
+              <div className="flex gap-4">
+                {project.github_url && (
+                  <>
+                    <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                      <GitHubLogo size={14} /> {t('common.repo')}
+                    </a>
+                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                      <Users size={14} /> {t('project.contributors')}
+                    </a>
+                  </>
+                )}
+                {project.live_url && (
+                  <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                    <Globe size={14} /> {t('common.app')}
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className={`shrink-0 flex items-center gap-4 px-6 py-4 rounded-2xl border ${isPass ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'} transition-colors duration-500`}>
+            <div className="text-right">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                {t('results.total_score')}
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className={`text-3xl font-black ${isPass ? 'text-green-600' : 'text-red-600'}`}>
+                  {totalPoints}
+                </span>
+                <span className="text-slate-300 font-bold text-lg">/</span>
+                <span className="text-slate-400 font-bold text-lg">{project.course.min_score}</span>
+              </div>
+            </div>
+            <div className={`p-2 rounded-xl ${isPass ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+              {isPass ? <CheckCircle size={24} /> : <XCircle size={24} />}
             </div>
           </div>
         </div>
@@ -225,7 +292,7 @@ export const ProjectEvaluation = () => {
                 <div className="flex-1">
                   <h3 className="text-xl font-black text-slate-800 mb-2 whitespace-pre-line leading-tight">{criterion.description}</h3>
                 </div>
-                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 shrink-0 w-full md:w-auto">
+                <div className={`flex items-center gap-4 p-4 rounded-2xl border ${getBgColor(val.score, criterion.max_score)} shrink-0 w-full md:w-auto transition-colors duration-300`}>
                    <div className="flex-1 md:w-32">
                     <input
                       type="range"
@@ -234,6 +301,7 @@ export const ProjectEvaluation = () => {
                       step="1"
                       value={val.score === '' ? 0 : val.score}
                       disabled={isReadOnly}
+                      ref={el => { if (formRefs.current[criterion.code]) formRefs.current[criterion.code].score = el; }}
                       onChange={(e) => handleScoreChange(criterion.code, 'score', parseInt(e.target.value, 10))}
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-tul-blue disabled:opacity-50"
                     />
@@ -242,7 +310,7 @@ export const ProjectEvaluation = () => {
                       <span>{criterion.max_score}</span>
                     </div>
                   </div>
-                  <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 font-black text-lg min-w-[4rem] text-center">
+                  <div className={`bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-black text-lg min-w-[3rem] text-center shadow-sm ${getScoreColor(val.score, criterion.max_score)} transition-colors duration-300`}>
                     {val.score === '' ? 0 : val.score}
                   </div>
                 </div>
@@ -256,6 +324,7 @@ export const ProjectEvaluation = () => {
                   </label>
                   <textarea
                     value={val.strengths}
+                    ref={el => { if (formRefs.current[criterion.code]) formRefs.current[criterion.code].strengths = el; }}
                     onChange={(e) => handleScoreChange(criterion.code, 'strengths', e.target.value)}
                     disabled={isReadOnly}
                     rows={4}
@@ -270,6 +339,7 @@ export const ProjectEvaluation = () => {
                   </label>
                   <textarea
                     value={val.improvements}
+                    ref={el => { if (formRefs.current[criterion.code]) formRefs.current[criterion.code].improvements = el; }}
                     onChange={(e) => handleScoreChange(criterion.code, 'improvements', e.target.value)}
                     disabled={isReadOnly}
                     rows={4}

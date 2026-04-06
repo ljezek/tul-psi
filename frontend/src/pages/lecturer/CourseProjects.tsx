@@ -295,6 +295,19 @@ export const CourseProjects = () => {
             const userEval = project.project_evaluations?.find(ev => user && ev.lecturer_id === user.id);
             const showYearSeparator = index === 0 || project.academic_year !== filteredProjects[index - 1].academic_year;
             
+            // Calculate stats for unlocked projects
+            let criteriaAverages: { code: string; avg: number; max_score: number }[] = [];
+            let totalLecturerAvg = 0;
+            if (project.results_unlocked) {
+              const evaluations = project.project_evaluations || [];
+              criteriaAverages = course.evaluation_criteria.map(criterion => {
+                const scores = evaluations.map(e => e.scores.find(s => s.criterion_code === criterion.code)?.score || 0);
+                const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+                return { code: criterion.code, avg, max_score: criterion.max_score };
+              });
+              totalLecturerAvg = criteriaAverages.reduce((sum, c) => sum + c.avg, 0);
+            }
+
             return (
               <div key={project.id} className="space-y-6">
                 {showYearSeparator && (
@@ -333,6 +346,56 @@ export const CourseProjects = () => {
                       </div>
                     </div>
                     
+                    {/* Progress or Results Summary */}
+                    <div className="py-4">
+                      {!project.results_unlocked ? (
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center gap-2 group/hint relative cursor-help w-fit bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                            <Clock size={14} className="text-slate-400" />
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                              {t('role.student')}: {project.submitted_student_count || 0}/{project.members.length}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 group/hint relative cursor-help w-fit bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                            <Users size={14} className="text-slate-400" />
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                              {t('role.lecturer')}: {project.submitted_lecturer_count || 0}/{course.lecturers.length}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap gap-2">
+                            {criteriaAverages.map(c => (
+                              <div key={c.code} className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                <span>{c.code}</span>
+                                <span className={c.avg / c.max_score < 0.5 ? 'text-red-500' : c.avg / c.max_score < 0.75 ? 'text-amber-500' : 'text-green-500'}>
+                                  {Math.round(c.avg * 10) / 10}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            {project.members.map(member => {
+                              const receivedFeedback = (project.received_peer_feedback || []).filter(f => f.receiving_student_id === member.id);
+                              const memberBonus = receivedFeedback.length > 0 
+                                  ? receivedFeedback.reduce((sum, f) => sum + f.bonus_points, 0) / receivedFeedback.length
+                                  : 0;
+                              const totalPoints = totalLecturerAvg + memberBonus;
+                              const isPass = totalPoints >= course.min_score;
+
+                              return (
+                                <div key={member.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest ${isPass ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                  <span>{member.name}</span>
+                                  <span>{Math.round(totalPoints * 10) / 10} ({memberBonus >= 0 ? '+' : ''}{Math.round(memberBonus * 10) / 10})</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {!project.results_unlocked && (
                       <div className="pt-2">
                         {addingMemberTo === project.id ? (
@@ -363,23 +426,6 @@ export const CourseProjects = () => {
                             <Plus size={14} className="mr-1 group-hover/add:scale-110 transition-transform"/> {t('lecturer.add_member')}
                           </button>
                         )}
-                      </div>
-                    )}
-
-                    {!project.results_unlocked && (
-                      <div className="flex items-center gap-2 group/hint relative cursor-help w-fit">
-                        <Clock size={14} className="text-slate-400" />
-                        <span className="text-xs font-bold text-slate-400">
-                          {t('lecturer.pending_status')
-                            .replace('{s_curr}', (project.submitted_student_count || 0).toString())
-                            .replace('{s_total}', project.members.length.toString())
-                            .replace('{l_curr}', (project.submitted_lecturer_count || 0).toString())
-                            .replace('{l_total}', (course?.lecturers.length || 0).toString())
-                          }
-                        </span>
-                        <div className="absolute bottom-full left-0 mb-2 w-64 bg-slate-800 text-white text-[10px] p-2 rounded-lg opacity-0 group-hover/hint:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl font-bold">
-                          {t('student.unlock_hint')}
-                        </div>
                       </div>
                     )}
 

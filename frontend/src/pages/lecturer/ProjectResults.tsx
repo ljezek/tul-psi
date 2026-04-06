@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Award, 
   CheckCircle, 
   XCircle, 
   Users, 
-  ThumbsUp, 
-  TrendingUp,
-  ListChecks
+  ListChecks,
+  Mail,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -16,6 +17,7 @@ import { getProject } from '@/api';
 import { ProjectPublic } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { GitHubLogo } from '@/components/icons/GitHubLogo';
 
 export const ProjectResults = () => {
   const { id } = useParams<{ id: string }>();
@@ -67,8 +69,19 @@ export const ProjectResults = () => {
     };
   }, [project]);
 
+  const getScoreColor = (score: number, max: number) => {
+    const ratio = score / max;
+    if (ratio < 0.5) return 'text-red-500';
+    if (ratio < 0.75) return 'text-amber-500';
+    return 'text-green-500';
+  };
+
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
   if (error || !project || !stats) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error || t('projectDetail.not_found')} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
+
+  const totalPossible = project.course.evaluation_criteria.reduce((s, c) => s + c.max_score, 0);
+  const passRatio = stats.totalLecturerAvg / totalPossible;
+  const passColorClass = passRatio < 0.5 ? 'text-red-600' : passRatio < 0.75 ? 'text-amber-600' : 'text-green-600';
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
@@ -83,9 +96,9 @@ export const ProjectResults = () => {
         </button>
         
         <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row justify-between gap-8">
-          <div className="space-y-4">
+          <div className="space-y-6 flex-1">
             <div>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-3">
                 <span className="bg-tul-blue text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">
                   {project.course.code}
                 </span>
@@ -93,34 +106,62 @@ export const ProjectResults = () => {
                   {project.academic_year}
                 </span>
               </div>
-              <h1 className="text-3xl font-black text-slate-900 leading-tight">
+              <h1 className="text-3xl font-black text-slate-900 leading-tight mb-4">
                 {project.title}
               </h1>
+              
+              <div className="flex flex-wrap gap-4 text-sm font-bold">
+                {project.github_url && (
+                  <>
+                    <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                      <GitHubLogo size={14} /> {t('common.repo')}
+                    </a>
+                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                      <Users size={14} /> {t('project.contributors')}
+                    </a>
+                  </>
+                )}
+                {project.live_url && (
+                  <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                    <Globe size={14} /> {t('common.app')}
+                  </a>
+                )}
+                <Link to={`/projects/${project.id}`} className="flex items-center gap-1.5 text-tul-blue hover:underline">
+                  <ExternalLink size={14} /> {t('projectDetail.title')}
+                </Link>
+              </div>
             </div>
             
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-6 pt-6 border-t border-slate-50">
               {project.members.map(m => (
-                <div key={m.id} className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                  <div className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center">
-                    <Users size={10} className="text-slate-400" />
+                <div key={m.id} className="space-y-1">
+                  <div className="text-xs font-black text-slate-800">{m.name}</div>
+                  <div className="flex items-center gap-3">
+                    <a href={`mailto:${m.email}`} title={m.email} className="text-slate-400 hover:text-tul-blue transition-colors">
+                      <Mail size={12} />
+                    </a>
+                    {m.github_alias && (
+                      <a href={`https://github.com/${m.github_alias}`} target="_blank" rel="noreferrer" title={m.github_alias} className="text-slate-400 hover:text-tul-blue transition-colors">
+                        <GitHubLogo size={12} />
+                      </a>
+                    )}
                   </div>
-                  <span className="text-xs font-bold text-slate-600">{m.name || m.email}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 h-fit">
+          <div className="flex items-center gap-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 h-fit self-center">
             <div className="text-right">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
                 {t('lecturer.lecturer_scores')}
               </span>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-black text-tul-blue">
+                <span className={`text-4xl font-black ${passColorClass}`}>
                   {Math.round(stats.totalLecturerAvg * 10) / 10}
                 </span>
                 <span className="text-slate-300 font-bold text-xl">/</span>
-                <span className="text-slate-400 font-bold text-xl">{project.course.evaluation_criteria.reduce((s, c) => s + c.max_score, 0)}</span>
+                <span className="text-slate-400 font-bold text-xl">{totalPossible}</span>
               </div>
             </div>
           </div>
@@ -143,11 +184,11 @@ export const ProjectResults = () => {
                 <div key={c.code} className="space-y-2">
                   <div className="flex justify-between items-center text-xs font-bold">
                     <span className="text-slate-500 truncate mr-2">{c.description}</span>
-                    <span className="text-slate-700">{Math.round(c.avg * 10) / 10} / {c.max_score}</span>
+                    <span className={`font-black ${getScoreColor(c.avg, c.max_score)}`}>{Math.round(c.avg * 10) / 10} / {c.max_score}</span>
                   </div>
                   <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-tul-blue transition-all duration-1000"
+                      className={`h-full transition-all duration-1000 ${c.avg / c.max_score < 0.5 ? 'bg-red-500' : c.avg / c.max_score < 0.75 ? 'bg-amber-500' : 'bg-green-500'}`}
                       style={{ width: `${(c.avg / c.max_score) * 100}%` }}
                     />
                   </div>
@@ -177,7 +218,19 @@ export const ProjectResults = () => {
                 return (
                   <div key={member.id} className="p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <div className="text-sm font-black text-slate-800 truncate">{member.name || member.email}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
+                        <div className="flex items-center gap-1.5">
+                          <a href={`mailto:${member.email}`} title={member.email} className="text-slate-300 hover:text-tul-blue transition-colors">
+                            <Mail size={10} />
+                          </a>
+                          {member.github_alias && (
+                            <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" title={member.github_alias} className="text-slate-300 hover:text-tul-blue transition-colors">
+                              <GitHubLogo size={10} />
+                            </a>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] font-bold text-purple-500">Peer: +{Math.round(memberBonus * 10) / 10}</span>
                         <span className="text-[10px] font-bold text-slate-300">&bull;</span>
@@ -198,58 +251,62 @@ export const ProjectResults = () => {
         {/* Middle and Right Column: Detailed Feedback */}
         <div className="lg:col-span-2 space-y-12">
           {/* Lecturer Feedback */}
-          <section className="space-y-6">
+          <section className="space-y-8">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
                 <Award size={24} className="text-tul-blue" />
                 {t('lecturer.lecturer_scores')}
               </h2>
             </div>
-            <div className="grid grid-cols-1 gap-6">
-              {project.project_evaluations?.map((ev) => (
-                <div key={ev.lecturer_id} className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-                  <div className="px-8 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <span className="text-sm font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-tul-blue" />
-                      {/* TODO: We need lecturer name in ProjectEvaluationDetail or fetch from somewhere */}
-                      {t('results.feedback')} #{ev.lecturer_id}
-                    </span>
-                    <span className="bg-tul-blue/10 text-tul-blue px-3 py-1 rounded-lg text-xs font-black">
-                      {ev.scores.reduce((sum, s) => sum + s.score, 0)} {t('label.points')}
-                    </span>
+            
+            <div className="space-y-12">
+              {project.course.evaluation_criteria.map((criterion) => (
+                <div key={criterion.code} className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest px-4 py-1.5 bg-slate-50 rounded-lg border border-slate-200 shadow-sm">
+                      {criterion.description}
+                    </h3>
+                    <div className="h-px bg-slate-200 flex-1" />
                   </div>
-                  <div className="p-8 space-y-8">
-                    {ev.scores.map((s) => {
-                      const criterion = project.course.evaluation_criteria.find(c => c.code === s.criterion_code);
-                      return (
-                        <div key={s.criterion_code} className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{criterion?.description || s.criterion_code}</h4>
-                            <span className="text-sm font-black text-slate-900">{s.score} / {criterion?.max_score}</span>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                              <div className="text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1">
-                                <ThumbsUp size={12} />
-                                {t('student.label_strengths')}
-                              </div>
-                              <div className="bg-green-50/30 p-4 rounded-2xl border border-green-100/50 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
-                                <ReactMarkdown>{s.strengths}</ReactMarkdown>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-1">
-                                <TrendingUp size={12} />
-                                {t('student.label_improvements')}
-                              </div>
-                              <div className="bg-amber-50/30 p-4 rounded-2xl border border-amber-100/50 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
-                                <ReactMarkdown>{s.improvements}</ReactMarkdown>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+
+                  <div className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/80 border-b border-slate-100">
+                          <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-left w-[40%]">
+                            {t('student.label_strengths')}
+                          </th>
+                          <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-left w-[40%]">
+                            {t('student.label_improvements')}
+                          </th>
+                          <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-center w-[20%]">
+                            {t('lecturer.score')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {project.project_evaluations?.map((ev) => {
+                          const score = ev.scores.find(s => s.criterion_code === criterion.code);
+                          if (!score) return null;
+
+                          return (
+                            <tr key={ev.lecturer_id} className="group hover:bg-slate-50/30 transition-colors">
+                              <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
+                                <ReactMarkdown>{score.strengths}</ReactMarkdown>
+                              </td>
+                              <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none border-l border-slate-50">
+                                <ReactMarkdown>{score.improvements}</ReactMarkdown>
+                              </td>
+                              <td className="px-8 py-6 text-center border-l border-slate-50">
+                                <span className={`px-4 py-1.5 rounded-xl text-sm font-black bg-white border border-slate-200 shadow-sm ${getScoreColor(score.score, criterion.max_score)}`}>
+                                  {score.score}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               ))}
@@ -272,7 +329,7 @@ export const ProjectResults = () => {
                     <div key={member.id} className="space-y-4">
                       <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
                         <Users size={16} />
-                        {member.name || member.email}
+                        {member.name}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {receivedFeedback.map((f, i) => (
