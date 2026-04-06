@@ -36,15 +36,10 @@ export const LecturerHome = () => {
     fetchCourses();
   }, []);
 
-  const sortedCourses = useMemo(() => {
-    if (!user) return courses;
-    return [...courses].sort((a, b) => {
-      const aIsLecturer = a.lecturer_names.includes(user.name);
-      const bIsLecturer = b.lecturer_names.includes(user.name);
-      if (aIsLecturer && !bIsLecturer) return -1;
-      if (!aIsLecturer && bIsLecturer) return 1;
-      return a.code.localeCompare(b.code);
-    });
+  const filteredCourses = useMemo(() => {
+    if (!user) return [];
+    return courses.filter(course => course.lecturer_names.includes(user.name))
+      .sort((a, b) => a.code.localeCompare(b.code));
   }, [courses, user]);
 
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
@@ -63,7 +58,7 @@ export const LecturerHome = () => {
         </div>
       </header>
 
-      {sortedCourses.length === 0 ? (
+      {filteredCourses.length === 0 ? (
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
           <div className="bg-white rounded-3xl p-12 shadow-xl shadow-slate-200/50 border border-slate-100">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -74,14 +69,11 @@ export const LecturerHome = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {sortedCourses.map((course) => {
-            const isLecturer = user && course.lecturer_names.includes(user.name);
+          {filteredCourses.map((course) => {
             return (
               <div
                 key={course.id}
-                className={`group bg-white rounded-3xl border shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col ${
-                  isLecturer ? 'border-tul-blue/40 ring-1 ring-tul-blue/10 bg-tul-blue/[0.01]' : 'border-slate-200/60'
-                }`}
+                className="group bg-white rounded-3xl border border-tul-blue/40 ring-1 ring-tul-blue/10 bg-tul-blue/[0.01] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col"
               >
                 <div className="p-8 flex-grow space-y-6">
                   <div>

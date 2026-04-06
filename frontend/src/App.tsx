@@ -18,6 +18,7 @@ import { Results } from '@/pages/student/Results';
 import { LecturerHome } from '@/pages/lecturer/LecturerHome';
 import { CourseProjects } from '@/pages/lecturer/CourseProjects';
 import { ProjectEvaluation } from '@/pages/lecturer/ProjectEvaluation';
+import { ProjectResults } from '@/pages/lecturer/ProjectResults';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -42,7 +43,7 @@ const router = createBrowserRouter(
         <Route path="/lecturer" element={<LecturerHome />} />
         <Route path="/lecturer/course/:id" element={<CourseProjects />} />
         <Route path="/lecturer/project/:id/evaluate" element={<ProjectEvaluation />} />
-        <Route path="/lecturer/project/:id/results" element={<Results />} />
+        <Route path="/lecturer/project/:id/results" element={<ProjectResults />} />
       </Route>
     </Route>
   )

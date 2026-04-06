@@ -1,6 +1,6 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, XCircle, ExternalLink, BookOpen, ListChecks } from 'lucide-react';
+import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, ApiError } from '@/api';
@@ -19,7 +19,6 @@ export const CourseProjects = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [yearFilter, setYearFilter] = useState<string>('all');
-  const [expandedResults, setExpandedResults] = useState<number | null>(null);
   
   // Add Project Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -409,7 +408,7 @@ export const CourseProjects = () => {
                         )}
                         {project.results_unlocked ? (
                           <Link
-                            to={`/projects/${project.id}`}
+                            to={`/lecturer/project/${project.id}/results`}
                             className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
                           >
                             {t('student.show_results')}
@@ -425,171 +424,7 @@ export const CourseProjects = () => {
                       </div>
                     </div>
                   </div>
-
-                  {project.results_unlocked && (() => {
-                    const criteria = course?.evaluation_criteria || [];
-                    const evaluations = project.project_evaluations || [];
-                    
-                    const criteriaAverages = criteria.map(criterion => {
-                      const scores = evaluations.map(e => e.scores.find(s => s.criterion_code === criterion.code)?.score || 0);
-                      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-                      return { ...criterion, avg };
-                    });
-
-                    const totalLecturerAvg = criteriaAverages.reduce((sum, c) => sum + c.avg, 0);
-                    const peerFeedback = project.received_peer_feedback || [];
-
-                    return (
-                      <div className="w-full md:w-96 bg-slate-50/50 border-l border-slate-100 p-8 flex flex-col gap-6">
-                        <div>
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('lecturer.avg_score')}</h4>
-                          <div className="space-y-3">
-                            {criteriaAverages.map(c => (
-                              <div key={c.code} className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-medium truncate mr-4">{c.description}</span>
-                                <span className="font-black text-slate-700 whitespace-nowrap">{Math.round(c.avg * 10) / 10} / {c.max_score}</span>
-                              </div>
-                            ))}
-                            <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-xs font-black">
-                              <span className="text-slate-900 uppercase tracking-wider">{t('lecturer.lecturer_scores')}</span>
-                              <span className="text-tul-blue">{Math.round(totalLecturerAvg * 10) / 10}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('student.results_status')}</h4>
-                          {project.members.map(member => {
-                            const receivedFeedback = peerFeedback.filter(f => f.receiving_student_id === member.id);
-                            const memberBonus = receivedFeedback.length > 0 
-                                ? receivedFeedback.reduce((sum, f) => sum + f.bonus_points, 0) / receivedFeedback.length
-                                : 0;
-                            
-                            const totalPoints = totalLecturerAvg + memberBonus;
-                            const isPass = totalPoints >= (course?.min_score || 0);
-
-                            return (
-                              <div key={member.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between gap-4">
-                                <div className="min-w-0">
-                                  <div className="text-sm font-black text-slate-800 truncate">{member.name || member.email}</div>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[10px] font-bold text-purple-500">Peer: +{memberBonus}</span>
-                                    <span className="text-[10px] font-bold text-slate-300">&bull;</span>
-                                    <span className="text-[10px] font-black text-slate-500">{t('results.total_score')}: {Math.round(totalPoints * 10) / 10}</span>
-                                  </div>
-                                </div>
-                                <div className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isPass ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                                  {isPass ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                                  {isPass ? t('results.pass') : t('results.fail')}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        
-                        <div className="mt-auto pt-6 border-t border-slate-200/60">
-                          <button
-                            onClick={() => setExpandedResults(expandedResults === project.id ? null : project.id)}
-                            className="w-full py-3 bg-white hover:bg-slate-50 text-tul-blue border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2"
-                          >
-                            <ListChecks size={14} />
-                            {expandedResults === project.id ? t('lecturer.hide_results') : t('lecturer.show_results')}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })()}
                 </div>
-
-                {/* Expanded Results View */}
-                {expandedResults === project.id && project.results_unlocked && (
-                  <div className="bg-slate-50/80 border-x border-b border-slate-200/60 rounded-b-3xl -mt-6 p-8 space-y-8 animate-slide-down">
-                    {/* Lecturer Feedback */}
-                    <div className="space-y-4">
-                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                        <Users size={16} className="text-tul-blue" />
-                        {t('lecturer.lecturer_scores')}
-                      </h4>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {project.project_evaluations?.map((ev) => (
-                          <div key={ev.lecturer_id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                              <span className="font-black text-slate-800">{ev.lecturer_name}</span>
-                              <span className="bg-tul-blue/5 text-tul-blue px-3 py-1 rounded-lg text-xs font-black">
-                                {ev.scores.reduce((sum, s) => sum + s.score, 0)} {t('label.points')}
-                              </span>
-                            </div>
-                            <div className="space-y-4">
-                              {ev.scores.map((s) => {
-                                const criterion = course?.evaluation_criteria.find(c => c.code === s.criterion_code);
-                                return (
-                                  <div key={s.criterion_code} className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{criterion?.description || s.criterion_code}</span>
-                                      <span className="text-xs font-black text-slate-700">{s.score} / {criterion?.max_score}</span>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                      <div className="bg-green-50/50 p-3 rounded-xl border border-green-100/50">
-                                        <div className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">{t('student.label_strengths')}</div>
-                                        <p className="text-xs text-slate-600 italic whitespace-pre-line">{s.strengths}</p>
-                                      </div>
-                                      <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/50">
-                                        <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">{t('student.label_improvements')}</div>
-                                        <p className="text-xs text-slate-600 italic whitespace-pre-line">{s.improvements}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Peer Feedback */}
-                    <div className="space-y-4">
-                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                        <Users size={16} className="text-purple-500" />
-                        {t('lecturer.peer_feedback')}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {project.members.map((member) => {
-                          const receivedFeedback = project.received_peer_feedback?.filter(f => f.receiving_student_id === member.id) || [];
-                          if (receivedFeedback.length === 0) return null;
-
-                          return (
-                            <div key={member.id} className="space-y-3">
-                              <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{member.name || member.email}</h5>
-                              <div className="space-y-3">
-                                {receivedFeedback.map((f, i) => (
-                                  <div key={i} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                                    <div className="flex justify-between items-center text-[10px] font-black border-b border-slate-50 pb-2">
-                                      <span className="text-slate-400 uppercase tracking-widest">{t('student.anonymous_notice')}</span>
-                                      <span className={f.bonus_points >= 0 ? 'text-purple-500' : 'text-red-500'}>
-                                        {f.bonus_points >= 0 ? '+' : ''}{f.bonus_points} {t('label.points')}
-                                      </span>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <div className="bg-slate-50 p-2 rounded-xl">
-                                        <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('student.label_strengths')}</div>
-                                        <p className="text-[11px] text-slate-600 italic leading-relaxed">{f.strengths}</p>
-                                      </div>
-                                      <div className="bg-slate-50 p-2 rounded-xl">
-                                        <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('student.label_improvements')}</div>
-                                        <p className="text-[11px] text-slate-600 italic leading-relaxed">{f.improvements}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })
