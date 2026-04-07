@@ -39,10 +39,8 @@ def _mock_settings() -> Generator[None, None, None]:
       tests decode the resulting cookie to verify the payload, so they need the same secret.
     - ``app_env="local"``: prevents the route from setting the ``Secure`` flag on the cookie;
       the test client uses plain HTTP so a Secure cookie would be silently dropped.
-    - ``show_otp_dev_only``: gates the dev-only OTP echo in the verify response.
     """
     mock_settings = MagicMock()
-    mock_settings.show_otp_dev_only = False
     mock_settings.jwt_secret = _JWT_SECRET
     mock_settings.jwt_algorithm = "HS256"
     # Use "local" so the route does not set the Secure flag on the cookie — the

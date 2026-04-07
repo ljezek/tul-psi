@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,7 @@ from models.course import Course
 from models.course_evaluation import CourseEvaluation
 from models.course_lecturer import CourseLecturer
 from models.project import Project
+from models.project_evaluation import ProjectEvaluation
 from models.user import User
 from schemas.courses import CourseCreate, CourseUpdate
 
@@ -191,3 +192,41 @@ async def remove_course_lecturer(
     )
     result = await session.execute(stmt)
     return result.rowcount > 0
+
+
+async def get_pending_lecturer_evaluations_count(
+    session: AsyncSession,
+    course_ids: list[int],
+    user_id: int,
+) -> dict[int, int]:
+    """Return a mapping from course id to the number of projects needing evaluation by *user_id*.
+
+    A project needs evaluation if the lecturer is assigned to the course,
+    the project results are NOT unlocked, and the lecturer hasn't submitted
+    a final evaluation for that project yet.
+    """
+    if not course_ids:
+        return {}
+
+    # Define the subquery for submitted evaluations by this user.
+    has_submitted_eval = exists().where(
+        ProjectEvaluation.project_id == Project.id,
+        ProjectEvaluation.lecturer_id == user_id,
+        ProjectEvaluation.submitted.is_(True),
+    )
+
+    # Count projects per course that are not unlocked and have no submitted eval from this user.
+    stmt = (
+        select(Project.course_id, func.count(Project.id))
+        .where(
+            Project.course_id.in_(course_ids),
+            Project.results_unlocked.is_(False),
+            ~has_submitted_eval,
+        )
+        .group_by(Project.course_id)
+    )
+
+    result: dict[int, int] = {cid: 0 for cid in course_ids}
+    for row in (await session.execute(stmt)).all():
+        result[row[0]] = row[1]
+    return result

@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Calendar, 
   ClipboardCheck, 
   Globe,
-  Users
+  Users,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getProjects } from '@/api';
+import { getProjects, addProjectMember, ApiError } from '@/api';
 import { ProjectPublic } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
@@ -21,6 +22,10 @@ export const StudentHome = () => {
   const [projects, setProjects] = useState<ProjectPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Add Member State
+  const [addingMemberTo, setAddingMemberTo] = useState<number | null>(null);
+  const [memberEmail, setMemberEmail] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -45,6 +50,20 @@ export const StudentHome = () => {
       fetchData();
     }
   }, [user]);
+
+  const handleAddMember = async (e: FormEvent, projectId: number) => {
+    e.preventDefault();
+    try {
+      const email = memberEmail.includes('@') ? memberEmail : `${memberEmail}@tul.cz`;
+      await addProjectMember(projectId, { email });
+      setAddingMemberTo(null);
+      setMemberEmail('');
+      await fetchData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
+    }
+  };
 
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
   if (error) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
@@ -102,7 +121,7 @@ export const StudentHome = () => {
                 </Link>
 
                 {/* Team Members */}
-                <div className="flex items-center gap-2 mb-6">
+                <div className="flex items-center gap-2 mb-2">
                   <Users size={14} className="text-slate-400" />
                   <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-2">
                     {project.members.map((m, idx) => (
@@ -112,6 +131,40 @@ export const StudentHome = () => {
                     ))}
                   </div>
                 </div>
+
+                {/* Add Member (Student) */}
+                {!project.results_unlocked && (
+                  <div className="mb-6">
+                    {addingMemberTo === project.id ? (
+                      <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                        <div className="relative flex-1">
+                          <input 
+                            type="text" 
+                            required 
+                            placeholder={t('form.email_placeholder')}
+                            value={memberEmail}
+                            onChange={e => setMemberEmail(e.target.value.split('@')[0])}
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
+                        </div>
+                        <button type="submit" className="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold transition-colors">
+                          {t('form.add')}
+                        </button>
+                        <button type="button" onClick={() => setAddingMemberTo(null)} className="text-xs text-slate-500 hover:text-slate-700 font-bold">
+                          {t('lecturer.cancel')}
+                        </button>
+                      </form>
+                    ) : (
+                      <button 
+                        onClick={() => setAddingMemberTo(project.id)}
+                        className="text-[10px] font-bold text-tul-blue hover:text-tul-blue/80 transition-colors uppercase tracking-wider flex items-center group/add"
+                      >
+                        <Plus size={12} className="mr-1 group-hover/add:scale-110 transition-transform"/> {t('lecturer.add_member')}
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* External Links */}
                 <div className="flex gap-4 mb-8">

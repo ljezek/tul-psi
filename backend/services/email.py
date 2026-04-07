@@ -87,8 +87,7 @@ class EmailTemplate:
                 f"Hello,\n\n"
                 f'You have been invited to join the project "{project_name}" '
                 f'in the course "{course_name}".\n\n'
-                f"Please log in to the TUL Student Projects Catalogue to accept or decline.\n\n"
-                f"Visit the portal: {portal_url}\n\n"
+                f"Please log in to the TUL Student Projects Catalogue at {portal_url}\n\n"
                 f"{_SIGN_OFF}"
             ),
         )

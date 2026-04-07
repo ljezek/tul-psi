@@ -71,14 +71,14 @@ INSERT INTO course (id, code, name, syllabus, term, project_type, min_score,
 OVERRIDING SYSTEM VALUE
 VALUES
     (1, 'PSI', 'Pokročilé Softwarové Inženýrství',
-        'Studenti v týmech navrhnou a implementují netriviální softwarový projekt. Důraz je kladen na architekturu, testování a dokumentaci.',
-        'WINTER', 'TEAM', 50, 10,
-        '[{"code":"architecture","description":"Architektura a návrh systému","max_score":20},{"code":"code_quality","description":"Kvalita kódu a dodržení konvencí","max_score":20},{"code":"testing","description":"Testování a pokrytí kódu","max_score":20},{"code":"documentation","description":"Dokumentace a README","max_score":20},{"code":"presentation","description":"Prezentace a demo","max_score":20}]'::jsonb,
-        '[{"label":"Moodle","url":"https://moodle.tul.cz/course/view.php?id=12344"},{"label":"GitHub Organisation","url":"https://github.com/PSI-RDB-2025"}]'::jsonb,
+        'Studenti v týmech navrhnou a implementují full-stack softwarový projekt. Důraz je kladen na architekturu, čistý kód, testování, nasazení do produkce, a dokumentaci.',
+        'SUMMER', 'TEAM', 40, 10,
+        '[{"code":"funkcionalita","description":"Funkčnost aplikace a vhodnost její architektury","max_score":20},{"code":"code_quality","description":"Čistota kódu a kvalita testů (80% coverage, end-to-end testy)","max_score":20},{"code":"nfr","description":"Kvalita NFR: CI/CD, Cloud deployment, monitoring, dokumentace","max_score":20}]'::jsonb,
+        '[{"label":"E-learning","url":"https://elearning.tul.cz/course/view.php?id=21545"},{"label":"STAG","url":"https://stag.tul.cz/StagPortletsJSR168/CleanUrl?urlid=prohlizeni-predmet-sylabus&predmetZkrPrac=MTI&predmetZkrPred=PSI&predmetRok=2025&predmetSemestr=LS"},{"label":"GitHub repo with demo","url":"https://github.com/ljezek/tul-psi"}]'::jsonb,
         1, '2025-09-01 12:00:00+00'),
-    (2, 'KDP', 'Klauzurní projekt',
-        'Individuální softwarový nebo výzkumný projekt obhajovaný u státní závěrečné zkoušky.',
-        'SUMMER', 'INDIVIDUAL', 60, NULL,
+    (2, 'ALD', 'Algoritmizace a datové struktury',
+        'Cílem předmětu je seznámit studenty s pokročilejšími datovými strukturami, možnostmi jejich počítačové reprezentace a algoritmy pro jejich zpracování. Nemalá pozornost je věnována práci s grafy (jejich reprezentaci) a algoritmům pro základní grafové úlohy. Z probíraných algoritmů je třeba především zmínit mechanismy pro třídění a vyhledávání v datech..',
+        'WINTER', 'INDIVIDUAL', 60, NULL,
         '[{"code":"analysis","description":"Analýza a specifikace požadavků","max_score":30},{"code":"implementation","description":"Implementace a funkčnost","max_score":40},{"code":"report","description":"Technická zpráva","max_score":30}]'::jsonb,
         '[]'::jsonb,
         1, '2025-02-01 12:00:00+00')
@@ -230,32 +230,32 @@ ON CONFLICT (id) DO NOTHING;
 --           awards 18/20 per criterion.
 -- KDP-2025: Jan Král evaluates both projects, awarding 25 per criterion.
 
-INSERT INTO project_evaluation (project_id, lecturer_id, scores, submitted_at)
+INSERT INTO project_evaluation (project_id, lecturer_id, scores, submitted, updated_at)
 VALUES
-    -- Project 1 — Lukáš Ježek (score 16/20 per criterion)
-    (1, 2, '[{"criterion_code":"architecture","score":16,"strengths":"Výborná práce v oblasti Architektura a návrh systému.","improvements":"Doporučuji věnovat více pozornosti detailům v Architektura a návrh systému."},{"criterion_code":"code_quality","score":16,"strengths":"Výborná práce v oblasti Kvalita kódu a dodržení konvencí.","improvements":"Doporučuji věnovat více pozornosti detailům v Kvalita kódu a dodržení konvencí."},{"criterion_code":"testing","score":16,"strengths":"Výborná práce v oblasti Testování a pokrytí kódu.","improvements":"Doporučuji věnovat více pozornosti detailům v Testování a pokrytí kódu."},{"criterion_code":"documentation","score":16,"strengths":"Výborná práce v oblasti Dokumentace a README.","improvements":"Doporučuji věnovat více pozornosti detailům v Dokumentace a README."},{"criterion_code":"presentation","score":16,"strengths":"Výborná práce v oblasti Prezentace a demo.","improvements":"Doporučuji věnovat více pozornosti detailům v Prezentace a demo."}]'::jsonb,
-     '2026-01-15 10:00:00+00'),
-    -- Project 1 — Roman Špánek (score 18/20 per criterion)
-    (1, 3, '[{"criterion_code":"architecture","score":18,"strengths":"Výborná práce v oblasti Architektura a návrh systému.","improvements":"Doporučuji věnovat více pozornosti detailům v Architektura a návrh systému."},{"criterion_code":"code_quality","score":18,"strengths":"Výborná práce v oblasti Kvalita kódu a dodržení konvencí.","improvements":"Doporučuji věnovat více pozornosti detailům v Kvalita kódu a dodržení konvencí."},{"criterion_code":"testing","score":18,"strengths":"Výborná práce v oblasti Testování a pokrytí kódu.","improvements":"Doporučuji věnovat více pozornosti detailům v Testování a pokrytí kódu."},{"criterion_code":"documentation","score":18,"strengths":"Výborná práce v oblasti Dokumentace a README.","improvements":"Doporučuji věnovat více pozornosti detailům v Dokumentace a README."},{"criterion_code":"presentation","score":18,"strengths":"Výborná práce v oblasti Prezentace a demo.","improvements":"Doporučuji věnovat více pozornosti detailům v Prezentace a demo."}]'::jsonb,
-     '2026-01-15 10:00:00+00'),
+    -- Project 1 — Lukáš Ježek
+    (1, 2, '[{"criterion_code":"funkcionalita","score":18,"strengths":"Skvělé UI a rychlá odezva.","improvements":"Občas pomalejší API při větším zatížení."},{"criterion_code":"code_quality","score":19,"strengths":"Velmi čistý kód a dobrá struktura.","improvements":"Chybí pár docstrings u helper funkcí."},{"criterion_code":"nfr","score":17,"strengths":"Nasazení na jedničku.","improvements":"Doporučuji přidat lepší monitoring."}]'::jsonb,
+     true, '2026-01-15 10:00:00+00'),
+    -- Project 1 — Roman Špánek
+    (1, 3, '[{"criterion_code":"funkcionalita","score":17,"strengths":"Z pohledu uživatele super.","improvements":"Architektura by snesla menší refaktoring pro lepší škálovatelnost."},{"criterion_code":"code_quality","score":20,"strengths":"Ukázkové testy a pokrytí.","improvements":"Nemám co vytknout."},{"criterion_code":"nfr","score":16,"strengths":"Základní CI/CD funguje.","improvements":"Deployment by se dal více zautomatizovat."}]'::jsonb,
+     true, '2026-01-15 10:00:00+00'),
     -- Project 2 — Lukáš Ježek
-    (2, 2, '[{"criterion_code":"architecture","score":16,"strengths":"Výborná práce v oblasti Architektura a návrh systému.","improvements":"Doporučuji věnovat více pozornosti detailům v Architektura a návrh systému."},{"criterion_code":"code_quality","score":16,"strengths":"Výborná práce v oblasti Kvalita kódu a dodržení konvencí.","improvements":"Doporučuji věnovat více pozornosti detailům v Kvalita kódu a dodržení konvencí."},{"criterion_code":"testing","score":16,"strengths":"Výborná práce v oblasti Testování a pokrytí kódu.","improvements":"Doporučuji věnovat více pozornosti detailům v Testování a pokrytí kódu."},{"criterion_code":"documentation","score":16,"strengths":"Výborná práce v oblasti Dokumentace a README.","improvements":"Doporučuji věnovat více pozornosti detailům v Dokumentace a README."},{"criterion_code":"presentation","score":16,"strengths":"Výborná práce v oblasti Prezentace a demo.","improvements":"Doporučuji věnovat více pozornosti detailům v Prezentace a demo."}]'::jsonb,
-     '2026-01-15 10:00:00+00'),
+    (2, 2, '[{"criterion_code":"funkcionalita","score":15,"strengths":"Nápad je skvělý a inovativní.","improvements":"Aplikace občas padá při edge cases."},{"criterion_code":"code_quality","score":14,"strengths":"Kód je celkem čitelný.","improvements":"Velmi slabé pokrytí testy."},{"criterion_code":"nfr","score":15,"strengths":"Dobrá dokumentace API.","improvements":"Chybí automatický deployment pipeline."}]'::jsonb,
+     true, '2026-01-15 10:00:00+00'),
     -- Project 2 —  Roman Špánek
-    (2, 3, '[{"criterion_code":"architecture","score":18,"strengths":"Výborná práce v oblasti Architektura a návrh systému.","improvements":"Doporučuji věnovat více pozornosti detailům v Architektura a návrh systému."},{"criterion_code":"code_quality","score":18,"strengths":"Výborná práce v oblasti Kvalita kódu a dodržení konvencí.","improvements":"Doporučuji věnovat více pozornosti detailům v Kvalita kódu a dodržení konvencí."},{"criterion_code":"testing","score":18,"strengths":"Výborná práce v oblasti Testování a pokrytí kódu.","improvements":"Doporučuji věnovat více pozornosti detailům v Testování a pokrytí kódu."},{"criterion_code":"documentation","score":18,"strengths":"Výborná práce v oblasti Dokumentace a README.","improvements":"Doporučuji věnovat více pozornosti detailům v Dokumentace a README."},{"criterion_code":"presentation","score":18,"strengths":"Výborná práce v oblasti Prezentace a demo.","improvements":"Doporučuji věnovat více pozornosti detailům v Prezentace a demo."}]'::jsonb,
-     '2026-01-15 10:00:00+00'),
+    (2, 3, '[{"criterion_code":"funkcionalita","score":14,"strengths":"Základní use-cases fungují dobře.","improvements":"Složitější scénáře nebyly plně otestovány."},{"criterion_code":"code_quality","score":16,"strengths":"Snaha o čistou architekturu.","improvements":"Místy příliš složité abstrakce."},{"criterion_code":"nfr","score":14,"strengths":"Aplikace běží v cloudu.","improvements":"Logování chyb by mohlo být podstatně lepší."}]'::jsonb,
+     true, '2026-01-15 10:00:00+00'),
     -- Project 3 — Lukáš Ježek
-    (3, 2, '[{"criterion_code":"architecture","score":16,"strengths":"Výborná práce v oblasti Architektura a návrh systému.","improvements":"Doporučuji věnovat více pozornosti detailům v Architektura a návrh systému."},{"criterion_code":"code_quality","score":16,"strengths":"Výborná práce v oblasti Kvalita kódu a dodržení konvencí.","improvements":"Doporučuji věnovat více pozornosti detailům v Kvalita kódu a dodržení konvencí."},{"criterion_code":"testing","score":16,"strengths":"Výborná práce v oblasti Testování a pokrytí kódu.","improvements":"Doporučuji věnovat více pozornosti detailům v Testování a pokrytí kódu."},{"criterion_code":"documentation","score":16,"strengths":"Výborná práce v oblasti Dokumentace a README.","improvements":"Doporučuji věnovat více pozornosti detailům v Dokumentace a README."},{"criterion_code":"presentation","score":16,"strengths":"Výborná práce v oblasti Prezentace a demo.","improvements":"Doporučuji věnovat více pozornosti detailům v Prezentace a demo."}]'::jsonb,
-     '2026-01-15 10:00:00+00'),
+    (3, 2, '[{"criterion_code":"funkcionalita","score":20,"strengths":"Vše funguje bezchybně, výborná architektura.","improvements":"Žádné podstatné vady."},{"criterion_code":"code_quality","score":18,"strengths":"Solidní kód.","improvements":"Drobné prohřešky proti jmenným konvencím."},{"criterion_code":"nfr","score":19,"strengths":"Perfektní dokumentace a deployment.","improvements":"Chybí load testing."}]'::jsonb,
+     true, '2026-01-15 10:00:00+00'),
     -- Project 3 —  Roman Špánek
-    (3, 3, '[{"criterion_code":"architecture","score":18,"strengths":"Výborná práce v oblasti Architektura a návrh systému.","improvements":"Doporučuji věnovat více pozornosti detailům v Architektura a návrh systému."},{"criterion_code":"code_quality","score":18,"strengths":"Výborná práce v oblasti Kvalita kódu a dodržení konvencí.","improvements":"Doporučuji věnovat více pozornosti detailům v Kvalita kódu a dodržení konvencí."},{"criterion_code":"testing","score":18,"strengths":"Výborná práce v oblasti Testování a pokrytí kódu.","improvements":"Doporučuji věnovat více pozornosti detailům v Testování a pokrytí kódu."},{"criterion_code":"documentation","score":18,"strengths":"Výborná práce v oblasti Dokumentace a README.","improvements":"Doporučuji věnovat více pozornosti detailům v Dokumentace a README."},{"criterion_code":"presentation","score":18,"strengths":"Výborná práce v oblasti Prezentace a demo.","improvements":"Doporučuji věnovat více pozornosti detailům v Prezentace a demo."}]'::jsonb,
-     '2026-01-15 10:00:00+00'),
-    -- KDP project 9 — Jan Král (score 25 per criterion)
-    (9,  3, '[{"criterion_code":"analysis","score":25,"strengths":"Výborná práce v oblasti Analýza a specifikace požadavků.","improvements":"Doporučuji věnovat více pozornosti detailům v Analýza a specifikace požadavků."},{"criterion_code":"implementation","score":25,"strengths":"Výborná práce v oblasti Implementace a funkčnost.","improvements":"Doporučuji věnovat více pozornosti detailům v Implementace a funkčnost."},{"criterion_code":"report","score":25,"strengths":"Výborná práce v oblasti Technická zpráva.","improvements":"Doporučuji věnovat více pozornosti detailům v Technická zpráva."}]'::jsonb,
-     '2026-01-10 10:00:00+00'),
+    (3, 3, '[{"criterion_code":"funkcionalita","score":19,"strengths":"Skvělá práce, robustní řešení.","improvements":"Některé formuláře by mohly mít lepší validaci."},{"criterion_code":"code_quality","score":19,"strengths":"Velmi dobré testy.","improvements":"Zbytečně velký počet závislostí."},{"criterion_code":"nfr","score":20,"strengths":"Excelentní NFR a zabezpečení.","improvements":"Vše v pořádku."}]'::jsonb,
+     true, '2026-01-15 10:00:00+00'),
+    -- KDP project 9 — Jan Král
+    (9,  3, '[{"criterion_code":"analysis","score":28,"strengths":"Velmi podrobná a pečlivá analýza.","improvements":"Uvítal bych více grafů pro vizualizaci."},{"criterion_code":"implementation","score":35,"strengths":"Funkční a výkonný prototyp.","improvements":"Občasné bugy v edge cases při vysoké zátěži."},{"criterion_code":"report","score":29,"strengths":"Výborně napsaný text.","improvements":"Drobné překlepy v závěru."}]'::jsonb,
+     true, '2026-01-10 10:00:00+00'),
     -- KDP project 10 — Jan Král
-    (10, 3, '[{"criterion_code":"analysis","score":25,"strengths":"Výborná práce v oblasti Analýza a specifikace požadavků.","improvements":"Doporučuji věnovat více pozornosti detailům v Analýza a specifikace požadavků."},{"criterion_code":"implementation","score":25,"strengths":"Výborná práce v oblasti Implementace a funkčnost.","improvements":"Doporučuji věnovat více pozornosti detailům v Implementace a funkčnost."},{"criterion_code":"report","score":25,"strengths":"Výborná práce v oblasti Technická zpráva.","improvements":"Doporučuji věnovat více pozornosti detailům v Technická zpráva."}]'::jsonb,
-     '2026-01-10 10:00:00+00')
+    (10, 3, '[{"criterion_code":"analysis","score":25,"strengths":"Základní analýza je dostatečná.","improvements":"Chybí srovnání s existujícími řešeními."},{"criterion_code":"implementation","score":38,"strengths":"Velmi robustní řešení s izolací anomálií.","improvements":"Vyšší spotřeba paměti u rozsáhlejších datasetů."},{"criterion_code":"report","score":27,"strengths":"Zpráva je přehledná.","improvements":"Chybí hlubší zhodnocení budoucího rozvoje."}]'::jsonb,
+     true, '2026-01-10 10:00:00+00')
 ON CONFLICT (project_id, lecturer_id) DO NOTHING;
 
 -- ============================================================================
@@ -270,19 +270,19 @@ INSERT INTO course_evaluation (id, project_id, student_id, rating,
 OVERRIDING SYSTEM VALUE
 VALUES
     -- PSI-2025 project 1 (TUL Event Planner): Alice + Bob
-    (1,  1,  5,  4, 'Kurz byl výborně organizován a přednášky byly srozumitelné.', 'Uvítal bych více praktických cvičení v první polovině semestru.', true,  '2026-01-20 10:00:00+00'),
-    (2,  1,  6,  4, 'Kurz byl výborně organizován a přednášky byly srozumitelné.', 'Uvítal bych více praktických cvičení v první polovině semestru.', true,  '2026-01-20 10:00:00+00'),
+    (1,  1,  5,  5, 'Projekt mě velmi bavil a naučil jsem se hodně o Reactu.', 'Možná by se hodil jeden úvodní tutoriál na FastAPI navíc.', true,  '2026-01-20 10:00:00+00'),
+    (2,  1,  6,  4, 'Skvělá týmová práce a podpora cvičících.', 'Někdy byly požadavky v zadání příliš obecné.', true,  '2026-01-20 10:00:00+00'),
     -- PSI-2025 project 2 (Studijní Asistent): Carol + Dan + Eva
-    (3,  2,  7,  4, 'Kurz byl výborně organizován a přednášky byly srozumitelné.', 'Uvítal bych více praktických cvičení v první polovině semestru.', true,  '2026-01-20 10:00:00+00'),
-    (4,  2,  8,  4, 'Kurz byl výborně organizován a přednášky byly srozumitelné.', 'Uvítal bych více praktických cvičení v první polovině semestru.', true,  '2026-01-20 10:00:00+00'),
-    (5,  2,  9,  4, 'Kurz byl výborně organizován a přednášky byly srozumitelné.', 'Uvítal bych více praktických cvičení v první polovině semestru.', true,  '2026-01-20 10:00:00+00'),
+    (3,  2,  7,  3, 'Zajímavé téma, ale hodně času zabralo samostudium technologií.', 'Přednášky mohly být více propojené s praxí.', true,  '2026-01-20 10:00:00+00'),
+    (4,  2,  8,  5, 'Výborný předmět, ideální příprava na praxi.', 'Nemám co vytknout, vše fungovalo skvěle.', true,  '2026-01-20 10:00:00+00'),
+    (5,  2,  9,  4, 'Líbila se mi volnost při výběru technologií.', 'Hodnocení mohlo být transparentnější už od začátku semestru.', true,  '2026-01-20 10:00:00+00'),
     -- PSI-2025 project 3 (Budget Tracker): Filip + Bob
-    (6,  3,  10, 4, 'Kurz byl výborně organizován a přednášky byly srozumitelné.', 'Uvítal bych více praktických cvičení v první polovině semestru.', true,  '2026-01-20 10:00:00+00'),
-    (7,  3,  6,  4, 'Kurz byl výborně organizován a přednášky byly srozumitelné.', 'Uvítal bych více praktických cvičení v první polovině semestru.', true,  '2026-01-20 10:00:00+00'),
+    (6,  3,  10, 5, 'Super předmět, oceňuji důraz na NFR a CI/CD.', 'Zpočátku jsem bojoval s Dockerem, nějaký tahák by se hodil.', true,  '2026-01-20 10:00:00+00'),
+    (7,  3,  6,  4, 'Konzultace s cvičícími byly velmi přínosné.', 'Uvítal bych více termínů pro průběžné odevzdání.', true,  '2026-01-20 10:00:00+00'),
     -- KDP-2025 project 9 (Analýza výkonnosti): Alice
-    (8,  9,  5,  5, 'Práce na projektu mi dala skvělou přípravu na obhajobu.',       'Více konzultačních termínů by pomohlo v průběhu zpracování.',       true,  '2026-01-20 10:00:00+00'),
+    (8,  9,  5,  4, 'Práce na projektu mi dala skvělou přípravu na obhajobu.',       'Více konzultačních termínů by pomohlo v průběhu zpracování.',       true,  '2026-01-20 10:00:00+00'),
     -- KDP-2025 project 10 (Detekce anomálií): Dan
-    (9,  10, 8,  5, 'Práce na projektu mi dala skvělou přípravu na obhajobu.',       'Více konzultačních termínů by pomohlo v průběhu zpracování.',       true,  '2026-01-20 10:00:00+00'),
+    (9,  10, 8,  5, 'Velmi zajímavé téma, které jsem si mohl zvolit sám.', 'Občas zdlouhavé čekání na feedback ke specifikaci.', true,  '2026-01-20 10:00:00+00'),
     -- PSI-2026 project 4 (Lectors SPC): Lukáš — draft, free-text not yet filled in
     (10, 4,  11, 4, NULL, NULL, false, '2026-03-01 09:00:00+00')
 ON CONFLICT (id) DO NOTHING;
@@ -299,20 +299,20 @@ INSERT INTO peer_feedback (course_evaluation_id, receiving_student_id,
                             strengths, improvements, bonus_points)
 VALUES
     -- CE 1 (Alice evaluates project 1): feedback for Bob (id 6)
-    (1,  6,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.', 10),
+    (1,  6,  'Výborná orientace v backendu, pomohl mi s databází.', 'Občas by mohl rychleji odpovídat na Slacku.', 10),
     -- CE 2 (Bob evaluates project 1): feedback for Alice (id 5)
-    (2,  5,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.', 10),
+    (2,  5,  'Skvělá organizátorka, hlídala všechny termíny.', 'Méně se zapojovala do složitější logiky v kódu.', 10),
     -- CE 3 (Carol evaluates project 2): feedback for Dan (id 8) + Eva (id 9)
-    (3,  8,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.',  5),
-    (3,  9,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.',  5),
+    (3,  8,  'Kód od něj byl vždy čistý a bez chyb.', 'Mohl by lépe dokumentovat své pull requesty.',  5),
+    (3,  9,  'Vymyslela skvělý design a frontend.', 'Někdy se zasekávala na detailech místo postupu.',  5),
     -- CE 4 (Dan evaluates project 2): feedback for Carol (id 7) + Eva (id 9)
-    (4,  7,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.',  5),
-    (4,  9,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.',  5),
+    (4,  7,  'Spolehlivá, vyřešila spoustu složitých problémů.', 'Trochu chaotické slučování větví v Gitu.',  5),
+    (4,  9,  'Super práce na prezentaci a dokumentaci.', 'Méně technického přínosu oproti ostatním.',  5),
     -- CE 5 (Eva evaluates project 2): feedback for Carol (id 7) + Dan (id 8)
-    (5,  7,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.',  5),
-    (5,  8,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.',  5),
+    (5,  7,  'Přátelská a proaktivní komunikace.', 'Příště by mohla víc delegovat úkoly.',  5),
+    (5,  8,  'Absolutní technický expert našeho týmu.', 'Trochu víc trpělivosti při vysvětlování kódu ostatním.',  5),
     -- CE 6 (Filip evaluates project 3): feedback for Bob (id 6)
-    (6,  6,  'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.', 10),
+    (6,  6,  'Vždy přišel s kreativním řešením problému.', 'Zbytečně často refaktoroval fungující kód.', 10),
     -- CE 7 (Bob evaluates project 3): feedback for Filip (id 10)
-    (7,  10, 'Spolehlivý člen týmu, vždy včas plnil zadané úkoly.', 'Doporučuji aktivnější komunikaci při blokujících problémech.', 10)
+    (7,  10, 'Dobře nastavil architekturu od samého začátku.', 'Dělal příliš velké commity, špatně se to revidovalo.', 10)
 ON CONFLICT (course_evaluation_id, receiving_student_id) DO NOTHING;

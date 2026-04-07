@@ -10,6 +10,8 @@ from db.courses import get_course as db_get_course
 from db.courses import get_course_lecturers
 from db.projects import (
     add_project_member,
+    get_all_peer_feedback_for_project,
+    get_all_peer_feedback_for_projects,
     get_course_evaluation_by_student,
     get_course_evaluations,
     get_course_evaluations_for_student,
@@ -20,6 +22,8 @@ from db.projects import (
     get_peer_feedback_received,
     get_project_evaluation_by_lecturer,
     get_project_evaluations,
+    get_project_evaluations_by_lecturer_for_projects,
+    get_project_evaluations_for_projects,
     get_project_members,
     get_projects,
     is_course_lecturer,
@@ -386,20 +390,73 @@ class ProjectsService:
 
         # For member projects with unlocked results, we need lecturer and peer feedback
         # to calculate total_points for the dashboard.
+        # For lecturers, we want to see their own evaluations even if not unlocked.
         project_evals: dict[int, list[ProjectEvaluationDetail]] = {}
         peer_feedback: dict[int, list[PeerFeedbackDetail]] = {}
         if user is not None and user.id is not None:
+            member_project_ids = [
+                pid
+                for pid in project_ids
+                if any(m.id == user.id for m in members_by_project.get(pid, []))
+            ]
             unlocked_member_project_ids = [
                 pid
                 for pid, p_obj in {p.id: p for p, _ in rows}.items()
                 if pid in member_project_ids and p_obj.results_unlocked
             ]
-            for pid in unlocked_member_project_ids:
-                raw_pevals = await get_project_evaluations(self._session, pid)
-                project_evals[pid] = [_to_project_evaluation_detail(ev) for ev in raw_pevals]
+            if unlocked_member_project_ids:
+                # Bulk fetch for members
+                raw_pevals_map = await get_project_evaluations_for_projects(
+                    self._session, unlocked_member_project_ids
+                )
+                for pid, evs in raw_pevals_map.items():
+                    project_evals[pid] = [_to_project_evaluation_detail(ev) for ev in evs]
 
-                raw_pfeedback = await get_peer_feedback_received(self._session, pid, user.id)
-                peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in raw_pfeedback]
+                raw_pfeedback_map = await get_all_peer_feedback_for_projects(
+                    self._session, unlocked_member_project_ids
+                )
+                for pid, fbs in raw_pfeedback_map.items():
+                    peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in fbs]
+
+            # 2. Lecturer logic: fetch evaluations for projects where user is a lecturer
+            if user.role in (UserRole.ADMIN, UserRole.LECTURER):
+                # Identify which projects the user is a lecturer for
+                lecturer_project_ids = []
+                for p, c in rows:
+                    if p.id is not None and c.id is not None:
+                        # Check if user is in lecturers_by_course[c.id]
+                        if any(lect.id == user.id for lect in lecturers_by_course.get(c.id, [])):
+                            lecturer_project_ids.append(p.id)
+
+                if lecturer_project_ids:
+                    # Bulk fetch for lecturers
+                    raw_lecturer_pevals_map = (
+                        await get_project_evaluations_by_lecturer_for_projects(
+                            self._session, lecturer_project_ids, user.id
+                        )
+                    )
+                    for pid, ev in raw_lecturer_pevals_map.items():
+                        # Fetch peer feedback if results are unlocked for these lecturer projects.
+                        p_obj = next((p for p, _ in rows if p.id == pid), None)
+                        if p_obj and p_obj.results_unlocked:
+                            # Results are unlocked: lecturers see EVERYTHING
+                            if pid not in project_evals:
+                                raw_all_pevals = await get_project_evaluations(self._session, pid)
+                                project_evals[pid] = [
+                                    _to_project_evaluation_detail(ev) for ev in raw_all_pevals
+                                ]
+
+                            if pid not in peer_feedback:
+                                raw_pfeedback = await get_all_peer_feedback_for_project(
+                                    self._session, pid
+                                )
+                                peer_feedback[pid] = [
+                                    _to_peer_feedback_detail(fb) for fb in raw_pfeedback
+                                ]
+                        else:
+                            # Results locked: lecturer only sees their own draft/submission
+                            if pid not in project_evals:
+                                project_evals[pid] = [_to_project_evaluation_detail(ev)]
 
         return [
             _build_project(
@@ -410,7 +467,15 @@ class ProjectsService:
                 authenticated=(user is not None),
                 project_evaluations=project_evals.get(p.id) if p.id is not None else None,
                 course_evaluations=[user_evals[p.id]] if p.id in user_evals else [],
-                received_peer_feedback=peer_feedback.get(p.id) if p.id is not None else None,
+                received_peer_feedback=peer_feedback.get(p.id, [])
+                if user is not None and user.role in (UserRole.ADMIN, UserRole.LECTURER)
+                else [
+                    fb
+                    for fb in peer_feedback.get(p.id, [])
+                    if user is not None and fb.receiving_student_id == user.id
+                ]
+                if p.id is not None
+                else None,
                 submitted_lecturer_count=eval_counts.get(p.id, (0, 0))[0]
                 if p.id is not None
                 else 0,
@@ -488,6 +553,14 @@ class ProjectsService:
                     course_evaluations = [
                         _to_course_evaluation_detail(ev) for ev in raw_course_evaluations
                     ]
+
+                # Fetch ALL peer feedback for the project
+                raw_received_peer_feedback = await get_all_peer_feedback_for_project(
+                    self._session, project_id
+                )
+                received_peer_feedback = [
+                    _to_peer_feedback_detail(feedback) for feedback in raw_received_peer_feedback
+                ]
             elif user.role == UserRole.STUDENT and user.id is not None:
                 raw_received_peer_feedback = await get_peer_feedback_received(
                     self._session, project_id, user.id

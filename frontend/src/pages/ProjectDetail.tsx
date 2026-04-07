@@ -69,7 +69,8 @@ export const ProjectDetail = () => {
   }
 
   const isMember = user && project.members.some(m => m.id === user.id);
-  const isLecturerOrAdmin = user && (user.role === UserRole.LECTURER || user.role === UserRole.ADMIN);
+  const isOwningLecturer = user && project.course.lecturers.some(l => l.id === user.id);
+  const showLecturerControls = user && (user.role === UserRole.ADMIN || (user.role === UserRole.LECTURER && isOwningLecturer));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -261,10 +262,10 @@ export const ProjectDetail = () => {
           </div>
 
           {/* Role-based Action Links */}
-          {(isMember || isLecturerOrAdmin) && (
+          {(isMember || showLecturerControls) && (
             <div className="space-y-6">
               <p className="text-xs text-slate-400 uppercase font-bold px-2 tracking-widest border-b border-slate-100 pb-2">
-                {isLecturerOrAdmin ? t('project.lecturer_links') : t('project.student_links')}
+                {showLecturerControls ? t('project.lecturer_links') : t('project.student_links')}
               </p>
               
               {isMember && (
@@ -278,7 +279,7 @@ export const ProjectDetail = () => {
                 </div>
               )}
 
-              {isLecturerOrAdmin && (
+              {showLecturerControls && (
                 <Link to={`/lecturer/project/${project.id}/evaluate`} className="block">
                   <Button variant="outline" className="w-full justify-start gap-3">
                     <CheckCircle size={18} className="text-tul-blue" />

@@ -172,6 +172,88 @@ async def get_course_evaluations(
     return list((await session.execute(stmt)).scalars().all())
 
 
+async def get_project_evaluations_for_projects(
+    session: AsyncSession,
+    project_ids: list[int],
+) -> dict[int, list[ProjectEvaluation]]:
+    """Return all lecturer evaluations for *project_ids*, grouped by project id."""
+    if not project_ids:
+        return {}
+
+    stmt = select(ProjectEvaluation).where(ProjectEvaluation.project_id.in_(project_ids))
+    result: dict[int, list[ProjectEvaluation]] = {}
+    for ev in (await session.execute(stmt)).scalars().all():
+        result.setdefault(ev.project_id, []).append(ev)
+    return result
+
+
+async def get_all_peer_feedback_for_projects(
+    session: AsyncSession,
+    project_ids: list[int],
+) -> dict[int, list[PeerFeedback]]:
+    """Return ALL peer feedback rows for ALL members of *project_ids*, grouped by project id.
+
+    Only includes feedback from submitted course evaluations.
+    """
+    if not project_ids:
+        return {}
+
+    stmt = (
+        select(CourseEvaluation.project_id, PeerFeedback)
+        .join(CourseEvaluation, PeerFeedback.course_evaluation_id == CourseEvaluation.id)
+        .where(
+            CourseEvaluation.project_id.in_(project_ids),
+            CourseEvaluation.submitted.is_(True),
+        )
+    )
+    result: dict[int, list[PeerFeedback]] = {}
+    for project_id, feedback in (await session.execute(stmt)).all():
+        result.setdefault(project_id, []).append(feedback)
+    return result
+
+
+async def get_project_evaluations_by_lecturer_for_projects(
+    session: AsyncSession,
+    project_ids: list[int],
+    lecturer_id: int,
+) -> dict[int, ProjectEvaluation]:
+    """Return lecturer evaluations by *lecturer_id* for *project_ids*.
+
+    Returns a dict mapping project ID to the corresponding ``ProjectEvaluation``.
+    """
+    if not project_ids:
+        return {}
+
+    stmt = select(ProjectEvaluation).where(
+        ProjectEvaluation.project_id.in_(project_ids),
+        ProjectEvaluation.lecturer_id == lecturer_id,
+    )
+    result: dict[int, ProjectEvaluation] = {}
+    for ev in (await session.execute(stmt)).scalars().all():
+        result[ev.project_id] = ev
+    return result
+
+
+async def get_all_peer_feedback_for_project(
+    session: AsyncSession,
+    project_id: int,
+) -> list[PeerFeedback]:
+    """Return ALL peer feedback rows for ALL members of ``project_id``.
+
+    Joins through ``course_evaluation`` to scope the lookup to a single project.
+    Only includes feedback from submitted course evaluations.
+    """
+    stmt = (
+        select(PeerFeedback)
+        .join(CourseEvaluation, PeerFeedback.course_evaluation_id == CourseEvaluation.id)
+        .where(
+            CourseEvaluation.project_id == project_id,
+            CourseEvaluation.submitted.is_(True),
+        )
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
 async def get_peer_feedback_received(
     session: AsyncSession,
     project_id: int,

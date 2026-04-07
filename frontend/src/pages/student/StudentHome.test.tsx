@@ -108,11 +108,11 @@ describe('StudentHome', () => {
     await waitFor(() => {
       // Project Alpha: Submitted
       const alphaCard = screen.getByText('Project Alpha').closest('div.group');
-      expect(alphaCard).toHaveTextContent(/Odesláno/i);
+      expect(alphaCard).toHaveTextContent(/Odevzdáno/i);
       
       // Project Beta: Draft (Koncept)
       const betaCard = screen.getByText('Project Beta').closest('div.group');
-      expect(betaCard).toHaveTextContent(/Koncept/i);
+      expect(betaCard).toHaveTextContent(/Rozpracováno/i);
     });
   });
 
@@ -126,7 +126,7 @@ describe('StudentHome', () => {
       
       // Project Beta: Pending
       const betaCard = screen.getByText('Project Beta').closest('div.group');
-      expect(betaCard).toHaveTextContent(/student\.locked/i);
+      expect(betaCard).toHaveTextContent(/Čeká se/i);
     });
   });
 

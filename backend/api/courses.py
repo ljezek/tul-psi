@@ -53,6 +53,7 @@ def get_projects_service(session: AsyncSession = Depends(get_session)) -> Projec
     ),
 )
 async def list_courses(
+    current_user: User | None = Depends(get_optional_current_user),
     service: CoursesService = Depends(get_courses_service),
 ) -> list[CourseListItem]:
     """Return all courses with aggregated stats.
@@ -62,7 +63,7 @@ async def list_courses(
     Authentication is not required.
     """
     try:
-        return await service.get_courses()
+        return await service.get_courses(current_user=current_user)
     except Exception:
         logger.exception("Failed to retrieve courses")
         raise HTTPException(status_code=500, detail="Internal server error.") from None

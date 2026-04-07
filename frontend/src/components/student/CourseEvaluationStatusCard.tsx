@@ -30,10 +30,15 @@ export const CourseEvaluationStatusCard = ({
   const labelSize = isCompact ? 'text-[9px]' : 'text-[10px]';
   const statusSize = isCompact ? 'text-[11px]' : 'text-xs';
   const iconSize = isCompact ? 14 : 16;
-  const buttonSize = isCompact ? 'sm' : 'default';
+  const buttonSize = isCompact ? 'sm' : 'md';
 
-  const isPass = project.total_points !== null && project.total_points >= project.course.min_score;
+  const isPass = project.total_points != null && project.total_points >= project.course.min_score;
   const maxPoints = project.course.evaluation_criteria.reduce((sum, c) => sum + c.max_score, 0) + (project.course.peer_bonus_budget || 0);
+
+  const totalLecturers = project.course.lecturers.length;
+  const totalStudents = project.members.length;
+  const submittedLecturers = project.submitted_lecturer_count || 0;
+  const submittedStudents = project.submitted_student_count || 0;
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -89,7 +94,7 @@ export const CourseEvaluationStatusCard = ({
           {project.results_unlocked ? (
             <div className="flex items-center gap-2 mt-1">
               <span className={`font-black ${statusSize} text-slate-700`}>
-                {project.total_points !== null ? Math.round(project.total_points * 10) / 10 : 0}/{maxPoints} {t('label.points')}
+                {project.total_points != null ? Math.round(project.total_points * 10) / 10 : 0}/{maxPoints} {t('label.points')}
               </span>
               <span className="text-slate-300 font-bold">•</span>
               <span className="text-slate-400 text-[10px] font-bold">
@@ -97,10 +102,20 @@ export const CourseEvaluationStatusCard = ({
               </span>
             </div>
           ) : (
-            <span className={`inline-flex items-center gap-1.5 text-slate-400 ${statusSize} font-bold`}>
-              <Clock size={iconSize} />
-              {t('student.locked')}
-            </span>
+            <div className="space-y-2 mt-1 relative group/hint cursor-help">
+              <span className={`inline-flex items-center gap-1.5 text-slate-400 ${statusSize} font-bold`}>
+                <Clock size={iconSize} />
+                {t('lecturer.pending_status')
+                  .replace('{s_curr}', submittedStudents.toString())
+                  .replace('{s_total}', totalStudents.toString())
+                  .replace('{l_curr}', submittedLecturers.toString())
+                  .replace('{l_total}', totalLecturers.toString())
+                }
+              </span>
+              <div className="absolute bottom-full left-0 mb-2 w-64 bg-slate-800 text-white text-[10px] p-2 rounded-lg opacity-0 group-hover/hint:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl font-bold">
+                {t('student.unlock_hint')}
+              </div>
+            </div>
           )}
         </div>
 
