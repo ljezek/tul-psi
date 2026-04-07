@@ -442,8 +442,10 @@ class ProjectsService:
                             # Results are unlocked: lecturers see EVERYTHING
                             if pid not in project_evals:
                                 raw_all_pevals = await get_project_evaluations(self._session, pid)
-                                project_evals[pid] = [_to_project_evaluation_detail(ev) for ev in raw_all_pevals]
-                            
+                                project_evals[pid] = [
+                                    _to_project_evaluation_detail(ev) for ev in raw_all_pevals
+                                ]
+
                             if pid not in peer_feedback:
                                 raw_pfeedback = await get_all_peer_feedback_for_project(
                                     self._session, pid

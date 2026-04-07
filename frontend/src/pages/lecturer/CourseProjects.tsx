@@ -30,10 +30,12 @@ export const CourseProjects = () => {
   // Add Lecturer Form State
   const [showAddLecturerForm, setShowAddLecturerForm] = useState(false);
   const [lecturerEmail, setLecturerEmail] = useState('');
+  const [lecturerError, setLecturerError] = useState<string | null>(null);
 
   // Add Member State
   const [addingMemberTo, setAddingMemberTo] = useState<number | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
+  const [memberError, setMemberError] = useState<string | null>(null);
   
   const loadData = async () => {
     try {
@@ -88,6 +90,7 @@ export const CourseProjects = () => {
 
   const handleAddLecturer = async (e: FormEvent) => {
     e.preventDefault();
+    setLecturerError(null);
     try {
       if (!course) return;
       const email = lecturerEmail.includes('@') ? lecturerEmail : `${lecturerEmail}@tul.cz`;
@@ -97,12 +100,13 @@ export const CourseProjects = () => {
       await loadData();
     } catch (err) {
       const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
-      alert(msg);
+      setLecturerError(msg);
     }
   };
 
   const handleAddMember = async (e: FormEvent, projectId: number) => {
     e.preventDefault();
+    setMemberError(null);
     try {
       const email = memberEmail.includes('@') ? memberEmail : `${memberEmail}@tul.cz`;
       await addProjectMember(projectId, { email });
@@ -111,7 +115,7 @@ export const CourseProjects = () => {
       await loadData();
     } catch (err) {
       const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
-      alert(msg);
+      setMemberError(msg);
     }
   };
 
@@ -159,6 +163,7 @@ export const CourseProjects = () => {
       </div>
 
       {/* Course Header */}
+      {/* TODO: Course editing (admin only) */}
       <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -209,6 +214,7 @@ export const CourseProjects = () => {
                     value={lecturerEmail}
                     onChange={e => setLecturerEmail(e.target.value.split('@')[0])}
                     placeholder={t('form.email_placeholder')}
+                    aria-label={t('login.email_label')}
                     className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
@@ -217,10 +223,11 @@ export const CourseProjects = () => {
               <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-xl text-sm font-black transition-colors shadow-sm h-[42px]">
                 {t('form.add')}
               </button>
-              <button type="button" onClick={() => setShowAddLecturerForm(false)} className="px-4 py-2.5 rounded-xl text-sm font-black transition-colors text-slate-500 hover:bg-slate-100 h-[42px]">
+              <button type="button" onClick={() => { setShowAddLecturerForm(false); setLecturerError(null); }} className="px-4 py-2.5 rounded-xl text-sm font-black transition-colors text-slate-500 hover:bg-slate-100 h-[42px]">
                 {t('lecturer.cancel')}
               </button>
             </form>
+            {lecturerError && <p className="text-red-500 text-xs font-bold mt-2 ml-1">{lecturerError}</p>}
           </div>
         )}
 
@@ -443,25 +450,29 @@ export const CourseProjects = () => {
                     {!project.results_unlocked && (
                       <div className="pt-2">
                         {addingMemberTo === project.id ? (
-                          <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-100 max-w-sm">
-                            <div className="relative flex-1">
-                              <input 
-                                type="text" 
-                                required 
-                                placeholder={t('form.email_placeholder')}
-                                value={memberEmail}
-                                onChange={e => setMemberEmail(e.target.value.split('@')[0])}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1 flex-1"
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
-                            </div>
-                            <button type="submit" className="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold transition-colors">
-                              {t('form.add')}
-                            </button>
-                            <button type="button" onClick={() => setAddingMemberTo(null)} className="text-xs text-slate-500 hover:text-slate-700 font-bold">
-                              {t('lecturer.cancel')}
-                            </button>
-                          </form>
+                          <div className="space-y-2">
+                            <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-100 max-w-sm">
+                              <div className="relative flex-1">
+                                <input 
+                                  type="text" 
+                                  required 
+                                  placeholder={t('form.email_placeholder')}
+                                  aria-label={t('form.email_placeholder')}
+                                  value={memberEmail}
+                                  onChange={e => setMemberEmail(e.target.value.split('@')[0])}
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1 flex-1"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
+                              </div>
+                              <button type="submit" className="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold transition-colors">
+                                {t('form.add')}
+                              </button>
+                              <button type="button" onClick={() => { setAddingMemberTo(null); setMemberError(null); }} className="text-xs text-slate-500 hover:text-slate-700 font-bold">
+                                {t('lecturer.cancel')}
+                              </button>
+                            </form>
+                            {memberError && <p className="text-red-500 text-[10px] font-black uppercase tracking-wider ml-2">{memberError}</p>}
+                          </div>
                         ) : (
                           <button 
                             onClick={() => setAddingMemberTo(project.id)}

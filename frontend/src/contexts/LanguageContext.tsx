@@ -260,7 +260,7 @@ const translations: Record<string, Record<Language, string>> = {
   'student.course_strengths': { cs: 'Silné stránky předmětu', en: 'Course Strengths' },
   'student.course_strengths_ph': { cs: 'Co se vám na předmětu líbilo, co bylo přínosné...', en: 'What did you like about the course, what was beneficial...' },
   'student.course_improvements': { cs: 'Prostor ke zlepšení předmětu', en: 'Course Areas for Improvement' },
-  'student.course_improvements_ph': { cs: 'Co byste na předmětu změnili, co vám nevyhovovalo...', en: 'What would you change about the course, what did not suit you...' },
+  'student.course_improvements_ph': { cs: 'Co byste na předmětu změnili, co by šlo udělat lépe...', en: 'What would you change about the course, what could be done better...' },
   'student.peer_eval': { cs: 'Hodnocení týmu', en: 'Team Evaluation' },
   'student.peer_strengths': { cs: 'Silné stránky člena týmu', en: 'Teammate strengths' },
   'student.peer_improvements': { cs: 'Prostor ke zlepšení člena týmu', en: 'Teammate areas for improvement' },

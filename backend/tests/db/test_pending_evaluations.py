@@ -9,7 +9,7 @@ from db.courses import get_pending_lecturer_evaluations_count
 
 @pytest.mark.asyncio
 async def test_get_pending_evaluations_returns_empty_dict_for_no_courses() -> None:
-    """get_pending_lecturer_evaluations_count must return an empty dict when no course_ids are provided."""
+    """Function must return an empty dict when no course_ids are provided."""
     session = AsyncMock()
     result = await get_pending_lecturer_evaluations_count(session, [], 1)
     assert result == {}
@@ -18,7 +18,7 @@ async def test_get_pending_evaluations_returns_empty_dict_for_no_courses() -> No
 
 @pytest.mark.asyncio
 async def test_get_pending_evaluations_returns_zeros_when_no_projects_found() -> None:
-    """get_pending_lecturer_evaluations_count must return 0 for all courses when no matching projects exist."""
+    """Function must return 0 for all courses without matching projects."""
     mock_result = MagicMock()
     mock_result.all.return_value = []
     session = AsyncMock()

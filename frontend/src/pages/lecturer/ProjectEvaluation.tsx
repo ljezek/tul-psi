@@ -304,6 +304,7 @@ export const ProjectEvaluation = () => {
                       disabled={isReadOnly}
                       ref={el => { if (formRefs.current[criterion.code]) formRefs.current[criterion.code].score = el; }}
                       onChange={(e) => handleScoreChange(criterion.code, 'score', parseInt(e.target.value, 10))}
+                      aria-label={`${criterion.description} - ${t('lecturer.score')}`}
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-tul-blue disabled:opacity-50"
                     />
                     <div className="flex justify-between mt-2 text-[8px] font-black text-slate-300 uppercase tracking-widest">
@@ -330,6 +331,7 @@ export const ProjectEvaluation = () => {
                     disabled={isReadOnly}
                     rows={4}
                     placeholder={t('lecturer.placeholder_strengths')}
+                    aria-label={`${criterion.description} - ${t('student.label_strengths')}`}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium resize-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 disabled:opacity-70 disabled:bg-slate-50"
                   />
                 </div>
@@ -345,6 +347,7 @@ export const ProjectEvaluation = () => {
                     disabled={isReadOnly}
                     rows={4}
                     placeholder={t('lecturer.placeholder_improvements')}
+                    aria-label={`${criterion.description} - ${t('student.label_improvements')}`}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium resize-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 disabled:opacity-70 disabled:bg-slate-50"
                   />
                 </div>

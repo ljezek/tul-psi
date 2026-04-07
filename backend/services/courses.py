@@ -137,7 +137,7 @@ class CoursesService:
             cid = _require_course_id(course.id)
             project_count, academic_years = stats_by_course.get(cid, (0, []))
             lecturer_users = lecturers_by_course.get(cid, [])
-            
+
             pending_count = None
             if current_user and current_user.role == UserRole.LECTURER:
                 pending_count = pending_evals_by_course.get(cid, 0)
