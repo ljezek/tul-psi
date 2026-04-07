@@ -462,6 +462,32 @@ Alert thresholds are configured in Grafana and stored in `examples/monitoring/mo
 
 ### OTP Login Flow
 
+Simplified happy-case for OTP:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend
+    participant API
+    participant DB
+    participant Email
+
+    User->>Frontend: Enter @tul.cz email
+    Frontend->>API: Request OTP
+    API->>DB: Store hash of OTP
+    API->>Email: Send 6-digit code
+    API-->>Frontend: 200 OK
+    User->>Frontend: Enter OTP from email
+    Frontend->>API: Verify OTP
+    API->>DB: Compare OTP hash (bcrypt)
+    API->>DB: Mark OTP as used
+    API-->>Frontend: 200 OK (Set Session Cookie)
+    Frontend->>User: Redirect to Dashboard
+```
+
+<details>
+<summary>Full OTP flow including error handling (click to expand):</summary>
+
 ```mermaid
 sequenceDiagram
     actor User
@@ -511,6 +537,9 @@ sequenceDiagram
         end
     end
 ```
+</details>
+
+#### OTP Details
 
 > [!NOTE]
 > `/auth/otp/request` returns `200 OK` regardless of whether the email is registered. Returning `404` for unknown addresses would allow an attacker to enumerate valid user accounts (user enumeration attack). The user sees the same "check your email" message either way; unregistered addresses simply receive no email.
