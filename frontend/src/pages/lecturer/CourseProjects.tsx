@@ -1,9 +1,9 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks } from 'lucide-react';
+import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, ApiError } from '@/api';
+import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, addCourseLecturer, ApiError } from '@/api';
 import { CourseDetail, ProjectPublic } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
@@ -26,6 +26,10 @@ export const CourseProjects = () => {
   const [addYear, setAddYear] = useState(new Date().getFullYear());
   const [addOwnerEmail, setAddOwnerEmail] = useState('');
   const [addError, setAddError] = useState<string | null>(null);
+
+  // Add Lecturer Form State
+  const [showAddLecturerForm, setShowAddLecturerForm] = useState(false);
+  const [lecturerEmail, setLecturerEmail] = useState('');
 
   // Add Member State
   const [addingMemberTo, setAddingMemberTo] = useState<number | null>(null);
@@ -79,6 +83,21 @@ export const CourseProjects = () => {
       } else {
         setAddError(t('login.error_unexpected'));
       }
+    }
+  };
+
+  const handleAddLecturer = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      if (!course) return;
+      const email = lecturerEmail.includes('@') ? lecturerEmail : `${lecturerEmail}@tul.cz`;
+      await addCourseLecturer(course.id, { email });
+      setShowAddLecturerForm(false);
+      setLecturerEmail('');
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
     }
   };
 
@@ -160,6 +179,13 @@ export const CourseProjects = () => {
           </div>
           <div className="flex gap-3">
             <button
+              onClick={() => setShowAddLecturerForm(!showAddLecturerForm)}
+              className="inline-flex items-center px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-colors font-black text-sm shadow-sm"
+            >
+              <UserPlus className="w-4 h-4 mr-2 text-slate-400" />
+              {t('courseDetail.lecturers')}
+            </button>
+            <button
               onClick={() => setShowAddForm(!showAddForm)}
               className="inline-flex items-center px-5 py-2.5 bg-tul-blue hover:bg-tul-blue/90 text-white rounded-xl transition-colors font-black text-sm shadow-sm"
             >
@@ -168,6 +194,35 @@ export const CourseProjects = () => {
             </button>
           </div>
         </div>
+
+        {/* Add Lecturer Form */}
+        {showAddLecturerForm && (
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mt-6 animate-in slide-in-from-top-4">
+            <h2 className="text-lg font-black text-slate-800 mb-4">{t('courseDetail.lecturers')}</h2>
+            <form onSubmit={handleAddLecturer} className="flex items-end gap-4">
+              <div className="flex-1 max-w-md">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('login.email_label')}</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={lecturerEmail}
+                    onChange={e => setLecturerEmail(e.target.value.split('@')[0])}
+                    placeholder={t('form.email_placeholder')}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
+                </div>
+              </div>
+              <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-xl text-sm font-black transition-colors shadow-sm h-[42px]">
+                {t('form.add')}
+              </button>
+              <button type="button" onClick={() => setShowAddLecturerForm(false)} className="px-4 py-2.5 rounded-xl text-sm font-black transition-colors text-slate-500 hover:bg-slate-100 h-[42px]">
+                {t('lecturer.cancel')}
+              </button>
+            </form>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
           <div className="space-y-4">
@@ -346,24 +401,9 @@ export const CourseProjects = () => {
                       </div>
                     </div>
                     
-                    {/* Progress or Results Summary */}
+                    {/* Results Summary (when unlocked) */}
                     <div className="py-4">
-                      {!project.results_unlocked ? (
-                        <div className="flex items-center gap-4 flex-wrap">
-                          <div className="flex items-center gap-2 group/hint relative cursor-help w-fit bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                            <Clock size={14} className="text-slate-400" />
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                              {t('role.student')}: {project.submitted_student_count || 0}/{project.members.length}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 group/hint relative cursor-help w-fit bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                            <Users size={14} className="text-slate-400" />
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                              {t('role.lecturer')}: {project.submitted_lecturer_count || 0}/{course.lecturers.length}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
+                      {project.results_unlocked && (
                         <div className="space-y-4">
                           <div className="flex flex-wrap gap-2">
                             {criteriaAverages.map(c => (
@@ -387,7 +427,10 @@ export const CourseProjects = () => {
                               return (
                                 <div key={member.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest ${isPass ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
                                   <span>{member.name}</span>
-                                  <span>{Math.round(totalPoints * 10) / 10} ({memberBonus >= 0 ? '+' : ''}{Math.round(memberBonus * 10) / 10})</span>
+                                  <div className="flex items-center gap-1">
+                                    <span>{Math.round(totalPoints * 10) / 10}</span>
+                                    <span className="text-purple-600">({Math.round(memberBonus * 10) / 10})</span>
+                                  </div>
                                 </div>
                               );
                             })}
@@ -430,15 +473,34 @@ export const CourseProjects = () => {
                     )}
 
                     <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
-                      <div className="flex items-center gap-1.5 text-xs font-bold">
-                        {userEval ? (
-                          userEval.submitted ? (
-                            <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700">{t('lecturer.eval_submitted')}</span></>
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <div className="flex items-center gap-1.5 text-xs font-bold">
+                          {userEval ? (
+                            userEval.submitted ? (
+                              <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700">{t('lecturer.eval_submitted')}</span></>
+                            ) : (
+                              <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700">{t('lecturer.eval_draft')}</span></>
+                            )
                           ) : (
-                            <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700">{t('lecturer.eval_draft')}</span></>
-                          )
-                        ) : (
-                          <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500">{t('lecturer.eval_not_done')}</span></>
+                            <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500">{t('lecturer.eval_not_done')}</span></>
+                          )}
+                        </div>
+
+                        {!project.results_unlocked && (
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 text-slate-400">
+                              <Users size={14} />
+                              <span className="text-[10px] font-black uppercase tracking-wider">
+                                {t('role.student')}: {project.submitted_student_count || 0}/{project.members.length}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-400">
+                              <Users size={14} />
+                              <span className="text-[10px] font-black uppercase tracking-wider">
+                                {t('role.lecturer')}: {project.submitted_lecturer_count || 0}/{course.lecturers.length}
+                              </span>
+                            </div>
+                          </div>
                         )}
                       </div>
 

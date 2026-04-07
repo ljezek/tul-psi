@@ -14,6 +14,8 @@ class CourseStats(BaseModel):
     project_count: int
     # Sorted list of distinct academic years in which the course had projects.
     academic_years: list[int]
+    # Number of projects in the course that the current lecturer has not yet evaluated.
+    pending_evaluations_count: int | None = None
 
 
 class CourseListItem(BaseModel):

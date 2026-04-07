@@ -107,9 +107,6 @@ export const ProjectEvaluation = () => {
         validation.field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
-      if (!window.confirm(t('lecturer.confirm_submit'))) {
-        return;
-      }
     }
 
     setSaving(true);
@@ -183,6 +180,7 @@ export const ProjectEvaluation = () => {
 
   const isReadOnly = Boolean(project.results_unlocked);
   const totalPoints = Object.values(scores).reduce((sum, s) => sum + (Number(s.score) || 0), 0);
+  const totalMaxPoints = project.course.evaluation_criteria.reduce((sum, c) => sum + c.max_score, 0);
   const isPass = totalPoints >= project.course.min_score;
 
   return (
@@ -233,7 +231,10 @@ export const ProjectEvaluation = () => {
                   {totalPoints}
                 </span>
                 <span className="text-slate-300 font-bold text-lg">/</span>
-                <span className="text-slate-400 font-bold text-lg">{project.course.min_score}</span>
+                <span className="text-slate-400 font-bold text-lg">{totalMaxPoints}</span>
+              </div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                {t('results.min_required')}: {project.course.min_score}
               </div>
             </div>
             <div className={`p-2 rounded-xl ${isPass ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>

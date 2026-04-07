@@ -320,42 +320,54 @@ export const ProjectResults = () => {
                 <Users size={24} className="text-purple-600" />
                 {t('lecturer.peer_feedback')}
               </h2>
-              <div className="space-y-10">
+              <div className="space-y-12">
                 {project.members.map((member) => {
                   const receivedFeedback = stats.peerFeedback.filter(f => f.receiving_student_id === member.id);
                   if (receivedFeedback.length === 0) return null;
 
                   return (
                     <div key={member.id} className="space-y-4">
-                      <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                        <Users size={16} />
-                        {member.name}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {receivedFeedback.map((f, i) => (
-                          <div key={i} className="bg-white rounded-3xl shadow-md border border-slate-100 overflow-hidden flex flex-col">
-                            <div className="px-6 py-3 bg-purple-50/50 border-b border-purple-100 flex justify-between items-center">
-                              <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">{t('results.feedback')} #{i + 1}</span>
-                              <span className={`text-xs font-black ${f.bonus_points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
-                                {f.bonus_points >= 0 ? '+' : ''}{f.bonus_points} {t('label.points')}
-                              </span>
-                            </div>
-                            <div className="p-6 space-y-4 flex-grow">
-                              <div className="space-y-2">
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('student.label_strengths')}</div>
-                                <div className="text-xs text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
+                      <div className="flex items-center gap-4">
+                        <h3 className="text-[11px] font-black text-purple-600 uppercase tracking-widest px-4 py-1.5 bg-purple-50 rounded-lg border border-purple-200 shadow-sm flex items-center gap-2">
+                          <Users size={14} />
+                          {member.name}
+                        </h3>
+                        <div className="h-px bg-purple-100 flex-1" />
+                      </div>
+
+                      <div className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50/80 border-b border-slate-100">
+                              <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-left w-[40%]">
+                                {t('student.label_strengths')}
+                              </th>
+                              <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-left w-[40%]">
+                                {t('student.label_improvements')}
+                              </th>
+                              <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-center w-[20%]">
+                                {t('lecturer.score')}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {receivedFeedback.map((f, i) => (
+                              <tr key={i} className="group hover:bg-slate-50/30 transition-colors">
+                                <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
                                   <ReactMarkdown>{f.strengths || '---'}</ReactMarkdown>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('student.label_improvements')}</div>
-                                <div className="text-xs text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
+                                </td>
+                                <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none border-l border-slate-50">
                                   <ReactMarkdown>{f.improvements || '---'}</ReactMarkdown>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                                </td>
+                                <td className="px-8 py-6 text-center border-l border-slate-50">
+                                  <span className={`px-4 py-1.5 rounded-xl text-sm font-black bg-white border border-slate-200 shadow-sm ${f.bonus_points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                                    {f.bonus_points}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   );

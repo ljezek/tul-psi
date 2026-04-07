@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, Users, FolderOpen } from 'lucide-react';
+import { BookOpen, Users, FolderOpen, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCourses, ApiError } from '@/api';
@@ -106,6 +106,15 @@ export const LecturerHome = () => {
                         {t('lecturer.academic_years')}: <span className="text-slate-500 ml-1">{course.stats.academic_years.join(', ') || '—'}</span>
                       </div>
                     </div>
+
+                    {course.stats.pending_evaluations_count !== undefined && course.stats.pending_evaluations_count !== null && course.stats.pending_evaluations_count > 0 && (
+                      <div className="flex items-center gap-2 bg-amber-50 px-3 py-2 rounded-xl border border-amber-100 animate-pulse">
+                        <AlertCircle size={16} className="text-amber-500 shrink-0" />
+                        <div className="text-xs font-black text-amber-600 uppercase tracking-wider">
+                          {t('lecturer.actions_requested')}: {course.stats.pending_evaluations_count}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

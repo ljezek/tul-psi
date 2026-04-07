@@ -10,6 +10,7 @@ from models.course import Course
 from models.course_evaluation import CourseEvaluation
 from models.course_lecturer import CourseLecturer
 from models.project import Project
+from models.project_evaluation import ProjectEvaluation
 from models.user import User
 from schemas.courses import CourseCreate, CourseUpdate
 
@@ -191,3 +192,44 @@ async def remove_course_lecturer(
     )
     result = await session.execute(stmt)
     return result.rowcount > 0
+
+
+async def get_pending_lecturer_evaluations_count(
+    session: AsyncSession,
+    course_ids: list[int],
+    user_id: int,
+) -> dict[int, int]:
+    """Return a mapping from course id to the number of projects needing evaluation by *user_id*.
+
+    A project needs evaluation if the lecturer is assigned to the course,
+    the project results are NOT unlocked, and the lecturer hasn't submitted
+    a final evaluation for that project yet.
+    """
+    if not course_ids:
+        return {}
+
+    # Find projects in these courses where results are not unlocked.
+    stmt = select(Project.id, Project.course_id).where(
+        Project.course_id.in_(course_ids),
+        Project.results_unlocked.is_(False),
+    )
+    projects = (await session.execute(stmt)).all()
+    if not projects:
+        return {cid: 0 for cid in course_ids}
+
+    project_ids = [p.id for p in projects]
+
+    # Find projects that have a submitted evaluation from this user.
+    submitted_stmt = select(ProjectEvaluation.project_id).where(
+        ProjectEvaluation.project_id.in_(project_ids),
+        ProjectEvaluation.lecturer_id == user_id,
+        ProjectEvaluation.submitted.is_(True),
+    )
+    submitted_ids = set((await session.execute(submitted_stmt)).scalars().all())
+
+    # Count projects per course that are not in submitted_ids.
+    result: dict[int, int] = {cid: 0 for cid in course_ids}
+    for p_id, c_id in projects:
+        if p_id not in submitted_ids:
+            result[c_id] += 1
+    return result

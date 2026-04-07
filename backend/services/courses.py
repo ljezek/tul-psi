@@ -9,6 +9,7 @@ from db.courses import (
     get_course_evaluations,
     get_course_lecturers,
     get_course_project_stats,
+    get_pending_lecturer_evaluations_count,
     remove_course_lecturer,
 )
 from db.courses import create_course as db_create_course
@@ -117,7 +118,7 @@ class CoursesService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_courses(self) -> list[CourseListItem]:
+    async def get_courses(self, current_user: User | None = None) -> list[CourseListItem]:
         """Return all courses with aggregated stats for the list endpoint."""
         courses = await db_get_courses(self._session)
 
@@ -125,11 +126,22 @@ class CoursesService:
         stats_by_course = await get_course_project_stats(self._session, course_ids)
         lecturers_by_course = await get_course_lecturers(self._session, course_ids)
 
+        pending_evals_by_course: dict[int, int] = {}
+        if current_user and current_user.role == UserRole.LECTURER:
+            pending_evals_by_course = await get_pending_lecturer_evaluations_count(
+                self._session, course_ids, current_user.id
+            )
+
         items: list[CourseListItem] = []
         for course in courses:
             cid = _require_course_id(course.id)
             project_count, academic_years = stats_by_course.get(cid, (0, []))
             lecturer_users = lecturers_by_course.get(cid, [])
+            
+            pending_count = None
+            if current_user and current_user.role == UserRole.LECTURER:
+                pending_count = pending_evals_by_course.get(cid, 0)
+
             items.append(
                 CourseListItem(
                     id=cid,
@@ -140,6 +152,7 @@ class CoursesService:
                     stats=CourseStats(
                         project_count=project_count,
                         academic_years=academic_years,
+                        pending_evaluations_count=pending_count,
                     ),
                 )
             )

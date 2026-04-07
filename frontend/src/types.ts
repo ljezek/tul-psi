@@ -160,6 +160,7 @@ export interface EvaluationOverviewResponse {
 export interface CourseStats {
   project_count: number;
   academic_years: number[];
+  pending_evaluations_count?: number | null;
 }
 
 export interface CourseListItem {
