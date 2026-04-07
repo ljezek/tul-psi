@@ -3,21 +3,19 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   BookOpen, 
-  Calendar, 
-  User, 
-  ExternalLink, 
   ListChecks, 
-  ArrowRight,
   FolderKanban,
   Star,
-  Mail
+  ExternalLink
 } from 'lucide-react';
-import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getCourse, getProjects } from '@/api';
 import { CourseDetail, ProjectPublic } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+
+import { CourseHero } from '@/components/course/CourseHero';
+import { ProjectCard } from '@/components/project/ProjectCard';
 
 export const CourseDetailView = () => {
   const { id } = useParams<{ id: string }>();
@@ -93,61 +91,8 @@ export const CourseDetailView = () => {
         {t('courseDetail.back_to_list')}
       </Link>
 
-      {/* Header */}
-      <div className="mb-12">
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <span className="px-3 py-1 bg-tul-blue text-white text-sm font-bold rounded uppercase">
-            {course.code}
-          </span>
-          <span className="flex items-center gap-1.5 text-slate-500 font-medium">
-            <Calendar size={16} className="text-slate-400" />
-            {t(`enum.${course.term}`)}
-          </span>
-        </div>
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-6">
-          {course.name}
-        </h1>
-        
-        {/* Lecturers */}
-        <div className="flex flex-wrap gap-4">
-          {course.lecturers.map((lecturer, idx) => (
-            <div 
-              key={idx} 
-              className="flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-tul-blue transition-all"
-            >
-              <Link 
-                to={`/courses?lecturer=${encodeURIComponent(lecturer.name)}`}
-                className="flex items-center gap-2 text-slate-700 hover:text-tul-blue transition-colors group"
-              >
-                <User size={18} className="text-slate-400 group-hover:text-tul-blue" />
-                <span className="font-bold">{lecturer.name}</span>
-              </Link>
-              <div className="flex items-center gap-4 text-xs">
-                {lecturer.github_alias && (
-                  <a 
-                    href={`https://github.com/${lecturer.github_alias}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-slate-500 hover:text-tul-blue transition-colors"
-                  >
-                    <GitHubLogo size={12} />
-                    {lecturer.github_alias}
-                  </a>
-                )}
-                {lecturer.email && (
-                  <a 
-                    href={`mailto:${lecturer.email}`}
-                    className="flex items-center gap-1 text-slate-500 hover:text-tul-blue transition-colors"
-                  >
-                    <Mail size={12} />
-                    {lecturer.email}
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Hero */}
+      <CourseHero course={course} className="mb-12" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Main Content */}
@@ -220,35 +165,23 @@ export const CourseDetailView = () => {
               {t('courseDetail.projects')}
             </h2>
             {sortedProjects.length > 0 ? (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {sortedProjects.map((project, index) => {
-                  const showDivider = index > 0 && project.academic_year !== sortedProjects[index - 1].academic_year;
+                  const showYearSeparator = index > 0 && project.academic_year !== sortedProjects[index - 1].academic_year;
                   return (
                     <Fragment key={project.id}>
-                      {showDivider && (
-                        <div className="pt-4 pb-2">
+                      {showYearSeparator && (
+                        <div className="col-span-full pt-4 pb-2">
                           <hr className="border-slate-200" />
                         </div>
                       )}
-                      <Link 
-                        to={`/projects/${project.id}`}
-                        className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md hover:border-tul-blue/20 transition-all group gap-4"
-                      >
-                        <div className="min-w-0 flex-grow">
-                          <h4 className="font-bold text-slate-800 group-hover:text-tul-blue transition-colors truncate">
-                            {project.title}
-                          </h4>
-                          <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider whitespace-nowrap">
-                              {project.academic_year}/{project.academic_year + 1}
-                            </span>
-                            <span className="text-[11px] text-slate-500 truncate italic">
-                              {project.members.map(m => m.name).join(', ')}
-                            </span>
-                          </div>
-                        </div>
-                        <ArrowRight size={18} className="text-slate-300 group-hover:text-tul-blue group-hover:translate-x-1 transition-all flex-shrink-0" />
-                      </Link>
+                      <ProjectCard 
+                        project={project} 
+                        href={`/projects/${project.id}`} 
+                        showCourseBadge={false}
+                        showLinks={false}
+                        className="!shadow-none !border-slate-100 hover:!border-tul-blue/20"
+                      />
                     </Fragment>
                   );
                 })}

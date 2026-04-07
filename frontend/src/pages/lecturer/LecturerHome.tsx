@@ -8,6 +8,8 @@ import { CourseListItem } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
+import { CourseCard } from '@/components/course/CourseCard';
+
 export const LecturerHome = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -69,55 +71,13 @@ export const LecturerHome = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredCourses.map((course) => {
-            return (
-              <div
-                key={course.id}
-                className="group bg-white rounded-3xl border border-tul-blue/40 ring-1 ring-tul-blue/10 bg-tul-blue/[0.01] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col"
-              >
-                <div className="p-8 flex-grow space-y-6">
-                  <div>
-                    <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-tul-blue group-hover:border-tul-blue/30 transition-colors inline-block mb-3">
-                      {course.code}
-                    </span>
-                    <h3 className="text-2xl font-black text-slate-800 line-clamp-2">
-                      {course.name}
-                    </h3>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-2">
-                      <Users size={16} className="text-slate-400 shrink-0 mt-0.5" />
-                      <div className="text-sm font-bold text-slate-500 line-clamp-2">
-                        {course.lecturer_names.join(', ') || '—'}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <FolderOpen size={16} className="text-slate-400 shrink-0" />
-                      <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        {t('lecturer.project_count')}: <span className="text-tul-blue ml-1">{course.stats.project_count}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <BookOpen size={16} className="text-slate-400 shrink-0" />
-                      <div className="text-xs font-bold text-slate-400 uppercase tracking-widest truncate">
-                        {t('lecturer.academic_years')}: <span className="text-slate-500 ml-1">{course.stats.academic_years.join(', ') || '—'}</span>
-                      </div>
-                    </div>
-
-                    {course.stats.pending_evaluations_count !== undefined && course.stats.pending_evaluations_count !== null && course.stats.pending_evaluations_count > 0 && (
-                      <div className="flex items-center gap-2 bg-amber-50 px-3 py-2 rounded-xl border border-amber-100 animate-pulse">
-                        <AlertCircle size={16} className="text-amber-500 shrink-0" />
-                        <div className="text-xs font-black text-amber-600 uppercase tracking-wider">
-                          {t('lecturer.actions_requested')}: {course.stats.pending_evaluations_count}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
+          {filteredCourses.map((course) => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              href={`/lecturer/course/${course.id}`}
+              variant="lecturer"
+              footer={
                 <div className="p-6 pt-0 mt-auto">
                   <Link
                     to={`/lecturer/course/${course.id}`}
@@ -126,9 +86,18 @@ export const LecturerHome = () => {
                     {t('lecturer.manage_projects')}
                   </Link>
                 </div>
-              </div>
-            );
-          })}
+              }
+            >
+              {course.stats.pending_evaluations_count !== undefined && course.stats.pending_evaluations_count !== null && course.stats.pending_evaluations_count > 0 && (
+                <div className="flex items-center gap-2 bg-amber-50 px-3 py-2 rounded-xl border border-amber-100 animate-pulse">
+                  <AlertCircle size={16} className="text-amber-500 shrink-0" />
+                  <div className="text-xs font-black text-amber-600 uppercase tracking-wider">
+                    {t('lecturer.actions_requested')}: {course.stats.pending_evaluations_count}
+                  </div>
+                </div>
+              )}
+            </CourseCard>
+          ))}
         </div>
       )}
     </div>

@@ -1,11 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { ArrowLeft, Save, Send, AlertTriangle, Mail, Globe, Users, XCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Save, Send, AlertTriangle, Users, XCircle, CheckCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getProject, getProjectEvaluation, submitProjectEvaluation, ApiError } from '@/api';
 import { ProjectPublic, ProjectEvaluationDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
+
+import { ProjectHero } from '@/components/project/ProjectHero';
+import { MemberInfo } from '@/components/project/MemberInfo';
 
 export const ProjectEvaluation = () => {
   const { id } = useParams<{ id: string }>();
@@ -185,42 +188,29 @@ export const ProjectEvaluation = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
-      {/* Back link */}
-      <div>
-        <Link to={`/lecturer/course/${project.course.id}`} className="inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('lecturer.course_projects')} - {project.course.code}
-        </Link>
-      </div>
-
-      <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm relative overflow-hidden space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-          <div className="flex-1">
-            <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title}</h1>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-slate-500 font-bold text-sm">
-              <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest">
-                {project.course.code}
-              </span>
-              <div className="flex gap-4">
-                {project.github_url && (
-                  <>
-                    <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
-                      <GitHubLogo size={14} /> {t('common.repo')}
-                    </a>
-                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
-                      <Users size={14} /> {t('project.contributors')}
-                    </a>
-                  </>
-                )}
-                {project.live_url && (
-                  <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
-                    <Globe size={14} /> {t('common.app')}
-                  </a>
-                )}
-              </div>
-            </div>
+      <ProjectHero 
+        project={project}
+        backLink={{ to: `/lecturer/course/${project.course.id}`, label: `${t('lecturer.course_projects')} - ${project.course.code}` }}
+        bottomContent={
+          <div className="flex flex-wrap gap-4 text-sm font-bold">
+            {project.github_url && (
+              <>
+                <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                  <GitHubLogo size={14} /> {t('common.repo')}
+                </a>
+                <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                  <Users size={14} /> {t('project.contributors')}
+                </a>
+              </>
+            )}
+            {project.live_url && (
+              <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                <Globe size={14} /> {t('common.app')}
+              </a>
+            )}
           </div>
-
+        }
+        rightContent={
           <div className={`shrink-0 flex items-center gap-4 px-6 py-4 rounded-2xl border ${isPass ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'} transition-colors duration-500`}>
             <div className="text-right">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
@@ -241,33 +231,12 @@ export const ProjectEvaluation = () => {
               {isPass ? <CheckCircle size={24} /> : <XCircle size={24} />}
             </div>
           </div>
-        </div>
+        }
+      />
 
-        <div className="pt-6 border-t border-slate-100">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('project.members')}</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {project.members.map(member => (
-              <div key={member.id} className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 font-black shrink-0">
-                  {member.name.charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
-                  <div className="flex flex-col gap-1 mt-1">
-                    <a href={`mailto:${member.email}`} className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
-                      <Mail size={10} /> {member.email}
-                    </a>
-                    {member.github_alias && (
-                      <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
-                        <GitHubLogo size={10} /> {member.github_alias}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm space-y-6">
+        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('project.members')}</h4>
+        <MemberInfo members={project.members} variant="grid" />
         
         {isReadOnly && (
           <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 text-xs font-black uppercase tracking-wider">

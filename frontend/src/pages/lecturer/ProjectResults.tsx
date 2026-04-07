@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, 
   Award, 
   CheckCircle, 
   XCircle, 
@@ -18,6 +17,9 @@ import { ProjectPublic } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
+
+import { ProjectHero } from '@/components/project/ProjectHero';
+import { MemberInfo } from '@/components/project/MemberInfo';
 
 export const ProjectResults = () => {
   const { id } = useParams<{ id: string }>();
@@ -85,87 +87,50 @@ export const ProjectResults = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="space-y-6">
-        <button 
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-tul-blue transition-colors group"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-          {t('common.back')}
-        </button>
-        
-        <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row justify-between gap-8">
-          <div className="space-y-6 flex-1">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="bg-tul-blue text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">
-                  {project.course.code}
-                </span>
-                <span className="bg-slate-50 px-3 py-1 rounded border border-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  {project.academic_year}
-                </span>
-              </div>
-              <h1 className="text-3xl font-black text-slate-900 leading-tight mb-4">
-                {project.title}
-              </h1>
-              
-              <div className="flex flex-wrap gap-4 text-sm font-bold">
-                {project.github_url && (
-                  <>
-                    <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
-                      <GitHubLogo size={14} /> {t('common.repo')}
-                    </a>
-                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
-                      <Users size={14} /> {t('project.contributors')}
-                    </a>
-                  </>
-                )}
-                {project.live_url && (
-                  <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
-                    <Globe size={14} /> {t('common.app')}
-                  </a>
-                )}
-                <Link to={`/projects/${project.id}`} className="flex items-center gap-1.5 text-tul-blue hover:underline">
-                  <ExternalLink size={14} /> {t('projectDetail.title')}
-                </Link>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-6 pt-6 border-t border-slate-50">
-              {project.members.map(m => (
-                <div key={m.id} className="space-y-1">
-                  <div className="text-xs font-black text-slate-800">{m.name}</div>
-                  <div className="flex items-center gap-3">
-                    <a href={`mailto:${m.email}`} title={m.email} className="text-slate-400 hover:text-tul-blue transition-colors">
-                      <Mail size={12} />
-                    </a>
-                    {m.github_alias && (
-                      <a href={`https://github.com/${m.github_alias}`} target="_blank" rel="noreferrer" title={m.github_alias} className="text-slate-400 hover:text-tul-blue transition-colors">
-                        <GitHubLogo size={12} />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+      <ProjectHero 
+        project={project}
+        backLink={{ to: `/lecturer/course/${project.course.id}`, label: t('common.back') }}
+        bottomContent={
+          <div className="flex flex-wrap gap-4 text-sm font-bold">
+            {project.github_url && (
+              <>
+                <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                  <GitHubLogo size={14} /> {t('common.repo')}
+                </a>
+                <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                  <Users size={14} /> {t('project.contributors')}
+                </a>
+              </>
+            )}
+            {project.live_url && (
+              <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                <Globe size={14} /> {t('common.app')}
+              </a>
+            )}
+            <Link to={`/projects/${project.id}`} className="flex items-center gap-1.5 text-tul-blue hover:underline">
+              <ExternalLink size={14} /> {t('projectDetail.title')}
+            </Link>
           </div>
-
-          <div className="flex items-center gap-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 h-fit self-center">
-            <div className="text-right">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
-                {t('lecturer.lecturer_scores')}
+        }
+        rightContent={
+          <div className="text-right">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+              {t('lecturer.lecturer_scores')}
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className={`text-4xl font-black ${passColorClass}`}>
+                {Math.round(stats.totalLecturerAvg * 10) / 10}
               </span>
-              <div className="flex items-baseline gap-1">
-                <span className={`text-4xl font-black ${passColorClass}`}>
-                  {Math.round(stats.totalLecturerAvg * 10) / 10}
-                </span>
-                <span className="text-slate-300 font-bold text-xl">/</span>
-                <span className="text-slate-400 font-bold text-xl">{totalPossible}</span>
-              </div>
+              <span className="text-slate-300 font-bold text-xl">/</span>
+              <span className="text-slate-400 font-bold text-xl">{totalPossible}</span>
             </div>
           </div>
-        </div>
+        }
+      />
+
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('project.members')}</h4>
+        <MemberInfo members={project.members} variant="grid" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

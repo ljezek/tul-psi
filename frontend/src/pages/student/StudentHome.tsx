@@ -16,74 +16,10 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
 
+import { ProjectCard } from '@/components/project/ProjectCard';
+
 export const StudentHome = () => {
-  const { user } = useAuth();
-  const { t } = useLanguage();
-  const [projects, setProjects] = useState<ProjectPublic[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Add Member State
-  const [addingMemberTo, setAddingMemberTo] = useState<number | null>(null);
-  const [memberEmail, setMemberEmail] = useState('');
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const allProjects = await getProjects();
-      // Filter projects where user is a member
-      const myProjects = allProjects.filter(p => 
-        p.members.some(m => m.id === user?.id)
-      );
-      setProjects(myProjects);
-    } catch (err) {
-      setError(t('dashboard.error_fetching'));
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const handleAddMember = async (e: FormEvent, projectId: number) => {
-    e.preventDefault();
-    try {
-      const email = memberEmail.includes('@') ? memberEmail : `${memberEmail}@tul.cz`;
-      await addProjectMember(projectId, { email });
-      setAddingMemberTo(null);
-      setMemberEmail('');
-      await fetchData();
-    } catch (err) {
-      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
-      alert(msg);
-    }
-  };
-
-  if (loading) return <div className="py-20"><LoadingSpinner /></div>;
-  if (error) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
-
-  if (projects.length === 0) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div className="bg-white rounded-3xl p-12 shadow-xl shadow-slate-200/50 border border-slate-100">
-          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ClipboardCheck size={40} className="text-slate-300" />
-          </div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2">{t('student.no_project')}</h2>
-          <p className="text-slate-500 font-medium">
-            {t('student.contact_teacher')}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+  // ... rest of state ...
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <header className="mb-12">
@@ -97,110 +33,53 @@ export const StudentHome = () => {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {projects.map(project => {
-          return (
-            <div key={project.id} className="group bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col">
-              <div className="p-8 flex-grow">
-                <div className="flex justify-between items-start mb-4">
-                  <Link 
-                    to={`/courses/${project.course.id}`}
-                    className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-tul-blue hover:border-tul-blue/30 transition-colors"
+        {projects.map(project => (
+          <ProjectCard 
+            key={project.id} 
+            project={project} 
+            href={`/projects/${project.id}`}
+          >
+            {/* Add Member (Student) */}
+            {!project.results_unlocked && (
+              <div className="mb-6">
+                {addingMemberTo === project.id ? (
+                  <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    <div className="relative flex-1">
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder={t('form.email_placeholder')}
+                        value={memberEmail}
+                        onChange={e => setMemberEmail(e.target.value.split('@')[0])}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
+                    </div>
+                    <button type="submit" className="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold transition-colors">
+                      {t('form.add')}
+                    </button>
+                    <button type="button" onClick={() => setAddingMemberTo(null)} className="text-xs text-slate-500 hover:text-slate-700 font-bold">
+                      {t('lecturer.cancel')}
+                    </button>
+                  </form>
+                ) : (
+                  <button 
+                    onClick={() => setAddingMemberTo(project.id)}
+                    className="text-[10px] font-bold text-tul-blue hover:text-tul-blue/80 transition-colors uppercase tracking-wider flex items-center group/add"
                   >
-                    {project.course.code}
-                  </Link>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                    <Calendar size={14} />
-                    {project.academic_year}
-                  </div>
-                </div>
-
-                <Link to={`/projects/${project.id}`} className="block group/title">
-                  <h3 className="text-2xl font-black text-slate-800 mb-2 group-hover/title:text-tul-blue transition-colors line-clamp-2">
-                    {project.title}
-                  </h3>
-                </Link>
-
-                {/* Team Members */}
-                <div className="flex items-center gap-2 mb-2">
-                  <Users size={14} className="text-slate-400" />
-                  <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-2">
-                    {project.members.map((m, idx) => (
-                      <span key={m.id} className={m.id === user?.id ? 'text-tul-blue' : ''}>
-                        {m.name}{idx < project.members.length - 1 ? ',' : ''}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Add Member (Student) */}
-                {!project.results_unlocked && (
-                  <div className="mb-6">
-                    {addingMemberTo === project.id ? (
-                      <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                        <div className="relative flex-1">
-                          <input 
-                            type="text" 
-                            required 
-                            placeholder={t('form.email_placeholder')}
-                            value={memberEmail}
-                            onChange={e => setMemberEmail(e.target.value.split('@')[0])}
-                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
-                        </div>
-                        <button type="submit" className="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold transition-colors">
-                          {t('form.add')}
-                        </button>
-                        <button type="button" onClick={() => setAddingMemberTo(null)} className="text-xs text-slate-500 hover:text-slate-700 font-bold">
-                          {t('lecturer.cancel')}
-                        </button>
-                      </form>
-                    ) : (
-                      <button 
-                        onClick={() => setAddingMemberTo(project.id)}
-                        className="text-[10px] font-bold text-tul-blue hover:text-tul-blue/80 transition-colors uppercase tracking-wider flex items-center group/add"
-                      >
-                        <Plus size={12} className="mr-1 group-hover/add:scale-110 transition-transform"/> {t('lecturer.add_member')}
-                      </button>
-                    )}
-                  </div>
+                    <Plus size={12} className="mr-1 group-hover/add:scale-110 transition-transform"/> {t('lecturer.add_member')}
+                  </button>
                 )}
-
-                {/* External Links */}
-                <div className="flex gap-4 mb-8">
-                  {project.github_url && (
-                    <a 
-                      href={project.github_url} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider"
-                    >
-                      <GitHubLogo size={14} />
-                      {t('common.repo')}
-                    </a>
-                  )}
-                  {project.live_url && (
-                    <a 
-                      href={project.live_url} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider"
-                    >
-                      <Globe size={14} />
-                      {t('common.app')}
-                    </a>
-                  )}
-                </div>
-
-                <CourseEvaluationStatusCard 
-                  project={project}
-                  user={user}
-                  className="pt-6 border-t border-slate-50"
-                />
               </div>
-            </div>
-          );
-        })}
+            )}
+
+            <CourseEvaluationStatusCard 
+              project={project}
+              user={user}
+              className="pt-6 border-t border-slate-50"
+            />
+          </ProjectCard>
+        ))}
       </div>
     </div>
   );

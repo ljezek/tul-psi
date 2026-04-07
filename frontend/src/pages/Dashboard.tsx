@@ -5,7 +5,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProjects, getCourses } from '@/api';
 import { ProjectPublic, CourseListItem } from '@/types';
-import { ProjectCard } from '@/components/ProjectCard';
+import { ProjectCard } from '@/components/project/ProjectCard';
+import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
@@ -230,7 +231,20 @@ export const Dashboard = () => {
       {filteredProjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProjects.map(project => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard 
+              key={project.id} 
+              project={project} 
+              href={`/projects/${project.id}`}
+            >
+              {user && project.members.some(m => m.id === user.id) && (
+                <CourseEvaluationStatusCard 
+                  project={project}
+                  user={user}
+                  isCompact={true}
+                  className="pt-4 border-t border-slate-50"
+                />
+              )}
+            </ProjectCard>
           ))}
         </div>
       ) : (

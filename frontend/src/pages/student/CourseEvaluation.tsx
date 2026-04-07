@@ -1,18 +1,16 @@
 import { useState, useEffect, useMemo, FormEvent } from 'react';
 import { useParams, useNavigate, Link, useBlocker } from 'react-router-dom';
 import { 
-  ArrowLeft, 
   Star, 
   ThumbsUp, 
   TrendingUp, 
-  User, 
-  Mail, 
   Save, 
   Info, 
   Award,
   CheckCircle,
   AlertCircle,
-  GitPullRequest
+  GitPullRequest,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -23,6 +21,8 @@ import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { ProjectHero } from '@/components/project/ProjectHero';
+import { MemberInfo } from '@/components/project/MemberInfo';
 
 type NotificationState = { type: 'success' | 'error'; message: string } | null;
 
@@ -96,10 +96,6 @@ export const CourseEvaluation = () => {
   const budget = project?.course.peer_bonus_budget;
   const isResultsUnlocked = project?.results_unlocked === true;
 
-  // Memoize so the object reference is stable between renders. Without this,
-  // usePointRedistribution's sync effect would fire every render, creating an
-  // infinite loop. savedPoints takes precedence over the equal-split default
-  // so that a loaded draft restores the previously saved allocation.
   const teammateIds = teammates.map(m => m.id).join(',');
   const initialPoints = useMemo(() =>
     teammates.reduce((acc, m) => {
@@ -121,14 +117,12 @@ export const CourseEvaluation = () => {
     if (strengths !== initialData.strengths) return true;
     if (improvements !== initialData.improvements) return true;
     
-    // Compare peer texts - check all teammates from initial data
     const ids = Object.keys(initialData.peerTexts).map(Number);
     for (const tid of ids) {
       if ((peerTexts[tid]?.strengths || '') !== (initialData.peerTexts[tid]?.strengths || '')) return true;
       if ((peerTexts[tid]?.improvements || '') !== (initialData.peerTexts[tid]?.improvements || '')) return true;
     }
 
-    // Compare peer points
     for (const tid of ids) {
       if (peerPoints[tid] !== initialData.peerPoints[tid]) return true;
     }
@@ -136,7 +130,6 @@ export const CourseEvaluation = () => {
     return false;
   }, [initialData, rating, strengths, improvements, peerTexts, peerPoints]);
 
-  // Block navigation within SPA if dirty
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       isDirty && !isSubmitSuccess && currentLocation.pathname !== nextLocation.pathname
@@ -153,12 +146,11 @@ export const CourseEvaluation = () => {
     }
   }, [blocker, t]);
 
-  // Block browser-level navigation (refresh, close tab) if dirty
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-        e.returnValue = ''; // Required for some browsers
+        e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -200,7 +192,6 @@ export const CourseEvaluation = () => {
         }
       }
 
-      // Initialize points if not loaded from server (equal split)
       const currentTeammates = projData.members.filter(m => m.id !== user?.id) || [];
       const currentBudget = projData.course.peer_bonus_budget || 0;
       const effectivePoints = { ...loadedPoints };
@@ -210,7 +201,6 @@ export const CourseEvaluation = () => {
         }
       });
 
-      // Set baseline for dirty check
       setInitialData({
         rating: evalData?.current_evaluation?.rating || 0,
         strengths: evalData?.current_evaluation?.strengths || '',
@@ -253,7 +243,6 @@ export const CourseEvaluation = () => {
       await submitCourseEvaluation(projectId, payload);
       setIsSubmitSuccess(true);
       setNotification({ type: 'success', message: t('student.submit_success') });
-      // Redirect after a short delay so the user sees the success message.
       setTimeout(() => navigate('/student'), 1500);
     } catch (err) {
       console.error(err);
@@ -267,33 +256,19 @@ export const CourseEvaluation = () => {
   if (error || !project) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error || t('projectDetail.not_found')} onRetry={fetchData} retryLabel={t('error.retry')} /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Header */}
-      <div className="mb-10">
-        <Link 
-          to="/student"
-          className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-tul-blue transition-colors mb-6 group"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-          {t('project.back_to_student_zone')}
-        </Link>
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-              {t('student.courseEvaluation.title')}
-            </h1>
-            <p className="text-slate-500 font-medium text-lg">
-              {project.title} <span className="text-slate-300 mx-2">|</span> <Link to={`/courses/${project.course.id}`} className="text-tul-blue hover:underline">{project.course.code}</Link>
-            </p>
-          </div>
-          {isResultsUnlocked && (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+      <ProjectHero 
+        project={project}
+        backLink={{ to: '/student', label: t('project.back_to_student_zone') }}
+        rightContent={
+          isResultsUnlocked && (
             <div className="bg-green-50 text-green-700 px-4 py-2 rounded-2xl border border-green-100 flex items-center gap-2 text-sm font-black uppercase">
               <CheckCircle size={18} />
               {t('student.results_available')}
             </div>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       <form onSubmit={handleSubmit} className="space-y-12">
         {/* Subject Evaluation Section */}
@@ -346,7 +321,7 @@ export const CourseEvaluation = () => {
           <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
             <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <User className="text-purple-600" size={24} />
+                <Award className="text-purple-600" size={24} />
                 <h2 className="text-xl font-black text-slate-800">{t('student.peer_eval')}</h2>
               </div>
               {budget !== null && !isResultsUnlocked && (
@@ -360,14 +335,14 @@ export const CourseEvaluation = () => {
             <div className="p-8 space-y-12">
               {teammates.map(member => (
                 <div key={member.id} className="space-y-6 pb-12 border-b border-slate-100 last:border-0 last:pb-0">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-700 font-black text-xl">
                         {member.name.charAt(0)}
                       </div>
                       <div>
                         <h3 className="font-black text-slate-800 text-lg">{member.name}</h3>
-                        <div className="flex items-center gap-4 mt-1">
+                        <div className="flex flex-wrap items-center gap-4 mt-1">
                           <a href={`mailto:${member.email}`} className="text-xs font-bold text-slate-400 hover:text-tul-blue transition-colors flex items-center gap-1.5">
                             <Mail size={12} /> {member.email}
                           </a>

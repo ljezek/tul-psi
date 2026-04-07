@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, 
-  ExternalLink, 
-  Users, 
   BookOpen, 
-  Calendar, 
-  Mail,
   CheckCircle,
-  Award
+  Award,
+  ExternalLink
 } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,6 +15,9 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Button } from '@/components/ui/Button';
 import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
+
+import { ProjectHero } from '@/components/project/ProjectHero';
+import { MemberInfo } from '@/components/project/MemberInfo';
 
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -73,41 +72,11 @@ export const ProjectDetail = () => {
   const showLecturerControls = user && (user.role === UserRole.ADMIN || (user.role === UserRole.LECTURER && isOwningLecturer));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Back Link */}
-      <Link 
-        to="/" 
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-tul-blue mb-8 transition-colors"
-      >
-        <ArrowLeft size={16} />
-        {t('project.back_to_projects')}
-      </Link>
-
-      {/* Header */}
-      <div className="mb-10">
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <Link 
-            to={`/courses/${project.course.id}`}
-            className="px-3 py-1 bg-tul-blue text-white text-sm font-bold rounded uppercase hover:bg-blue-700 transition-colors"
-          >
-            {project.course.code}
-          </Link>
-          <Link 
-            to={`/courses/${project.course.id}`}
-            className="text-slate-500 font-medium hover:text-tul-blue transition-colors"
-          >
-            {project.course.name}
-          </Link>
-          <span className="h-4 w-px bg-slate-200 mx-1"></span>
-          <span className="flex items-center gap-1.5 text-slate-500 font-medium">
-            <Calendar size={16} className="text-slate-400" />
-            {project.academic_year}/{project.academic_year + 1}
-          </span>
-        </div>
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-          {project.title}
-        </h1>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+      <ProjectHero 
+        project={project} 
+        backLink={{ to: '/', label: t('project.back_to_projects') }}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Main Content */}
@@ -171,38 +140,10 @@ export const ProjectDetail = () => {
           {/* Team Members */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Users size={20} className="text-tul-blue" />
+              <Award size={20} className="text-tul-blue" />
               {t('project.members')}
             </h2>
-            <ul className="space-y-4">
-              {project.members.map(member => (
-                <li key={member.id} className="flex flex-col gap-1">
-                  <span className="font-semibold text-slate-800">{member.name}</span>
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    {member.github_alias && (
-                      <a 
-                        href={`https://github.com/${member.github_alias}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 hover:text-tul-blue transition-colors"
-                      >
-                        <GitHubLogo size={12} />
-                        {member.github_alias}
-                      </a>
-                    )}
-                    {member.email && (
-                      <a 
-                        href={`mailto:${member.email}`}
-                        className="flex items-center gap-1 hover:text-tul-blue transition-colors"
-                      >
-                        <Mail size={12} />
-                        {member.email}
-                      </a>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <MemberInfo members={project.members} variant="list" />
           </div>
 
           {/* Course Info */}
@@ -213,50 +154,17 @@ export const ProjectDetail = () => {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">{t('project.term')}</span>
-                <span className="font-medium text-slate-700">{project.course.term}</span>
+                <span className="font-medium text-slate-700">{t(`enum.${project.course.term}`)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">{t('project.type')}</span>
-                <span className="font-medium text-slate-700">{project.course.project_type}</span>
+                <span className="font-medium text-slate-700">{t(`enum.${project.course.project_type}`)}</span>
               </div>
               <div className="pt-3 mt-3 border-t border-slate-200">
-                <p className="text-xs text-slate-400 uppercase font-bold mb-2 tracking-widest">
+                <p className="text-xs text-slate-400 uppercase font-bold mb-4 tracking-widest">
                   {t('role.lecturer')}
                 </p>
-                <div className="flex flex-col gap-3">
-                  {project.course.lecturers.map((l, i) => (
-                    <div key={i} className="flex flex-col gap-1">
-                      <Link 
-                        to={`/courses?lecturer=${encodeURIComponent(l.name)}`}
-                        className="font-bold text-slate-700 hover:text-tul-blue transition-colors"
-                      >
-                        {l.name}
-                      </Link>
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        {l.github_alias && (
-                          <a 
-                            href={`https://github.com/${l.github_alias}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 hover:text-tul-blue transition-colors"
-                          >
-                            <GitHubLogo size={10} />
-                            {l.github_alias}
-                          </a>
-                        )}
-                        {l.email && (
-                          <a 
-                            href={`mailto:${l.email}`}
-                            className="flex items-center gap-1 hover:text-tul-blue transition-colors"
-                          >
-                            <Mail size={10} />
-                            {l.email}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <MemberInfo members={project.course.lecturers} variant="list" className="space-y-4" />
               </div>
             </div>
           </div>

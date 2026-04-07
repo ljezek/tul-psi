@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { BookOpen, User, ArrowRight, Info, Search } from 'lucide-react';
+import { Info, Search } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getCourses } from '@/api';
 import { CourseListItem } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Button } from '@/components/ui/Button';
+
+import { CourseCard } from '@/components/course/CourseCard';
 
 export const CourseList = () => {
   const { t } = useLanguage();
@@ -118,40 +120,11 @@ export const CourseList = () => {
       {filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map(course => (
-            <Link 
+            <CourseCard 
               key={course.id} 
-              to={`/courses/${course.id}`}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-tul-blue/20 transition-all group flex flex-col h-full"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <span className="px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider">
-                  {course.code}
-                </span>
-                <span className="text-xs text-slate-400 font-medium">
-                  {course.stats.project_count} {t('lecturer.project_count')}
-                </span>
-              </div>
-              
-              <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-tul-blue transition-colors">
-                {course.name}
-              </h3>
-              
-              <div className="space-y-2 mb-6 flex-grow">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
-                  <User size={16} className="text-slate-400" />
-                  <span className="line-clamp-1">{course.lecturer_names.join(', ')}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
-                  <BookOpen size={16} className="text-slate-400" />
-                  <span>{course.stats.academic_years.join(', ')}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-50 flex items-center text-tul-blue text-sm font-bold mt-auto">
-                {t('courseDetail.view_detail')}
-                <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+              course={course} 
+              href={`/courses/${course.id}`} 
+            />
           ))}
         </div>
       ) : (
