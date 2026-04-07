@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -208,28 +208,25 @@ async def get_pending_lecturer_evaluations_count(
     if not course_ids:
         return {}
 
-    # Find projects in these courses where results are not unlocked.
-    stmt = select(Project.id, Project.course_id).where(
-        Project.course_id.in_(course_ids),
-        Project.results_unlocked.is_(False),
-    )
-    projects = (await session.execute(stmt)).all()
-    if not projects:
-        return {cid: 0 for cid in course_ids}
-
-    project_ids = [p.id for p in projects]
-
-    # Find projects that have a submitted evaluation from this user.
-    submitted_stmt = select(ProjectEvaluation.project_id).where(
-        ProjectEvaluation.project_id.in_(project_ids),
+    # Define the subquery for submitted evaluations by this user.
+    has_submitted_eval = exists().where(
+        ProjectEvaluation.project_id == Project.id,
         ProjectEvaluation.lecturer_id == user_id,
         ProjectEvaluation.submitted.is_(True),
     )
-    submitted_ids = set((await session.execute(submitted_stmt)).scalars().all())
 
-    # Count projects per course that are not in submitted_ids.
+    # Count projects per course that are not unlocked and have no submitted eval from this user.
+    stmt = (
+        select(Project.course_id, func.count(Project.id))
+        .where(
+            Project.course_id.in_(course_ids),
+            Project.results_unlocked.is_(False),
+            ~has_submitted_eval,
+        )
+        .group_by(Project.course_id)
+    )
+
     result: dict[int, int] = {cid: 0 for cid in course_ids}
-    for p_id, c_id in projects:
-        if p_id not in submitted_ids:
-            result[c_id] += 1
+    for row in (await session.execute(stmt)).all():
+        result[row[0]] = row[1]
     return result

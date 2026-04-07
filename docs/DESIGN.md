@@ -504,7 +504,7 @@ sequenceDiagram
                 else hash matches
                     API->>DB: UPDATE otp_tokens SET used = true
                     API->>API: Sign JWT {user_id, role, exp: now + 8 h}
-                    API-->>Frontend: 200 + Set-Cookie: session=<jwt>; HttpOnly; Secure; SameSite=Strict
+                    API-->>Frontend: 200 + Set-Cookie: session=jwt, HttpOnly, Secure, SameSite=Strict
                     Frontend-->>User: Redirect to role-based route
                 end
             end

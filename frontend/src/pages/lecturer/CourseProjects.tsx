@@ -394,15 +394,36 @@ export const CourseProjects = () => {
                     
                     <div className="flex items-center gap-2">
                       <Users size={14} className="text-slate-400" />
-                      <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-2">
-                        {project.members.length > 0 ? project.members.map((m, idx) => (
-                          <span key={m.id}>{m.name || m.email}{idx < project.members.length - 1 ? ',' : ''}</span>
-                        )) : <span className="italic">{t('lecturer.no_members')}</span>}
+                      <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-2 gap-y-2">
+                        {!project.results_unlocked ? (
+                          project.members.length > 0 ? project.members.map((m, idx) => (
+                            <span key={m.id}>{m.name || m.email}{idx < project.members.length - 1 ? ',' : ''}</span>
+                          )) : <span className="italic">{t('lecturer.no_members')}</span>
+                        ) : (
+                          project.members.map(member => {
+                            const receivedFeedback = (project.received_peer_feedback || []).filter(f => f.receiving_student_id === member.id);
+                            const memberBonus = receivedFeedback.length > 0 
+                                ? receivedFeedback.reduce((sum, f) => sum + f.bonus_points, 0) / receivedFeedback.length
+                                : 0;
+                            const totalPoints = totalLecturerAvg + memberBonus;
+                            const isPass = totalPoints >= course.min_score;
+
+                            return (
+                              <div key={member.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest ${isPass ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                <span>{member.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <span>{Math.round(totalPoints * 10) / 10}</span>
+                                  <span className="text-purple-600">({Math.round(memberBonus * 10) / 10})</span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                     
                     {/* Results Summary (when unlocked) */}
-                    <div className="py-4">
+                    <div className="py-2">
                       {project.results_unlocked && (
                         <div className="space-y-4">
                           <div className="flex flex-wrap gap-2">
@@ -414,26 +435,6 @@ export const CourseProjects = () => {
                                 </span>
                               </div>
                             ))}
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            {project.members.map(member => {
-                              const receivedFeedback = (project.received_peer_feedback || []).filter(f => f.receiving_student_id === member.id);
-                              const memberBonus = receivedFeedback.length > 0 
-                                  ? receivedFeedback.reduce((sum, f) => sum + f.bonus_points, 0) / receivedFeedback.length
-                                  : 0;
-                              const totalPoints = totalLecturerAvg + memberBonus;
-                              const isPass = totalPoints >= course.min_score;
-
-                              return (
-                                <div key={member.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest ${isPass ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                                  <span>{member.name}</span>
-                                  <div className="flex items-center gap-1">
-                                    <span>{Math.round(totalPoints * 10) / 10}</span>
-                                    <span className="text-purple-600">({Math.round(memberBonus * 10) / 10})</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
                           </div>
                         </div>
                       )}

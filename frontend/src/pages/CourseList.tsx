@@ -128,7 +128,7 @@ export const CourseList = () => {
                   {course.code}
                 </span>
                 <span className="text-xs text-slate-400 font-medium">
-                  {course.stats.project_count} {t('lecturer.project_count').toLowerCase()}
+                  {course.stats.project_count} {t('lecturer.project_count')}
                 </span>
               </div>
               
