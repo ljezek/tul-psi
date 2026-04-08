@@ -866,19 +866,26 @@ class ProjectsService:
 
         Returns the updated ``ProjectPublic``.
         """
-        row = await db_get_project(self._session, project_id)
-        if row is None:
-            raise LookupError(f"Project {project_id} not found.")
+        from opentelemetry import trace
+        tracer = trace.get_tracer(__name__)
 
-        _p, course = row
-        if course.id is None:
-            raise ValueError(f"Course returned from DB has no id: {course!r}")
+        with tracer.start_as_current_span("service.lock_project") as span:
+            span.set_attribute("project_id", project_id)
+            span.set_attribute("requester_id", requester.id or 0)
 
-        await require_course_manage_access(self._session, course.id, requester)
-        await lock_project_results(self._session, project_id)
-        await self._session.commit()
+            row = await db_get_project(self._session, project_id)
+            if row is None:
+                raise LookupError(f"Project {project_id} not found.")
 
-        return await self.get_project_detail(project_id, requester)
+            _p, course = row
+            if course.id is None:
+                raise ValueError(f"Course returned from DB has no id: {course!r}")
+
+            await require_course_manage_access(self._session, course.id, requester)
+            await lock_project_results(self._session, project_id)
+            await self._session.commit()
+
+            return await self.get_project_detail(project_id, requester)
 
     async def get_project_evaluation(
         self,
