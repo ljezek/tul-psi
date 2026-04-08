@@ -1,12 +1,15 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus } from 'lucide-react';
+import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, addCourseLecturer, ApiError } from '@/api';
-import { CourseDetail, ProjectPublic } from '@/types';
+import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, lockProject, addCourseLecturer, updateCourse, ApiError } from '@/api';
+import { CourseDetail, ProjectPublic, UserRole, CourseUpdate } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Modal } from '@/components/ui/Modal';
+import { CourseForm } from '@/components/admin/CourseForm';
+import { Button } from '@/components/ui/Button';
 
 export const CourseProjects = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +39,11 @@ export const CourseProjects = () => {
   const [addingMemberTo, setAddingMemberTo] = useState<number | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberError, setMemberError] = useState<string | null>(null);
+
+  // Edit Course State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   
   const loadData = async () => {
     try {
@@ -130,6 +138,32 @@ export const CourseProjects = () => {
     }
   };
 
+  const handleRelockResults = async (projectId: number) => {
+    if (!window.confirm(t('admin.confirm_relock'))) return;
+    try {
+      await lockProject(projectId);
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
+    }
+  };
+
+  const handleUpdateCourse = async (data: CourseUpdate) => {
+    if (!course) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      await updateCourse(course.id, data);
+      setIsEditModalOpen(false);
+      await loadData();
+    } catch (err) {
+      setEditError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const sortedProjects = useMemo(() => {
     return [...projects].sort((a, b) => {
       if (a.academic_year !== b.academic_year) {
@@ -163,7 +197,6 @@ export const CourseProjects = () => {
       </div>
 
       {/* Course Header */}
-      {/* TODO: Course editing (admin only) */}
       <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -182,7 +215,15 @@ export const CourseProjects = () => {
               <span>{course.lecturers.map(l => l.name).join(', ')}</span>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              {t('admin.edit_course')}
+            </Button>
             <button
               onClick={() => setShowAddLecturerForm(!showAddLecturerForm)}
               className="inline-flex items-center px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-colors font-black text-sm shadow-sm"
@@ -517,6 +558,15 @@ export const CourseProjects = () => {
                       </div>
 
                       <div className="flex gap-2">
+                        {user?.role === UserRole.ADMIN && project.results_unlocked && (
+                          <button
+                            onClick={() => handleRelockResults(project.id)}
+                            className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors flex items-center justify-center border border-red-200"
+                            title={t('admin.relock_results')}
+                          >
+                            <Lock className="w-4 h-4" />
+                          </button>
+                        )}
                         {!project.results_unlocked && (
                           <button
                             onClick={() => handleUnlockResults(project.id)}
@@ -550,6 +600,21 @@ export const CourseProjects = () => {
           })
         )}
       </div>
+
+      {/* Edit Course Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={t('admin.edit_course')}
+        size="xl"
+      >
+        <CourseForm
+          initialData={course}
+          onSubmit={handleUpdateCourse}
+          isLoading={editLoading}
+          error={editError}
+        />
+      </Modal>
     </div>
   );
 };

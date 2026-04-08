@@ -265,6 +265,43 @@ async def unlock_project(
         raise HTTPException(status_code=500, detail="Internal server error.") from None
 
 
+@router.post(
+    "/{project_id}/lock",
+    response_model=ProjectPublic,
+    summary="Lock project results",
+    description=(
+        "Manually locks the evaluation results for the specified project. "
+        "Only accessible to admin users or lecturers assigned to the project's course."
+    ),
+)
+async def lock_project(
+    project_id: int,
+    current_user: User = Depends(require_current_user),
+    service: ProjectsService = Depends(get_projects_service),
+) -> ProjectPublic:
+    """Set ``results_unlocked=False`` on the project identified by ``project_id``.
+
+    Raises HTTP 401 when the caller is not authenticated.
+    Raises HTTP 403 when the caller is not an admin or assigned lecturer.
+    Raises HTTP 404 when the project does not exist.
+    """
+    try:
+        return await service.lock_project(project_id, current_user)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found.",
+        ) from None
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorised to lock results for this project.",
+        ) from None
+    except Exception:
+        logger.exception("Failed to lock project results", extra={"project_id": project_id})
+        raise HTTPException(status_code=500, detail="Internal server error.") from None
+
+
 @router.get(
     "/{project_id}/project-evaluation",
     response_model=ProjectEvaluationDetail,

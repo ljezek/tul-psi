@@ -137,7 +137,7 @@ export const ProjectResults = () => {
                 <div key={m.id} className="space-y-1">
                   <div className="text-xs font-black text-slate-800">{m.name}</div>
                   <div className="flex items-center gap-3">
-                    <a href={`mailto:${m.email}`} title={m.email} className="text-slate-400 hover:text-tul-blue transition-colors">
+                    <a href={`mailto:${m.email}`} title={m.email || undefined} className="text-slate-400 hover:text-tul-blue transition-colors">
                       <Mail size={12} />
                     </a>
                     {m.github_alias && (
@@ -221,7 +221,7 @@ export const ProjectResults = () => {
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
                         <div className="flex items-center gap-1.5">
-                          <a href={`mailto:${member.email}`} title={member.email} className="text-slate-300 hover:text-tul-blue transition-colors">
+                          <a href={`mailto:${member.email}`} title={member.email || undefined} className="text-slate-300 hover:text-tul-blue transition-colors">
                             <Mail size={10} />
                           </a>
                           {member.github_alias && (

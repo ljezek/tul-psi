@@ -19,6 +19,7 @@ import { LecturerHome } from '@/pages/lecturer/LecturerHome';
 import { CourseProjects } from '@/pages/lecturer/CourseProjects';
 import { ProjectEvaluation } from '@/pages/lecturer/ProjectEvaluation';
 import { ProjectResults } from '@/pages/lecturer/ProjectResults';
+import { UserManagement } from '@/pages/admin/UserManagement';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -45,6 +46,10 @@ const router = createBrowserRouter(
         <Route path="/lecturer/project/:id/evaluate" element={<ProjectEvaluation />} />
         <Route path="/lecturer/project/:id/results" element={<ProjectResults />} />
       </Route>
+      <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
+        <Route path="/admin/users" element={<UserManagement />} />
+      </Route>
+
     </Route>
   )
 );

@@ -1,6 +1,8 @@
 import { config } from './config';
 import {
   UserPublic,
+  UserCreate,
+  AdminUserUpdate,
   ProjectPublic,
   ProjectUpdate,
   AddMemberBody,
@@ -90,12 +92,30 @@ export async function logout(): Promise<void> {
   });
 }
 
+export async function getUsers(): Promise<UserPublic[]> {
+  return apiFetch<UserPublic[]>('/api/v1/users');
+}
+
+export async function createUser(data: UserCreate): Promise<UserPublic> {
+  return apiFetch<UserPublic>('/api/v1/users', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getCurrentUser(): Promise<UserPublic> {
   return apiFetch<UserPublic>('/api/v1/users/me');
 }
 
 export async function updateCurrentUser(data: { name?: string; github_alias?: string | null }): Promise<UserPublic> {
   return apiFetch<UserPublic>('/api/v1/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateUser(id: number, data: AdminUserUpdate): Promise<UserPublic> {
+  return apiFetch<UserPublic>(`/api/v1/users/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
@@ -188,6 +208,12 @@ export async function submitProjectEvaluation(projectId: number, data: ProjectEv
 
 export async function unlockProject(projectId: number): Promise<ProjectPublic> {
   return apiFetch<ProjectPublic>(`/api/v1/projects/${projectId}/unlock`, {
+    method: 'POST',
+  });
+}
+
+export async function lockProject(projectId: number): Promise<ProjectPublic> {
+  return apiFetch<ProjectPublic>(`/api/v1/projects/${projectId}/lock`, {
     method: 'POST',
   });
 }

@@ -1,12 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, Users, FolderOpen, AlertCircle } from 'lucide-react';
+import { BookOpen, Users, FolderOpen, AlertCircle, Plus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourses, ApiError } from '@/api';
-import { CourseListItem } from '@/types';
+import { getCourses, createCourse, ApiError } from '@/api';
+import { CourseListItem, UserRole, CourseCreate, CourseUpdate } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { CourseForm } from '@/components/admin/CourseForm';
 
 export const LecturerHome = () => {
   const { t } = useLanguage();
@@ -14,6 +17,11 @@ export const LecturerHome = () => {
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Admin Create Course Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchCourses = async () => {
     try {
@@ -36,8 +44,25 @@ export const LecturerHome = () => {
     fetchCourses();
   }, []);
 
+  const handleCreateCourse = async (data: CourseCreate | CourseUpdate) => {
+    setFormLoading(true);
+    setFormError(null);
+    try {
+      await createCourse(data as CourseCreate);
+      setIsModalOpen(false);
+      fetchCourses();
+    } catch (err) {
+      setFormError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   const filteredCourses = useMemo(() => {
     if (!user) return [];
+    if (user.role === UserRole.ADMIN) {
+      return [...courses].sort((a, b) => a.code.localeCompare(b.code));
+    }
     return courses.filter(course => course.lecturer_names.includes(user.name))
       .sort((a, b) => a.code.localeCompare(b.code));
   }, [courses, user]);
@@ -46,17 +71,25 @@ export const LecturerHome = () => {
   if (error) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error} onRetry={fetchCourses} retryLabel={t('error.retry')} /></div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
       {/* TODO: Add evaluation overview table (stretch goal) */}
-      <header className="mb-12">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-          {t('lecturer.title')}
-        </h1>
-        <div className="flex items-center gap-2 text-slate-500 font-medium">
-          <div className="w-2 h-2 rounded-full bg-tul-blue animate-pulse" />
-          {t('lecturer.subtitle')}
-        </div>
-      </header>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <header>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+            {t('lecturer.title')}
+          </h1>
+          <div className="flex items-center gap-2 text-slate-500 font-medium">
+            <div className="w-2 h-2 rounded-full bg-tul-blue animate-pulse" />
+            {t('lecturer.subtitle')}
+          </div>
+        </header>
+        {user?.role === UserRole.ADMIN && (
+          <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 shadow-lg shadow-tul-blue/20">
+            <Plus size={18} />
+            {t('admin.create_course')}
+          </Button>
+        )}
+      </div>
 
       {filteredCourses.length === 0 ? (
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
@@ -131,6 +164,20 @@ export const LecturerHome = () => {
           })}
         </div>
       )}
+
+      {/* Admin Create Course Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={t('admin.create_course')}
+        size="xl"
+      >
+        <CourseForm
+          onSubmit={handleCreateCourse}
+          isLoading={formLoading}
+          error={formError}
+        />
+      </Modal>
     </div>
   );
 };

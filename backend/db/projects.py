@@ -855,6 +855,23 @@ async def unlock_project_results(session: AsyncSession, project_id: int) -> Proj
     return project
 
 
+async def lock_project_results(session: AsyncSession, project_id: int) -> Project | None:
+    """Set ``results_unlocked=False`` on the project identified by *project_id*.
+
+    Returns the updated ``Project`` row, or ``None`` when no such project exists.
+    The caller is responsible for committing the session after this call.
+    """
+    project = (
+        (await session.execute(select(Project).where(Project.id == project_id))).scalars().first()
+    )
+    if project is None:
+        return None
+    project.results_unlocked = False
+    session.add(project)
+    await session.flush()
+    return project
+
+
 async def get_evaluation_counts_for_projects(
     session: AsyncSession,
     project_ids: list[int],
