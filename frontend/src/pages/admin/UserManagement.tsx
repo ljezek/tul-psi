@@ -146,7 +146,7 @@ export const UserManagement = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
           <input
             type="text"
-            placeholder={t('dashboard.search_placeholder')}
+            placeholder={t('admin.search_placeholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue transition-all font-bold"

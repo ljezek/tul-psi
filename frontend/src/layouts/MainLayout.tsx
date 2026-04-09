@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Globe, LogIn, LogOut, Shield } from 'lucide-react';
+import { Menu, X, Globe, LogIn, LogOut, Shield, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
@@ -35,15 +35,21 @@ export const MainLayout = () => {
           {t('nav.student_zone')}
         </Link>
       )}
-      {(user?.role === UserRole.LECTURER || user?.role === UserRole.ADMIN) && (
+      {user?.role === UserRole.ADMIN && (
+        <>
+          <Link to="/lecturer" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2">
+            <BookOpen size={16} />
+            {t('nav.lecturer_panel')}
+          </Link>
+          <Link to="/admin/users" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2">
+            <Shield size={16} />
+            {t('admin.user_management')}
+          </Link>
+        </>
+      )}
+      {user?.role === UserRole.LECTURER && (
         <Link to="/lecturer" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
           {t('nav.lecturer_panel')}
-        </Link>
-      )}
-      {user?.role === UserRole.ADMIN && (
-        <Link to="/admin/users" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2">
-          <Shield size={16} />
-          {t('admin.user_management')}
         </Link>
       )}
     </>

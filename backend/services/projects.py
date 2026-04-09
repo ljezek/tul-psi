@@ -42,6 +42,9 @@ from db.projects import (
     get_project as db_get_project,
 )
 from db.projects import (
+    lock_project_results as db_lock_project_results,
+)
+from db.projects import (
     unlock_project_results as db_unlock_project_results,
 )
 from db.projects import (
@@ -527,14 +530,14 @@ class ProjectsService:
         if row is None:
             return None
 
-        p, c = row
-        project_id_list = [p.id] if p.id is not None else []
-        course_id_list = [c.id] if c.id is not None else []
-        members_by_project = await get_project_members(self._session, project_id_list)
-        lecturers_by_course = await get_course_lecturers(self._session, course_id_list)
-        eval_counts = await get_evaluation_counts_for_projects(self._session, project_id_list)
+        p, course = row
+        lecturer_ids = await db_get_course_lecturer_ids(self._session, course.id)
+
+        # Admins only see evaluations if they are assigned as lecturers
+        show_evaluations = user.id in lecturer_ids
 
         project_evaluations: list[ProjectEvaluationDetail] | None = None
+
         course_evaluations: list[CourseEvaluationDetail] | None = None
         received_peer_feedback: list[PeerFeedbackDetail] | None = None
         authored_peer_feedback: list[PeerFeedbackDetail] | None = None

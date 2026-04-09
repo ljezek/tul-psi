@@ -182,7 +182,9 @@ class CoursesService:
 
         include_email = current_user is not None
         lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-        show_evaluations = is_admin_or_course_lecturer(current_user, lecturer_ids)
+        
+        # Admins should only see evaluations if they are assigned lecturers
+        show_evaluations = current_user is not None and current_user.id in lecturer_ids
 
         course_evaluations: list[CourseEvaluationPublic] | None = None
         if show_evaluations:

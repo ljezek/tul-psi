@@ -13,8 +13,8 @@ vi.mock('@/api', () => ({
   updateUser: vi.fn(),
   ApiError: class extends Error {
     status: number;
-    detail: any;
-    constructor(status: number, detail: any) {
+    detail: unknown;
+    constructor(status: number, detail: unknown) {
       super();
       this.status = status;
       this.detail = detail;
@@ -41,7 +41,7 @@ const renderUserManagement = () => {
 describe('UserManagement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (api.getUsers as any).mockResolvedValue(mockUsers);
+    (api.getUsers as ReturnType<typeof vi.fn>).mockResolvedValue(mockUsers);
   });
 
   it('renders user list and handles search', async () => {

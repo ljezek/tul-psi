@@ -3,11 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, BookOpen, Calendar, Tag, AlertCircle, User } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProjects, getCourses } from '@/api';
-import { ProjectPublic, CourseListItem } from '@/types';
+import { getProjects, getCourses, getCourse, updateCourse, ApiError } from '@/api';
+import { ProjectPublic, CourseListItem, CourseDetail, CourseCreate, CourseUpdate } from '@/types';
 import { ProjectCard } from '@/components/ProjectCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Modal } from '@/components/ui/Modal';
+import { CourseForm } from '@/components/admin/CourseForm';
 
 export const Dashboard = () => {
   const { t } = useLanguage();
@@ -18,6 +20,12 @@ export const Dashboard = () => {
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit Course Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<CourseDetail | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Filter states derived from URL
   const searchQuery = searchParams.get('q') || '';
@@ -50,9 +58,9 @@ export const Dashboard = () => {
       ]);
       setProjects(projectsData);
       setCourses(coursesData);
-    } catch (err) {
+    } catch (_err) {
       setError(t('dashboard.error_fetching'));
-      console.error(err);
+      console.error(_err);
     } finally {
       setLoading(false);
     }
@@ -61,6 +69,34 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  const handleOpenEdit = async (courseId: number) => {
+    try {
+      setEditLoading(true);
+      const detail = await getCourse(courseId);
+      setEditingCourse(detail);
+      setIsEditModalOpen(true);
+    } catch (_err) {
+      alert(t('courseDetail.error_fetching'));
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleUpdateCourse = async (data: CourseCreate | CourseUpdate) => {
+    if (!editingCourse) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      await updateCourse(editingCourse.id, data as CourseUpdate);
+      setIsEditModalOpen(false);
+      fetchData();
+    } catch (_err) {
+      setEditError(_err instanceof ApiError && typeof _err.detail === 'string' ? _err.detail : t('login.error_unexpected'));
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   // Extract distinct years, technologies, and lecturers for filters
   const years = useMemo(() => {
@@ -230,7 +266,7 @@ export const Dashboard = () => {
       {filteredProjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProjects.map(project => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} onEditCourse={handleOpenEdit} />
           ))}
         </div>
       ) : (
@@ -252,6 +288,21 @@ export const Dashboard = () => {
           </button>
         </div>
       )}
+
+      {/* Edit Course Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={t('admin.edit_course')}
+        size="xl"
+      >
+        <CourseForm
+          initialData={editingCourse}
+          onSubmit={handleUpdateCourse}
+          isLoading={editLoading}
+          error={editError}
+        />
+      </Modal>
     </div>
   );
 };

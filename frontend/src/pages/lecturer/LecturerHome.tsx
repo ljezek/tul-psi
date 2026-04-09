@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, Users, FolderOpen, AlertCircle, Plus } from 'lucide-react';
+import { BookOpen, Users, FolderOpen, AlertCircle, Plus, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourses, createCourse, ApiError } from '@/api';
-import { CourseListItem, UserRole, CourseCreate, CourseUpdate } from '@/types';
+import { getCourses, createCourse, ApiError, getCourse, updateCourse } from '@/api';
+import { CourseListItem, UserRole, CourseCreate, CourseUpdate, CourseDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Button } from '@/components/ui/Button';
@@ -18,8 +18,8 @@ export const LecturerHome = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Admin Create Course Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<CourseDetail | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -44,15 +44,38 @@ export const LecturerHome = () => {
     fetchCourses();
   }, []);
 
-  const handleCreateCourse = async (data: CourseCreate | CourseUpdate) => {
+  const handleOpenCreate = () => {
+    setEditingCourse(null);
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = async (courseId: number) => {
+    try {
+      setFormLoading(true);
+      const detail = await getCourse(courseId);
+      setEditingCourse(detail);
+      setIsModalOpen(true);
+    } catch (_err) {
+      alert(t('courseDetail.error_fetching'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleSubmitCourse = async (data: CourseCreate | CourseUpdate) => {
     setFormLoading(true);
     setFormError(null);
     try {
-      await createCourse(data as CourseCreate);
+      if (editingCourse) {
+        await updateCourse(editingCourse.id, data as CourseUpdate);
+      } else {
+        await createCourse(data as CourseCreate);
+      }
       setIsModalOpen(false);
       fetchCourses();
-    } catch (err) {
-      setFormError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
+    } catch (_err) {
+      setFormError(_err instanceof ApiError && typeof _err.detail === 'string' ? _err.detail : t('login.error_unexpected'));
     } finally {
       setFormLoading(false);
     }
@@ -84,7 +107,7 @@ export const LecturerHome = () => {
           </div>
         </header>
         {user?.role === UserRole.ADMIN && (
-          <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 shadow-lg shadow-tul-blue/20">
+          <Button onClick={handleOpenCreate} className="flex items-center gap-2 shadow-lg shadow-tul-blue/20">
             <Plus size={18} />
             {t('admin.create_course')}
           </Button>
@@ -151,13 +174,23 @@ export const LecturerHome = () => {
                   </div>
                 </div>
 
-                <div className="p-6 pt-0 mt-auto">
+                <div className="p-6 pt-0 mt-auto flex gap-2">
                   <Link
                     to={`/lecturer/course/${course.id}`}
-                    className="block w-full text-center px-4 py-3 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue text-sm font-black rounded-xl transition-colors border border-slate-200 hover:border-tul-blue"
+                    className="flex-1 text-center px-4 py-3 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue text-sm font-black rounded-xl transition-colors border border-slate-200 hover:border-tul-blue"
                   >
                     {t('lecturer.manage_projects')}
                   </Link>
+                  {(user?.role === UserRole.ADMIN || course.lecturer_names.includes(user?.name || '')) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleOpenEdit(course.id)}
+                      className="px-3"
+                      title={t('admin.edit_course')}
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );
@@ -165,15 +198,16 @@ export const LecturerHome = () => {
         </div>
       )}
 
-      {/* Admin Create Course Modal */}
+      {/* Admin Create/Edit Course Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={t('admin.create_course')}
+        title={editingCourse ? t('admin.edit_course') : t('admin.create_course')}
         size="xl"
       >
         <CourseForm
-          onSubmit={handleCreateCourse}
+          initialData={editingCourse}
+          onSubmit={handleSubmitCourse}
           isLoading={formLoading}
           error={formError}
         />

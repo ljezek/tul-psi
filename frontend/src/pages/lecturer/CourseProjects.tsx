@@ -173,6 +173,13 @@ export const CourseProjects = () => {
     });
   }, [projects]);
 
+  const isCourseOwner = useMemo(() => {
+    if (!user || !course) return false;
+    return course.lecturers.some(l => l.email === user.email);
+  }, [user, course]);
+
+  const canSeeEvaluations = isCourseOwner; // Admins only see if they are lecturers too
+
   const availableYears = useMemo(() => 
     Array.from(new Set(projects.map(p => p.academic_year))).sort((a, b) => b - a),
     [projects]
@@ -527,19 +534,21 @@ export const CourseProjects = () => {
 
                     <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
                       <div className="flex items-center gap-6 flex-wrap">
-                        <div className="flex items-center gap-1.5 text-xs font-bold">
-                          {userEval ? (
-                            userEval.submitted ? (
-                              <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700">{t('lecturer.eval_submitted')}</span></>
+                        {canSeeEvaluations && (
+                          <div className="flex items-center gap-1.5 text-xs font-bold">
+                            {userEval ? (
+                              userEval.submitted ? (
+                                <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700">{t('lecturer.eval_submitted')}</span></>
+                              ) : (
+                                <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700">{t('lecturer.eval_draft')}</span></>
+                              )
                             ) : (
-                              <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700">{t('lecturer.eval_draft')}</span></>
-                            )
-                          ) : (
-                            <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500">{t('lecturer.eval_not_done')}</span></>
-                          )}
-                        </div>
+                              <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500">{t('lecturer.eval_not_done')}</span></>
+                            )}
+                          </div>
+                        )}
 
-                        {!project.results_unlocked && (
+                        {canSeeEvaluations && !project.results_unlocked && (
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2 text-slate-400">
                               <Users size={14} />
@@ -567,7 +576,7 @@ export const CourseProjects = () => {
                             <Lock className="w-4 h-4" />
                           </button>
                         )}
-                        {!project.results_unlocked && (
+                        {!project.results_unlocked && (user?.role === UserRole.ADMIN || isCourseOwner) && (
                           <button
                             onClick={() => handleUnlockResults(project.id)}
                             className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-colors flex items-center justify-center border border-amber-200"
@@ -584,12 +593,14 @@ export const CourseProjects = () => {
                             {t('student.show_results')}
                           </Link>
                         ) : (
-                          <Link
-                            to={`/lecturer/project/${project.id}/evaluate`}
-                            className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
-                          >
-                            {userEval ? t('lecturer.edit_evaluation') : t('lecturer.evaluate')}
-                          </Link>
+                          canSeeEvaluations && (
+                            <Link
+                              to={`/lecturer/project/${project.id}/evaluate`}
+                              className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
+                            >
+                              {userEval ? t('lecturer.edit_evaluation') : t('lecturer.evaluate')}
+                            </Link>
+                          )
                         )}
                       </div>
                     </div>
