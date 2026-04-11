@@ -80,17 +80,38 @@ describe('UserManagement', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     
-    await userEvent.type(screen.getByLabelText(/univerzitní email/i), 'newuser');
-    await userEvent.type(screen.getByLabelText(/^jméno$/i), 'New User');
+    // Type name first
+    await userEvent.type(screen.getByLabelText(/^jméno$/i), 'Jan Novak');
+    // Email should be auto-filled by handleNameChange
+    expect(screen.getByLabelText(/univerzitní email/i)).toHaveValue('jan.novak');
+
     await userEvent.selectOptions(screen.getByLabelText(/^role$/i), UserRole.LECTURER);
 
     const submitButton = screen.getByRole('button', { name: /^přidat$/i });
     await userEvent.click(submitButton);
 
     expect(api.createUser).toHaveBeenCalledWith(expect.objectContaining({
-      email: 'newuser@tul.cz',
-      name: 'New User',
+      email: 'jan.novak@tul.cz',
+      name: 'Jan Novak',
       role: UserRole.LECTURER
+    }));
+  });
+
+  it('submits null name if empty', async () => {
+    renderUserManagement();
+    await waitFor(() => screen.getByText('Admin User'));
+
+    const addButton = screen.getByText(/přidat uživatele/i);
+    await userEvent.click(addButton);
+
+    await userEvent.type(screen.getByLabelText(/univerzitní email/i), 'noname');
+    
+    const submitButton = screen.getByRole('button', { name: /^přidat$/i });
+    await userEvent.click(submitButton);
+
+    expect(api.createUser).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'noname@tul.cz',
+      name: null
     }));
   });
 

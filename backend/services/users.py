@@ -146,9 +146,9 @@ class UsersService:
         # Send invitation email.
         _settings = get_settings()
         EmailSender(app_env=_settings.app_env).send(
-            EmailTemplate.otp_notification(
+            EmailTemplate.user_invite(
                 to=body.email,
-                otp="N/A",  # The user will request their own OTP on first login.
+                role=body.role.value.lower(),
                 portal_url=_settings.frontend_url,
             )
         )

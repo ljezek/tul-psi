@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -10,23 +11,31 @@ import {
   ArrowRight,
   FolderKanban,
   Star,
-  Mail
+  Mail,
+  X,
+  Plus
 } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getCourse, getProjects } from '@/api';
-import { CourseDetail, ProjectPublic } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { getCourse, getProjects, addCourseLecturer, deleteCourseLecturer } from '@/api';
+import { CourseDetail, ProjectPublic, UserRole } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Button } from '@/components/ui/Button';
 
 export const CourseDetailView = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useLanguage();
+  const { user: currentUser } = useAuth();
   
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [projects, setProjects] = useState<ProjectPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddingLecturer, setIsAddingLecturer] = useState(false);
+  const [newLecturerEmail, setNewLecturerEmail] = useState('');
+  const [lecturerError, setLecturerError] = useState<string | null>(null);
 
   const fetchCourseData = async () => {
     setLoading(true);
@@ -59,6 +68,44 @@ export const CourseDetailView = () => {
   useEffect(() => {
     fetchCourseData();
   }, [id]);
+
+  const canManageLecturers = useMemo(() => {
+    if (!currentUser || !course) return false;
+    if (currentUser.role === UserRole.ADMIN) return true;
+    return course.lecturers.some(l => l.email === currentUser.email);
+  }, [currentUser, course]);
+
+  const handleAddLecturer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!course || !newLecturerEmail) return;
+
+    setLecturerError(null);
+    try {
+      const email = newLecturerEmail.includes('@') ? newLecturerEmail : `${newLecturerEmail}@tul.cz`;
+      await addCourseLecturer(course.id, { email });
+      setNewLecturerEmail('');
+      setIsAddingLecturer(false);
+      // Refresh course data
+      const updatedCourse = await getCourse(course.id);
+      setCourse(updatedCourse);
+    } catch (err) {
+      setLecturerError(t('error.failed_to_add'));
+      console.error(err);
+    }
+  };
+
+  const handleRemoveLecturer = async (lecturerId: number) => {
+    if (!course || !window.confirm(t('course.remove_lecturer_confirm'))) return;
+
+    try {
+      await deleteCourseLecturer(course.id, lecturerId);
+      // Refresh course data
+      const updatedCourse = await getCourse(course.id);
+      setCourse(updatedCourse);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Sort projects: Year DESC, Title ASC
   const sortedProjects = useMemo(() => {
@@ -109,12 +156,21 @@ export const CourseDetailView = () => {
         </h1>
         
         {/* Lecturers */}
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 items-start">
           {course.lecturers.map((lecturer, idx) => (
             <div 
               key={idx} 
-              className="flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-tul-blue transition-all"
+              className="flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-tul-blue transition-all relative group/lecturer"
             >
+              {canManageLecturers && course.lecturers.length > 1 && (
+                <button
+                  onClick={() => lecturer.email && handleRemoveLecturer(lecturer.email)}
+                  className="absolute -top-2 -right-2 p-1 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover/lecturer:opacity-100 transition-all"
+                  title={t('common.delete')}
+                >
+                  <X size={14} />
+                </button>
+              )}
               <Link 
                 to={`/courses?lecturer=${encodeURIComponent(lecturer.name)}`}
                 className="flex items-center gap-2 text-slate-700 hover:text-tul-blue transition-colors group"
@@ -122,13 +178,13 @@ export const CourseDetailView = () => {
                 <User size={18} className="text-slate-400 group-hover:text-tul-blue" />
                 <span className="font-bold">{lecturer.name}</span>
               </Link>
-              <div className="flex items-center gap-4 text-xs">
+              <div className="flex flex-col gap-1 text-[11px]">
                 {lecturer.github_alias && (
                   <a 
                     href={`https://github.com/${lecturer.github_alias}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-slate-500 hover:text-tul-blue transition-colors"
+                    className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors font-medium"
                   >
                     <GitHubLogo size={12} />
                     {lecturer.github_alias}
@@ -137,7 +193,7 @@ export const CourseDetailView = () => {
                 {lecturer.email && (
                   <a 
                     href={`mailto:${lecturer.email}`}
-                    className="flex items-center gap-1 text-slate-500 hover:text-tul-blue transition-colors"
+                    className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors font-medium"
                   >
                     <Mail size={12} />
                     {lecturer.email}
@@ -146,6 +202,46 @@ export const CourseDetailView = () => {
               </div>
             </div>
           ))}
+
+          {canManageLecturers && (
+            <div className="flex flex-col gap-2">
+              {isAddingLecturer ? (
+                <form onSubmit={handleAddLecturer} className="flex items-center gap-2 bg-white p-2 border border-tul-blue/20 rounded-2xl shadow-sm">
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={newLecturerEmail.includes('@') ? newLecturerEmail.split('@')[0] : newLecturerEmail}
+                      onChange={e => setNewLecturerEmail(e.target.value)}
+                      placeholder={t('form.email_placeholder')}
+                      className="pl-8 pr-16 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-tul-blue/20 w-48"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
+                  </div>
+                  <Button type="submit" size="sm" className="px-3 py-1.5 h-auto text-[10px] uppercase tracking-wider font-black">
+                    {t('form.add')}
+                  </Button>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsAddingLecturer(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setIsAddingLecturer(true)}
+                  className="flex items-center gap-2 p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-slate-500 hover:text-tul-blue hover:border-tul-blue hover:bg-tul-blue/5 transition-all group"
+                >
+                  <Plus size={18} className="text-slate-400 group-hover:text-tul-blue" />
+                  <span className="text-sm font-bold">{t('course.add_lecturer')}</span>
+                </button>
+              )}
+              {lecturerError && <p className="text-[10px] font-bold text-red-500 ml-2">{lecturerError}</p>}
+            </div>
+          )}
         </div>
       </div>
 
@@ -158,8 +254,10 @@ export const CourseDetailView = () => {
               <BookOpen size={24} className="text-tul-blue" />
               {t('courseDetail.syllabus')}
             </h2>
-            <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
-              {course.syllabus || t('project.no_description')}
+            <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+              <ReactMarkdown>
+                {course.syllabus || t('project.no_description')}
+              </ReactMarkdown>
             </div>
           </section>
 
@@ -173,7 +271,7 @@ export const CourseDetailView = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('lecturer.criterion')}</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('course.criterion')}</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">{t('lecturer.score')}</th>
                   </tr>
                 </thead>

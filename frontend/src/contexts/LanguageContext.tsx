@@ -87,6 +87,13 @@ const translations: Record<string, Record<Language, string>> = {
   'project.course_info': { cs: 'Informace o předmětu', en: 'Course Information' },
   'project.term': { cs: 'Semestr', en: 'Term' },
   'project.type': { cs: 'Typ projektu', en: 'Project Type' },
+  'admin.edit_project': { cs: 'Upravit projekt', en: 'Edit Project' },
+  'admin.update_project': { cs: 'Aktualizovat projekt', en: 'Update Project' },
+  'project.title': { cs: 'Název projektu', en: 'Project Title' },
+  'project.description': { cs: 'Popis projektu', en: 'Project Description' },
+  'project.github_url': { cs: 'GitHub URL', en: 'GitHub URL' },
+  'project.live_url': { cs: 'Live Demo URL', en: 'Live Demo URL' },
+  'project.technologies_hint': { cs: 'Oddělte čárkou (např. React, Node.js)', en: 'Separate with commas (e.g. React, Node.js)' },
   'project.evaluate': { cs: 'Hodnotit projekt', en: 'Evaluate Project' },
   'project.view_results': { cs: 'Zobrazit výsledky', en: 'View Results' },
 
@@ -305,7 +312,7 @@ const translations: Record<string, Record<Language, string>> = {
   'course.min_score': { cs: 'Minimální skóre', en: 'Minimum Score' },
   'course.peer_bonus': { cs: 'Peer Bonus rozpočet', en: 'Peer Bonus Budget' },
   'course.peer_bonus_hint': { 
-    cs: 'Rozpočet bodů k rozdělení na jednoho kolegu. Každý student dá každému kolegovi body v rozmezí [0, 2 * rozpočet]. Obdržené body se zprůměrují a přičtou k výsledku projektu.', 
+    cs: 'Rozpočet bodů k rozdělení na jednoho spoluhráče. Každý student dá každému spoluhráči body v rozmezí [0, 2 * rozpočet]. Obdržené body se zprůměrují a přičtou k výsledku projektu.', 
     en: 'Budget of points to distribute per teammate. Each student gives each teammate points in [0, 2 * budget] range. Received points are averaged and added to the project score.' 
   },
   'course.default_criterion_docs': { cs: 'Specifikace a dokumentace', en: 'Specification & Documentation' },
@@ -314,6 +321,10 @@ const translations: Record<string, Record<Language, string>> = {
   'course.syllabus': { cs: 'Sylabus', en: 'Syllabus' },
   'course.term': { cs: 'Semestr', en: 'Term' },
   'course.project_type': { cs: 'Typ projektu', en: 'Project Type' },
+  'course.criterion': { cs: 'Kritérium', en: 'Criterion' },
+  'course.add_lecturer': { cs: 'Přidat vyučujícího', en: 'Add Lecturer' },
+  'course.remove_lecturer_confirm': { cs: 'Opravdu chcete odebrat vyučujícího z tohoto kurzu?', en: 'Are you sure you want to remove the lecturer from this course?' },
+  'form.markdown_supported': { cs: 'podporuje Markdown', en: 'Markdown supported' },
   'course.code': { cs: 'Kód kurzu', en: 'Course Code' },
   'course.name': { cs: 'Název kurzu', en: 'Course Name' },
   'common.save': { cs: 'Uložit', en: 'Save' },
@@ -321,7 +332,7 @@ const translations: Record<string, Record<Language, string>> = {
   'common.delete': { cs: 'Smazat', en: 'Delete' },
   'common.actions': { cs: 'Akce', en: 'Actions' },
   'common.search': { cs: 'Hledat', en: 'Search' },
-  'common.all': { cs: 'Vše', en: 'All' },
+  'common.all': { cs: 'Všechny', en: 'All' },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);

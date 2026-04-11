@@ -49,6 +49,7 @@ describe('CourseForm', () => {
     expect(projectTypeSelect.value).toBe(ProjectType.INDIVIDUAL);
 
     // Should have 3 evaluation criteria
+    expect(screen.getAllByText(/Kritérium/i).length).toBeGreaterThanOrEqual(3);
     expect(screen.getByDisplayValue(/Specifikace a dokumentace/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue(/Kvalita kódu/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue(/Testování a nasazení/i)).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe('CourseForm', () => {
     fireEvent.change(projectTypeSelect, { target: { value: ProjectType.TEAM } });
 
     // Check for Czech hint content
-    expect(screen.getByText(/Rozpočet bodů k rozdělení na jednoho kolegu/i)).toBeInTheDocument();
+    expect(screen.getByText(/Rozpočet bodů k rozdělení na jednoho spoluhráče/i)).toBeInTheDocument();
     expect(screen.getByText(/\[0, 2 \* rozpočet\]/i)).toBeInTheDocument();
   });
 });

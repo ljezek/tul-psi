@@ -24,7 +24,6 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
   const [projectType, setProjectType] = useState<ProjectType>(initialData?.project_type || ProjectType.INDIVIDUAL);
   const [minScore, setMinScore] = useState(initialData?.min_score || 40);
   const [peerBonusBudget, setPeerBonusBudget] = useState<number>(initialData?.peer_bonus_budget ?? 0);
-  const [ownerEmail, setOwnerEmail] = useState(initialData?.lecturers?.[0]?.email || currentUser?.email || '');
   
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriterion[]>(
     initialData?.evaluation_criteria || [
@@ -56,7 +55,6 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
       peer_bonus_budget: projectType === ProjectType.TEAM && peerBonusBudget > 0 ? peerBonusBudget : null,
       evaluation_criteria: processedCriteria,
       links,
-      owner_email: ownerEmail.includes('@') ? ownerEmail : `${ownerEmail}@tul.cz`,
     } as CourseCreate | CourseUpdate;
     
     onSubmit(data);
@@ -137,24 +135,10 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
             </div>
 
             <div>
-              <label htmlFor="course-owner" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('course.owner_email')}</label>
-              <div className="relative">
-                <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  id="course-owner"
-                  type="text"
-                  required
-                  value={ownerEmail.includes('@') ? ownerEmail.split('@')[0] : ownerEmail}
-                  onChange={e => setOwnerEmail(e.target.value)}
-                  placeholder={t('form.email_placeholder')}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-16 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="course-syllabus" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('course.syllabus')}</label>
+              <label htmlFor="course-syllabus" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+                {t('course.syllabus')}
+                <span className="ml-2 lowercase font-normal opacity-60">({t('form.markdown_supported')})</span>
+              </label>
               <textarea
                 id="course-syllabus"
                 value={syllabus}
@@ -307,7 +291,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   </button>
                   <div className="flex gap-3">
                     <div className="flex-[3]">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">{t('courseDetail.evaluation_criteria')}</label>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">{t('course.criterion')}</label>
                       <input
                         type="text"
                         required

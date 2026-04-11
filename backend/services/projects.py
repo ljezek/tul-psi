@@ -156,6 +156,7 @@ def _build_project(
             links=c.links,
             lecturers=[
                 LecturerPublic(
+                    id=require_user_id(u),
                     name=u.name,
                     github_alias=u.github_alias,
                     email=(u.email if authenticated else None),
@@ -530,8 +531,15 @@ class ProjectsService:
         if row is None:
             return None
 
-        p, course = row
-        lecturer_ids = await db_get_course_lecturer_ids(self._session, course.id)
+        project, course = row
+        project_id_list = [project.id] if project.id is not None else []
+        course_id_list = [course.id] if course.id is not None else []
+        members_by_project = await get_project_members(self._session, project_id_list)
+        lecturers_by_course = await get_course_lecturers(self._session, course_id_list)
+        eval_counts = await get_evaluation_counts_for_projects(self._session, project_id_list)
+
+        lecturers = lecturers_by_course.get(course.id, []) if course.id is not None else []
+        lecturer_ids = [l.id for l in lecturers if l.id is not None]
 
         # Admins only see evaluations if they are assigned as lecturers
         show_evaluations = user.id in lecturer_ids
@@ -542,16 +550,16 @@ class ProjectsService:
         received_peer_feedback: list[PeerFeedbackDetail] | None = None
         authored_peer_feedback: list[PeerFeedbackDetail] | None = None
 
-        if p.results_unlocked:
+        if project.results_unlocked:
             raw_project_evaluations = await get_project_evaluations(self._session, project_id)
             project_evaluations = [
                 _to_project_evaluation_detail(ev) for ev in raw_project_evaluations
             ]
 
             if user.role in (UserRole.ADMIN, UserRole.LECTURER):
-                if c.id is not None:
+                if course.id is not None:
                     raw_course_evaluations = await get_course_evaluations(
-                        self._session, c.id, academic_year=p.academic_year
+                        self._session, course.id, academic_year=project.academic_year
                     )
                     course_evaluations = [
                         _to_course_evaluation_detail(ev) for ev in raw_course_evaluations
@@ -581,7 +589,7 @@ class ProjectsService:
         # Students always see their own course evaluation status (draft or submitted)
         # only if they are members of the project.
         if user.role == UserRole.STUDENT and user.id is not None:
-            members = members_by_project.get(p.id, [])
+            members = members_by_project.get(project.id, [])
             is_member = any(m.id == user.id for m in members)
             if is_member:
                 raw_my_eval = await get_course_evaluation_by_student(
@@ -591,17 +599,17 @@ class ProjectsService:
                     course_evaluations = [_to_course_evaluation_detail(raw_my_eval)]
 
         return _build_project(
-            p,
-            c,
-            members_by_project.get(p.id, []) if p.id is not None else [],
-            lecturers_by_course.get(c.id, []) if c.id is not None else [],
+            project,
+            course,
+            members_by_project.get(project.id, []) if project.id is not None else [],
+            lecturers_by_course.get(course.id, []) if course.id is not None else [],
             authenticated=True,
             project_evaluations=project_evaluations,
             course_evaluations=course_evaluations,
             received_peer_feedback=received_peer_feedback,
             authored_peer_feedback=authored_peer_feedback,
-            submitted_lecturer_count=eval_counts.get(p.id, (0, 0))[0] if p.id is not None else 0,
-            submitted_student_count=eval_counts.get(p.id, (0, 0))[1] if p.id is not None else 0,
+            submitted_lecturer_count=eval_counts.get(project.id, (0, 0))[0] if project.id is not None else 0,
+            submitted_student_count=eval_counts.get(project.id, (0, 0))[1] if project.id is not None else 0,
         )
 
     async def _check_write_permission(self, project_id: int, user: User) -> tuple[Project, Course]:

@@ -1,9 +1,9 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock } from 'lucide-react';
+import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock, Trash2, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, lockProject, addCourseLecturer, updateCourse, ApiError } from '@/api';
+import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, lockProject, addCourseLecturer, updateCourse, ApiError, deleteProject, deleteProjectMember } from '@/api';
 import { CourseDetail, ProjectPublic, UserRole, CourseUpdate } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
@@ -142,6 +142,28 @@ export const CourseProjects = () => {
     if (!window.confirm(t('admin.confirm_relock'))) return;
     try {
       await lockProject(projectId);
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: number) => {
+    if (!window.confirm(t('common.confirm_action'))) return;
+    try {
+      await deleteProject(projectId);
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
+    }
+  };
+
+  const handleDeleteMember = async (projectId: number, userId: number) => {
+    if (!window.confirm(t('common.confirm_action'))) return;
+    try {
+      await deleteProjectMember(projectId, userId);
       await loadData();
     } catch (err) {
       const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
@@ -449,10 +471,21 @@ export const CourseProjects = () => {
                     
                     <div className="flex items-center gap-2">
                       <Users size={14} className="text-slate-400" />
-                      <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-2 gap-y-2">
+                      <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-3 gap-y-2">
                         {!project.results_unlocked ? (
-                          project.members.length > 0 ? project.members.map((m, idx) => (
-                            <span key={m.id}>{m.name || m.email}{idx < project.members.length - 1 ? ',' : ''}</span>
+                          project.members.length > 0 ? project.members.map((m) => (
+                            <span key={m.id} className="flex items-center gap-1 group/member bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                              {m.name || m.email}
+                              {(user?.role === UserRole.ADMIN || isCourseOwner) && (
+                                <button
+                                  onClick={() => handleDeleteMember(project.id, m.id)}
+                                  className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/member:opacity-100"
+                                  title={t('common.delete')}
+                                >
+                                  <X size={12} />
+                                </button>
+                              )}
+                            </span>
                           )) : <span className="italic">{t('lecturer.no_members')}</span>
                         ) : (
                           project.members.map(member => {
@@ -567,6 +600,15 @@ export const CourseProjects = () => {
                       </div>
 
                       <div className="flex gap-2">
+                        {!project.results_unlocked && (user?.role === UserRole.ADMIN || isCourseOwner) && (
+                          <button
+                            onClick={() => handleDeleteProject(project.id)}
+                            className="p-2.5 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors flex items-center justify-center border border-slate-200 hover:border-red-200"
+                            title={t('common.delete')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                         {user?.role === UserRole.ADMIN && project.results_unlocked && (
                           <button
                             onClick={() => handleRelockResults(project.id)}

@@ -122,6 +122,35 @@ class EmailTemplate:
                 f"{_SIGN_OFF}"
             ),
         )
+    
+    @classmethod
+    def user_invite(
+        cls,
+        to: str,
+        role: str,
+        *,
+        portal_url: str,
+    ) -> EmailMessage:
+        """Return a user-invitation email addressed to a new user.
+
+        Args:
+            to: Recipient e-mail address.
+            role: The role the user has been invited to assume.
+            portal_url: Absolute URL of the frontend portal to embed in the body.
+        """
+        return EmailMessage(
+            to=to,
+            subject=(
+                f'{_SUBJECT_PREFIX}You have been invited as a {role}'
+            ),
+            body=(
+                f"Hello,\n\n"
+                f"You have been invited as a {role} to TUL Student Projects Catalogue.\n\n"
+                f"You can log in to manage your profile and access course and project details.\n\n"
+                f"Visit the portal: {portal_url}\n\n"
+                f"{_SIGN_OFF}"
+            ),
+        )
 
     @classmethod
     def results_unlocked(

@@ -85,6 +85,7 @@ def _lecturer_public(user: User, *, include_email: bool) -> LecturerPublic:
     only be the case when the requesting user holds a valid session.
     """
     return LecturerPublic(
+        id=require_user_id(user),
         name=user.name,
         github_alias=user.github_alias,
         email=user.email if include_email else None,

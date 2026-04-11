@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { ExternalLink, Users, Tag, Settings } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { ProjectPublic, UserRole } from '@/types';
@@ -64,9 +65,13 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
         <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-tul-blue transition-colors">
           {project.title}
         </h3>
-        <p className="text-slate-600 text-sm line-clamp-2 mb-4">
-          {project.description || t('project.no_description')}
-        </p>
+        <div className="text-slate-600 text-sm line-clamp-2 mb-4 prose-compact">
+          {project.description ? (
+            <ReactMarkdown>{project.description}</ReactMarkdown>
+          ) : (
+            t('project.no_description')
+          )}
+        </div>
 
         {/* Technologies */}
         <div className="flex flex-wrap gap-1 mb-4">

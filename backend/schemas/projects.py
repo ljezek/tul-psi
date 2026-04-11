@@ -14,6 +14,7 @@ class LecturerPublic(BaseModel):
     ``email`` is ``None`` for unauthenticated users and populated for authenticated ones.
     """
 
+    id: int
     name: str
     github_alias: str | None
     # Null for unauthenticated users — email is only visible to authenticated callers.

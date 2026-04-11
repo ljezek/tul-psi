@@ -229,7 +229,13 @@ export async function submitCourseEvaluation(projectId: number, data: CourseEval
   });
 }
 
-export async function getEvaluationOverview(courseId: number, year?: number): Promise<EvaluationOverviewResponse> {
-  const path = `/api/v1/courses/${courseId}/evaluation-overview${year ? `?year=${year}` : ''}`;
-  return apiFetch<EvaluationOverviewResponse>(path);
+export async function deleteProject(projectId: number): Promise<void> {
+  const path = `/api/v1/projects/${projectId}`;
+  return apiFetch<void>(path, { method: 'DELETE' });
 }
+
+export async function deleteProjectMember(projectId: number, userId: number): Promise<void> {
+  const path = `/api/v1/projects/${projectId}/members/${userId}`;
+  return apiFetch<void>(path, { method: 'DELETE' });
+}
+

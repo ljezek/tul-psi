@@ -32,6 +32,28 @@ export const UserManagement = () => {
   const [role, setRole] = useState<UserRole>(UserRole.STUDENT);
   const [isActive, setIsActive] = useState(true);
 
+  // Helper to normalize name to email format (first.last@tul.cz)
+  const normalizeForEmail = (str: string): string => {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '.') // replace non-alphanumeric with dot
+      .replace(/\.+/g, '.') // replace multiple dots with one
+      .replace(/^\.|\.$/g, ''); // trim dots from ends
+  };
+
+  const handleNameChange = (newName: string) => {
+    setName(newName);
+    if (!editingUser) {
+      const parts = newName.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        const generatedEmail = `${normalizeForEmail(parts[0])}.${normalizeForEmail(parts[parts.length - 1])}`;
+        setEmail(generatedEmail);
+      }
+    }
+  };
+
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -80,15 +102,15 @@ export const UserManagement = () => {
     setIsModalOpen(true);
   };
 
-  const handleFormSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleFormSubmit = async (e?: FormEvent) => {
+    e?.preventDefault();
     setFormLoading(true);
     setFormError(null);
 
     try {
       if (editingUser) {
         const updateData: AdminUserUpdate = {
-          name,
+          name: name.trim() || null,
           github_alias: githubAlias || null,
           role,
           is_active: isActive,
@@ -97,7 +119,7 @@ export const UserManagement = () => {
       } else {
         const createData: UserCreate = {
           email: email.includes('@') ? email : `${email}@tul.cz`,
-          name,
+          name: name.trim() || null,
           github_alias: githubAlias || null,
           role,
           is_active: isActive,
@@ -110,6 +132,12 @@ export const UserManagement = () => {
       setFormError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleFormSubmit();
     }
   };
 
@@ -264,6 +292,19 @@ export const UserManagement = () => {
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="space-y-4">
             <div>
+              <label htmlFor="user-name" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('profile.name')}</label>
+              <input
+                id="user-name"
+                type="text"
+                autoFocus
+                value={name}
+                onChange={e => handleNameChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue font-bold"
+              />
+            </div>
+
+            <div>
               <label htmlFor="user-email" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('login.email_label')}</label>
               <div className="relative">
                 <input
@@ -273,6 +314,7 @@ export const UserManagement = () => {
                   disabled={!!editingUser}
                   value={email.includes('@') ? email.split('@')[0] : email}
                   onChange={e => setEmail(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder={t('form.email_placeholder')}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue disabled:opacity-50 font-bold"
                 />
@@ -283,24 +325,13 @@ export const UserManagement = () => {
             </div>
 
             <div>
-              <label htmlFor="user-name" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('profile.name')}</label>
-              <input
-                id="user-name"
-                type="text"
-                required
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue font-bold"
-              />
-            </div>
-
-            <div>
               <label htmlFor="user-github" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t('profile.github')}</label>
               <input
                 id="user-github"
                 type="text"
                 value={githubAlias}
                 onChange={e => setGithubAlias(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue font-bold"
               />
             </div>

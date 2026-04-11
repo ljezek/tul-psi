@@ -126,18 +126,24 @@ export const LecturerHome = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCourses.map((course) => {
+            const isUserLecturer = course.lecturer_names.includes(user?.name || '');
             return (
               <div
                 key={course.id}
-                className="group bg-white rounded-3xl border border-tul-blue/40 ring-1 ring-tul-blue/10 bg-tul-blue/[0.01] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col"
+                className={`group bg-white rounded-3xl border ${isUserLecturer ? 'border-tul-blue ring-2 ring-tul-blue/5' : 'border-slate-200'} shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 overflow-hidden flex flex-col`}
               >
                 <div className="p-8 flex-grow space-y-6">
                   <div>
-                    <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-tul-blue group-hover:border-tul-blue/30 transition-colors inline-block mb-3">
+                    <Link
+                      to={`/lecturer/course/${course.id}`}
+                      className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-tul-blue group-hover:border-tul-blue/30 transition-colors inline-block mb-3"
+                    >
                       {course.code}
-                    </span>
+                    </Link>
                     <h3 className="text-2xl font-black text-slate-800 line-clamp-2">
-                      {course.name}
+                      <Link to={`/lecturer/course/${course.id}`} className="hover:text-tul-blue transition-colors">
+                        {course.name}
+                      </Link>
                     </h3>
                   </div>
 
@@ -145,7 +151,11 @@ export const LecturerHome = () => {
                     <div className="flex items-start gap-2">
                       <Users size={16} className="text-slate-400 shrink-0 mt-0.5" />
                       <div className="text-sm font-bold text-slate-500 line-clamp-2">
-                        {course.lecturer_names.join(', ') || '—'}
+                        {course.lecturer_names.map((name, idx) => (
+                          <span key={idx} className={name === user?.name ? 'text-tul-blue font-black underline decoration-tul-blue/30 underline-offset-4' : ''}>
+                            {name}{idx < course.lecturer_names.length - 1 ? ', ' : ''}
+                          </span>
+                        )) || '—'}
                       </div>
                     </div>
                     
