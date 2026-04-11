@@ -1,7 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Plus, Trash2, Link as LinkIcon, ListChecks, Info, User } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { CourseCreate, CourseUpdate, CourseDetail, CourseTerm, ProjectType, EvaluationCriterion, CourseLink } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
@@ -15,7 +14,6 @@ export interface CourseFormProps {
 
 export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFormProps) => {
   const { t } = useLanguage();
-  const { user: currentUser } = useAuth();
 
   const [code, setCode] = useState(initialData?.code || '');
   const [name, setName] = useState(initialData?.name || '');
@@ -56,7 +54,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
       peer_bonus_budget: projectType === ProjectType.TEAM && peerBonusBudget > 0 ? peerBonusBudget : null,
       evaluation_criteria: processedCriteria,
       links,
-      ...(initialData ? {} : { owner_email: ownerEmail }),
+      ...(initialData ? {} : { owner_email: ownerEmail.includes('@') ? ownerEmail : `${ownerEmail}@tul.cz` }),
     } as CourseCreate | CourseUpdate;
     
     onSubmit(data);
@@ -140,7 +138,6 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
               <div>
                 <label htmlFor="course-owner-email" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
                   {t('course.owner_email')}
-                  <span className="ml-2 lowercase font-normal opacity-60">(@tul.cz)</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -148,13 +145,14 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   </div>
                   <input
                     id="course-owner-email"
-                    type="email"
+                    type="text"
                     required
-                    value={ownerEmail}
+                    value={ownerEmail.includes('@') ? ownerEmail.split('@')[0] : ownerEmail}
                     onChange={e => setOwnerEmail(e.target.value)}
-                    placeholder="lecturer@tul.cz"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                    placeholder="lecturer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-16 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
                   />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
                 </div>
               </div>
             )}

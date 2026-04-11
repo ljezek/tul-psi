@@ -25,7 +25,7 @@ export interface UserPublic {
 
 export interface UserCreate {
   email: string;
-  name: string;
+  name?: string | null;
   github_alias?: string | null;
   role: UserRole;
   is_active?: boolean;

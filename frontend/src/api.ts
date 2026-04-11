@@ -16,7 +16,6 @@ import {
   ProjectEvaluationCreate,
   CourseEvaluationSubmit,
   CourseEvaluationFormResponse,
-  EvaluationOverviewResponse,
   CourseTerm,
   MemberPublic
 } from './types';

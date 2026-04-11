@@ -200,7 +200,7 @@ export const CourseProjects = () => {
     return course.lecturers.some(l => l.email === user.email);
   }, [user, course]);
 
-  const canSeeEvaluations = isCourseOwner; // Admins only see if they are lecturers too
+  const canSeeEvaluations = user?.role === UserRole.ADMIN || isCourseOwner;
 
   const availableYears = useMemo(() => 
     Array.from(new Set(projects.map(p => p.academic_year))).sort((a, b) => b - a),

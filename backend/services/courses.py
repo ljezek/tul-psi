@@ -43,7 +43,7 @@ from schemas.courses import (
     StudentBonusSummary,
 )
 from schemas.projects import AddUserBody, LecturerPublic
-from services.auth import is_admin_or_course_lecturer, require_course_manage_access
+from services.auth import require_course_manage_access
 from services.email import EmailSender, EmailTemplate
 from settings import get_settings
 from validators import derive_display_name, require_user_id
@@ -183,7 +183,7 @@ class CoursesService:
 
         include_email = current_user is not None
         lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-        
+
         # Admins and lecturers assigned to the course should see evaluations.
         show_evaluations = current_user is not None and (
             current_user.role == UserRole.ADMIN or current_user.id in lecturer_ids
@@ -227,7 +227,7 @@ class CoursesService:
 
         created_by = current_user.id
         course = await db_create_course(self._session, data, created_by)
-        
+
         # Resolve owner email to a user and assign as lecturer.
         owner = await get_or_create_user(self._session, data.owner_email)
         await add_course_lecturer(self._session, _require_course_id(course.id), owner.id)

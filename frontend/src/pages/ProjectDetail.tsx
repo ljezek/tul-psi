@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { 
@@ -12,8 +12,7 @@ import {
   Award,
   Edit2,
   UserPlus,
-  X,
-  Plus
+  X
 } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';

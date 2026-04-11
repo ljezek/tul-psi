@@ -1062,6 +1062,58 @@ async def test_service_unlock_project_sets_results_unlocked() -> None:
     assert result.results_unlocked is True
 
 
+async def test_service_lock_project_sets_results_unlocked() -> None:
+    """``lock_project`` must set ``results_unlocked=False`` and return the project."""
+    project, course = _make_project_and_course()
+    project.id = 5
+    project.results_unlocked = False  # Value returned after the lock.
+    session = MagicMock()
+    user = _make_admin_user()
+
+    with (
+        patch(
+            "services.projects.db_get_project",
+            new_callable=AsyncMock,
+            return_value=(project, course),
+        ),
+        patch(
+            "services.projects.db_lock_project_results",
+            new_callable=AsyncMock,
+            return_value=project,
+        ),
+        patch("services.projects.get_project_members", new_callable=AsyncMock, return_value={}),
+        patch("services.projects.get_course_lecturers", new_callable=AsyncMock, return_value={}),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_course_evaluation_by_student",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
+        patch("services.projects.get_course_evaluations", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "services.projects.get_all_peer_feedback_for_project",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch.object(session, "commit", new_callable=AsyncMock),
+    ):
+        result = await ProjectsService(session).lock_project(5, user)
+
+    assert result is not None
+    assert result.id == 5
+    assert result.results_unlocked is False
+
+
 # ---------------------------------------------------------------------------
 # ProjectsService.patch_project unit tests
 # ---------------------------------------------------------------------------

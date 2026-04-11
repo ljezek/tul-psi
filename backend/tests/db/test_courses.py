@@ -36,6 +36,7 @@ async def test_create_course_adds_to_session_and_flushes() -> None:
         term=CourseTerm.WINTER,
         project_type=ProjectType.TEAM,
         min_score=50,
+        owner_email="owner@tul.cz",
     )
 
     result = await db_create_course(session, data, created_by=1)
@@ -58,6 +59,7 @@ async def test_create_course_sets_optional_fields() -> None:
         term=CourseTerm.SUMMER,
         project_type=ProjectType.INDIVIDUAL,
         min_score=40,
+        owner_email="owner@tul.cz",
         syllabus="Course syllabus text.",
         peer_bonus_budget=5,
         evaluation_criteria=[{"code": "c1", "description": "Criterion 1", "max_score": 10}],

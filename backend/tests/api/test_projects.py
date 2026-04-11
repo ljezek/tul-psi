@@ -414,6 +414,76 @@ async def test_unlock_project_forwards_id_and_user_to_service(client: AsyncClien
 
 
 # ---------------------------------------------------------------------------
+# POST /api/v1/projects/{project_id}/lock — endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_lock_project_returns_200(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/lock must return HTTP 200 for an admin."""
+    mock_service = AsyncMock()
+    mock_service.lock_project = AsyncMock(return_value=_PROJECT_DETAIL)
+    user = _make_admin_user()
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/lock")
+
+    assert response.status_code == 200
+
+
+async def test_lock_project_returns_401_when_unauthenticated(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/lock must return HTTP 401 when not authenticated."""
+    app.dependency_overrides[get_current_user] = _mock_unauthenticated
+
+    response = await client.post("/api/v1/projects/1/lock")
+
+    assert response.status_code == 401
+
+
+async def test_lock_project_returns_403_on_permission_error(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/lock must return HTTP 403 when not authorised."""
+    mock_service = AsyncMock()
+    mock_service.lock_project = AsyncMock(side_effect=PermissionError("Not authorised."))
+    user = _make_lecturer_user()
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/1/lock")
+
+    assert response.status_code == 403
+
+
+async def test_lock_project_returns_404_when_not_found(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/lock must return HTTP 404 when the project does not exist."""
+    mock_service = AsyncMock()
+    mock_service.lock_project = AsyncMock(side_effect=LookupError("Project 99 not found."))
+    user = _make_admin_user()
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    response = await client.post("/api/v1/projects/99/lock")
+
+    assert response.status_code == 404
+
+
+async def test_lock_project_forwards_id_and_user_to_service(client: AsyncClient) -> None:
+    """POST /api/v1/projects/{id}/lock must forward the project id and user to the service."""
+    mock_service = AsyncMock()
+    mock_service.lock_project = AsyncMock(return_value=_PROJECT_DETAIL)
+    user = _make_admin_user()
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: mock_service
+
+    await client.post("/api/v1/projects/42/lock")
+
+    mock_service.lock_project.assert_called_once_with(42, user)
+
+
+# ---------------------------------------------------------------------------
 # DELETE /api/v1/projects/{project_id} — endpoint tests
 # ---------------------------------------------------------------------------
 
@@ -1225,3 +1295,30 @@ async def test_put_course_evaluation_returns_500_on_unexpected_error(
     response = await client.put("/api/v1/projects/1/course-evaluation", json=_PUT_PAYLOAD)
 
     assert response.status_code == 500
+
+
+def _make_admin_user() -> MagicMock:
+    """Return a mock ADMIN user with id=1."""
+    from models.user import User
+
+    user = MagicMock(spec=User)
+    user.id = 1
+    user.role = UserRole.ADMIN
+    user.email = "admin@tul.cz"
+    return user
+
+
+def _make_lecturer_user(user_id: int = 7) -> MagicMock:
+    """Return a mock LECTURER user with the specified id."""
+    from models.user import User
+
+    user = MagicMock(spec=User)
+    user.id = user_id
+    user.role = UserRole.LECTURER
+    user.email = f"lecturer{user_id}@tul.cz"
+    return user
+
+
+async def _mock_unauthenticated() -> None:
+    """Mock for unauthenticated user dependency."""
+    return None

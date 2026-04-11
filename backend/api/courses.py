@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
-from models.user import User, UserRole
+from models.user import User
 from schemas.courses import (
     CourseCreate,
     CourseDetail,

@@ -122,7 +122,7 @@ class EmailTemplate:
                 f"{_SIGN_OFF}"
             ),
         )
-    
+
     @classmethod
     def user_invite(
         cls,
@@ -140,9 +140,7 @@ class EmailTemplate:
         """
         return EmailMessage(
             to=to,
-            subject=(
-                f'{_SUBJECT_PREFIX}You have been invited as a {role}'
-            ),
+            subject=(f"{_SUBJECT_PREFIX}You have been invited as a {role}"),
             body=(
                 f"Hello,\n\n"
                 f"You have been invited as a {role} to TUL Student Projects Catalogue.\n\n"

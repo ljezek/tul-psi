@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, FormEvent } from 'react';
+import { useEffect, useState, useMemo, FormEvent, KeyboardEvent } from 'react';
 import { Search, UserPlus, Edit2, Shield, User as UserIcon, CheckCircle, XCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getUsers, createUser, updateUser, ApiError } from '@/api';
@@ -135,7 +135,7 @@ export const UserManagement = () => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleFormSubmit();
     }

@@ -76,7 +76,7 @@ export const Dashboard = () => {
       const detail = await getCourse(courseId);
       setEditingCourse(detail);
       setIsEditModalOpen(true);
-    } catch (_err) {
+    } catch {
       alert(t('courseDetail.error_fetching'));
     } finally {
       setEditLoading(false);

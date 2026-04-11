@@ -56,7 +56,7 @@ export const LecturerHome = () => {
       const detail = await getCourse(courseId);
       setEditingCourse(detail);
       setIsModalOpen(true);
-    } catch (_err) {
+    } catch {
       alert(t('courseDetail.error_fetching'));
     } finally {
       setFormLoading(false);

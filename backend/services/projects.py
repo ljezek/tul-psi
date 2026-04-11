@@ -422,14 +422,16 @@ class ProjectsService:
                 for pid, fbs in raw_pfeedback_map.items():
                     peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in fbs]
 
-            # 2. Lecturer logic: fetch evaluations for projects where user is a lecturer
+            # 2. Lecturer/Admin logic: fetch evaluations
             if user.role in (UserRole.ADMIN, UserRole.LECTURER):
-                # Identify which projects the user is a lecturer for
+                # Identify which projects the user is a lecturer for (Admins see all)
                 lecturer_project_ids = []
                 for p, c in rows:
                     if p.id is not None and c.id is not None:
-                        # Check if user is in lecturers_by_course[c.id]
-                        if any(lect.id == user.id for lect in lecturers_by_course.get(c.id, [])):
+                        # Admins see all projects; Lecturers only see their assigned courses
+                        if user.role == UserRole.ADMIN or any(
+                            lect.id == user.id for lect in lecturers_by_course.get(c.id, [])
+                        ):
                             lecturer_project_ids.append(p.id)
 
                 if lecturer_project_ids:
@@ -443,7 +445,7 @@ class ProjectsService:
                         # Fetch peer feedback if results are unlocked for these lecturer projects.
                         p_obj = next((p for p, _ in rows if p.id == pid), None)
                         if p_obj and p_obj.results_unlocked:
-                            # Results are unlocked: lecturers see EVERYTHING
+                            # Results are unlocked: lecturers/admins see EVERYTHING
                             if pid not in project_evals:
                                 raw_all_pevals = await get_project_evaluations(self._session, pid)
                                 project_evals[pid] = [
@@ -459,6 +461,7 @@ class ProjectsService:
                                 ]
                         else:
                             # Results locked: lecturer only sees their own draft/submission
+                            # Admin sees their own if they have one.
                             if pid not in project_evals:
                                 project_evals[pid] = [_to_project_evaluation_detail(ev)]
 
@@ -538,12 +541,6 @@ class ProjectsService:
         lecturers_by_course = await get_course_lecturers(self._session, course_id_list)
         eval_counts = await get_evaluation_counts_for_projects(self._session, project_id_list)
 
-        lecturers = lecturers_by_course.get(course.id, []) if course.id is not None else []
-        lecturer_ids = [l.id for l in lecturers if l.id is not None]
-
-        # Admins only see evaluations if they are assigned as lecturers
-        show_evaluations = user.id in lecturer_ids
-
         project_evaluations: list[ProjectEvaluationDetail] | None = None
 
         course_evaluations: list[CourseEvaluationDetail] | None = None
@@ -608,8 +605,12 @@ class ProjectsService:
             course_evaluations=course_evaluations,
             received_peer_feedback=received_peer_feedback,
             authored_peer_feedback=authored_peer_feedback,
-            submitted_lecturer_count=eval_counts.get(project.id, (0, 0))[0] if project.id is not None else 0,
-            submitted_student_count=eval_counts.get(project.id, (0, 0))[1] if project.id is not None else 0,
+            submitted_lecturer_count=eval_counts.get(project.id, (0, 0))[0]
+            if project.id is not None
+            else 0,
+            submitted_student_count=eval_counts.get(project.id, (0, 0))[1]
+            if project.id is not None
+            else 0,
         )
 
     async def _check_write_permission(self, project_id: int, user: User) -> tuple[Project, Course]:
@@ -878,6 +879,7 @@ class ProjectsService:
         Returns the updated ``ProjectPublic``.
         """
         from opentelemetry import trace
+
         tracer = trace.get_tracer(__name__)
 
         with tracer.start_as_current_span("service.lock_project") as span:
@@ -893,7 +895,7 @@ class ProjectsService:
                 raise ValueError(f"Course returned from DB has no id: {course!r}")
 
             await require_course_manage_access(self._session, course.id, requester)
-            await lock_project_results(self._session, project_id)
+            await db_lock_project_results(self._session, project_id)
             await self._session.commit()
 
             return await self.get_project_detail(project_id, requester)

@@ -9,10 +9,10 @@ from httpx import AsyncClient
 from sqlalchemy.exc import IntegrityError
 
 from api.courses import get_courses_service, get_projects_service
-from api.deps import get_current_user, get_optional_current_user
+from api.deps import get_current_user, get_optional_current_user, require_current_user
 from main import app
 from models.course import CourseTerm, ProjectType
-from models.user import UserRole
+from models.user import User, UserRole
 from schemas.courses import (
     CourseDetail,
     CourseEvaluationPublic,
@@ -115,7 +115,13 @@ def _make_service(
     service = MagicMock(spec=CoursesService)
     service.get_courses = AsyncMock(return_value=courses or [])
     service.get_course = AsyncMock(return_value=detail)
-    service.create_course = AsyncMock(return_value=detail)
+
+    async def _mock_create_course(data, user):
+        if user.role != UserRole.ADMIN:
+            raise CoursePermissionError("Only admins can create courses.")
+        return detail
+
+    service.create_course = AsyncMock(side_effect=_mock_create_course)
     service.update_course = AsyncMock(return_value=detail)
     service.add_lecturer = AsyncMock(return_value=None)
     service.remove_lecturer = AsyncMock(return_value=None)
@@ -124,9 +130,11 @@ def _make_service(
 
 def _make_user(role: UserRole = UserRole.ADMIN) -> MagicMock:
     """Return a mock ``User`` with the specified role."""
-    user = MagicMock()
+    user = MagicMock(spec=User)
     user.role = role
     user.id = 99
+    user.email = "test@tul.cz"
+    user.name = "Test User"
     return user
 
 
@@ -147,6 +155,7 @@ def _clear_dependency_overrides() -> Generator[None, None, None]:
     app.dependency_overrides.pop(get_projects_service, None)
     app.dependency_overrides.pop(get_optional_current_user, None)
     app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(require_current_user, None)
 
 
 # ---------------------------------------------------------------------------
@@ -341,6 +350,7 @@ async def test_create_course_project_returns_201(client: AsyncClient) -> None:
     """POST /api/v1/courses/{id}/projects must return HTTP 201 for a lecturer."""
     mock_user = _make_user(UserRole.LECTURER)
     app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[require_current_user] = lambda: mock_user
     app.dependency_overrides[get_projects_service] = lambda: _make_projects_service()
 
     response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
@@ -352,6 +362,7 @@ async def test_create_course_project_returns_201_for_admin(client: AsyncClient) 
     """POST /api/v1/courses/{id}/projects must return HTTP 201 for an admin."""
     mock_user = _make_user(UserRole.ADMIN)
     app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[require_current_user] = lambda: mock_user
     app.dependency_overrides[get_projects_service] = lambda: _make_projects_service()
 
     response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
@@ -363,6 +374,7 @@ async def test_create_course_project_returns_project_schema(client: AsyncClient)
     """POST /api/v1/courses/{id}/projects must return the created ``ProjectPublic``."""
     mock_user = _make_user(UserRole.LECTURER)
     app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[require_current_user] = lambda: mock_user
     app.dependency_overrides[get_projects_service] = lambda: _make_projects_service()
 
     response = await client.post("/api/v1/courses/1/projects", json=_PROJECT_CREATE_PAYLOAD)
@@ -481,16 +493,20 @@ async def test_create_course_returns_401_for_unauthenticated(client: AsyncClient
 
 async def test_create_course_returns_403_for_lecturer(client: AsyncClient) -> None:
     """POST /api/v1/courses must return HTTP 403 when the caller is a lecturer."""
+    user = _make_user(UserRole.LECTURER)
     app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.LECTURER)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[require_current_user] = lambda: user
     response = await client.post("/api/v1/courses", json=_CREATE_BODY)
     assert response.status_code == 403
 
 
 async def test_create_course_returns_403_for_student(client: AsyncClient) -> None:
     """POST /api/v1/courses must return HTTP 403 when the caller is a student."""
+    user = _make_user(UserRole.STUDENT)
     app.dependency_overrides[get_courses_service] = lambda: _make_service(detail=_COURSE_DETAIL)
-    app.dependency_overrides[get_current_user] = lambda: _make_user(UserRole.STUDENT)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[require_current_user] = lambda: user
     response = await client.post("/api/v1/courses", json=_CREATE_BODY)
     assert response.status_code == 403
 
@@ -728,6 +744,7 @@ async def test_add_course_lecturer_returns_422_for_non_tul_email(
     user = _make_user(UserRole.ADMIN)
     mock_service = _make_service()
     app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[require_current_user] = lambda: user
     app.dependency_overrides[get_courses_service] = lambda: mock_service
 
     response = await client.post(

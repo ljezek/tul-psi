@@ -152,7 +152,7 @@ class UsersService:
                 portal_url=_settings.frontend_url,
             )
         )
-        # Note: We should probably have a better "welcome" email template, 
+        # Note: We should probably have a better "welcome" email template,
         # but for now we reuse the OTP notification pattern or just log it.
         logger.info(
             "User created by admin and invite sent.",
