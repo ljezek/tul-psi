@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectType
 from schemas.projects import LecturerPublic
@@ -92,6 +92,7 @@ class CourseCreate(BaseModel):
     term: CourseTerm
     project_type: ProjectType
     min_score: int
+    owner_email: EmailStr
     syllabus: str | None = None
     # Null means no peer-bonus-point scheme for this course.
     peer_bonus_budget: int | None = None

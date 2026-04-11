@@ -19,6 +19,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
 
   const [code, setCode] = useState(initialData?.code || '');
   const [name, setName] = useState(initialData?.name || '');
+  const [ownerEmail, setOwnerEmail] = useState('');
   const [syllabus, setSyllabus] = useState(initialData?.syllabus || '');
   const [term, setTerm] = useState<CourseTerm>(initialData?.term || CourseTerm.WINTER);
   const [projectType, setProjectType] = useState<ProjectType>(initialData?.project_type || ProjectType.INDIVIDUAL);
@@ -55,6 +56,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
       peer_bonus_budget: projectType === ProjectType.TEAM && peerBonusBudget > 0 ? peerBonusBudget : null,
       evaluation_criteria: processedCriteria,
       links,
+      ...(initialData ? {} : { owner_email: ownerEmail }),
     } as CourseCreate | CourseUpdate;
     
     onSubmit(data);
@@ -133,6 +135,29 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
               />
             </div>
+
+            {!initialData && (
+              <div>
+                <label htmlFor="course-owner-email" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+                  {t('course.owner_email')}
+                  <span className="ml-2 lowercase font-normal opacity-60">(@tul.cz)</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <User size={16} className="text-slate-400" />
+                  </div>
+                  <input
+                    id="course-owner-email"
+                    type="email"
+                    required
+                    value={ownerEmail}
+                    onChange={e => setOwnerEmail(e.target.value)}
+                    placeholder="lecturer@tul.cz"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="course-syllabus" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">

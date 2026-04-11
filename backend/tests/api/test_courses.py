@@ -41,8 +41,9 @@ from services.projects import ProjectsService
 # Shared fixtures
 # ---------------------------------------------------------------------------
 
-_LECTURER = LecturerPublic(name="Jan Novák", github_alias="jnovak")
+_LECTURER = LecturerPublic(id=1, name="Jan Novák", github_alias="jnovak")
 _LECTURER_WITH_EMAIL = LecturerPublic(
+    id=1,
     name="Jan Novák",
     github_alias="jnovak",
     email="jan.novak@tul.cz",
@@ -318,7 +319,7 @@ _SEEDED_PROJECT = ProjectPublic(
         peer_bonus_budget=None,
         evaluation_criteria=[],
         links=[],
-        lecturers=[LecturerPublic(name="Lect", github_alias=None, email="lect@tul.cz")],
+        lecturers=[LecturerPublic(id=1, name="Lect", github_alias=None, email="lect@tul.cz")],
     ),
     members=[],
 )
@@ -445,6 +446,7 @@ _CREATE_BODY = {
     "term": "WINTER",
     "project_type": "TEAM",
     "min_score": 50,
+    "owner_email": "lecturer@tul.cz",
 }
 
 

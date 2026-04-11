@@ -216,6 +216,7 @@ export interface CourseCreate {
   term: CourseTerm;
   project_type: ProjectType;
   min_score: number;
+  owner_email: string;
   syllabus?: string | null;
   peer_bonus_budget?: number | null;
   evaluation_criteria?: EvaluationCriterion[];

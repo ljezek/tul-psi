@@ -91,13 +91,13 @@ async def create_course(
     Only admins may call this endpoint.  Raises HTTP 401 when the request is
     unauthenticated and HTTP 403 when the caller is not an admin.
     """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create courses.",
-        )
     try:
         return await service.create_course(body, current_user)
+    except CoursePermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
     except IntegrityError:
         logger.warning("Course creation failed: duplicate code.", extra={"code": body.code})
         raise HTTPException(

@@ -45,7 +45,9 @@ async def create_course(
     ``session.flush()`` is used to materialise the auto-assigned ``id``
     without ending the transaction.
     """
-    course = Course(**data.model_dump(), created_by=created_by)
+    course_data = data.model_dump()
+    course_data.pop("owner_email", None)
+    course = Course(**course_data, created_by=created_by)
     session.add(course)
     await session.flush()
     return course

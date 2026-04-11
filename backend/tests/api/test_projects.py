@@ -31,7 +31,7 @@ from services.projects import (
 # Shared fixtures
 # ---------------------------------------------------------------------------
 
-_LECTURER = LecturerPublic(name="Jan Novák", github_alias="jnovak")
+_LECTURER = LecturerPublic(id=1, name="Jan Novák", github_alias="jnovak")
 
 _COURSE = CoursePublic(
     id=1,
@@ -82,7 +82,7 @@ _PROJECT_DETAIL = ProjectPublic(
         peer_bonus_budget=None,
         evaluation_criteria=[],
         links=[],
-        lecturers=[LecturerPublic(name="Lect", github_alias=None, email="lect@tul.cz")],
+        lecturers=[LecturerPublic(id=1, name="Lect", github_alias=None, email="lect@tul.cz")],
     ),
     members=[MemberPublic(id=5, github_alias=None, name="Alice", email="alice@tul.cz")],
 )
