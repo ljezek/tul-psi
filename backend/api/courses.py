@@ -98,11 +98,14 @@ async def create_course(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from exc
-    except IntegrityError:
-        logger.warning("Course creation failed: duplicate code.", extra={"code": body.code})
+    except IntegrityError as exc:
+        logger.warning(
+            "Course creation failed: integrity error.",
+            extra={"code": body.code, "error": str(exc.orig) if hasattr(exc, "orig") else str(exc)},
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A course with code '{body.code}' already exists.",
+            detail=f"A course with code '{body.code}' already exists or another integrity constraint was violated.",
         ) from None
     except Exception:
         logger.exception("Failed to create course", extra={"code": body.code})

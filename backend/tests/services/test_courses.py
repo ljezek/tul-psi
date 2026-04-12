@@ -416,7 +416,7 @@ async def test_create_course_calls_db_create_and_commits() -> None:
         patch(
             "services.courses.get_or_create_user",
             new_callable=AsyncMock,
-            return_value=owner_user,
+            return_value=(owner_user, True),
         ),
         patch(
             "services.courses.add_course_lecturer",
