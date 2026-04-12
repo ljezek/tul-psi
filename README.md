@@ -34,30 +34,42 @@ flowchart TD
 * [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md) (in-progress) provides product-oriented description: business objectives and motivation, planned user scenarios, functional requirements and scope.
 * [`docs/DESIGN.md`](docs/DESIGN.md) (in-progress) contains engineering-oriented documentation: technical architecture, UML diagrams, API contracts and DB schema.
 
-## 💻 Local development
+## 💻 Local Development
 
-Currently the app only contains a prototype, see the [prototype/README.md](prototype/README.md) for instructions how to run it locally and in Google AI Studio.
-
-The backend API is under development — see [backend/README.md](backend/README.md) for setup instructions.
-
-### Database
-
-A local PostgreSQL instance can be started with Docker Compose (see [`database/README.md`](database/README.md) for full details):
-
+### 1. Start the Infrastructure (Docker)
+Ensure you have Docker Desktop running, then start the database and monitoring stack from the project root:
 ```bash
-cd database
-cp .env.example .env   # first time only – adjust credentials if needed
 docker compose up -d
 ```
 
-By default, the database is exposed on `localhost:${POSTGRES_PORT:-5432}` (that is, `localhost:5432` unless you override the `POSTGRES_PORT` environment variable in `docker-compose.yml`). The default credentials are defined in [`database/.env.example`](database/.env.example).
-
-To stop the database:
-
+### 2. Start the Backend (Native)
 ```bash
-docker compose down          # stop containers (data is preserved)
-docker compose down -v       # stop containers and wipe all data
+cd backend
+python -m venv .venv
+source .venv/bin/activate  # Or .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+./start.sh --reload
 ```
+*API accessible at: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)*
+
+### 3. Start the Frontend (Native)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Web UI accessible at: [http://127.0.0.1:3000](http://127.0.0.1:3000)*
+
+## 📊 Monitoring & Observability
+
+When running via Docker Compose, the following tools are available:
+
+*   **Traces (Jaeger):** [http://127.0.0.1:16686](http://127.0.0.1:16686) - Search for "student-projects-catalogue-backend" to see request traces and DB queries.
+*   **Metrics (Prometheus):** [http://127.0.0.1:9090](http://127.0.0.1:9090) - Raw metrics from the collector and backend.
+*   **Visualization (Grafana):** [http://127.0.0.1:3001](http://127.0.0.1:3001) - Unified dashboard (Login: admin/admin).
+*   **Logs:** 
+    *   **Native:** Streamed to your terminal as structured JSON.
+    *   **Docker:** Run `docker compose logs -f backend` to see combined application and OTel logs.
 
 ## 🔍 Examples
 

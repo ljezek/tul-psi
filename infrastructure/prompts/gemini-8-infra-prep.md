@@ -10,12 +10,15 @@ Create a multi-stage build:
 1.  **Build Stage:** Install dependencies and build wheels.
 2.  **Runtime Stage:** A slim Python 3.12 image, non-root user (`appuser`), and OTel instrumentation enabled.
 
+### 📋 TODO: Create `backend/Dockerfile.dev`
+Development-optimized Dockerfile that supports bind mounts and hot-reload.
+
 ## 2. Local Monitoring & Observability Stack
-We use a 2-container local stack to mirror cloud behavior without the complexity of Azure.
+We use a local stack to mirror cloud behavior without the complexity of Azure.
 
 ### 📋 TODO: Create Root `docker-compose.yaml`
 
-In the database setup respect the existing database/docker-compose.yml settings (users & disk).
+In the database setup respect the existing `database/docker-compose.yml` settings (users & disk).
 
 ```yaml
 services:
@@ -40,13 +43,21 @@ services:
 
   # Database
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
+    container_name: tul-psi-db-all
     environment:
-      POSTGRES_DB: spc
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: student_projects
+      POSTGRES_ADMIN_USER: tul_psi_admin
+      POSTGRES_ADMIN_PASSWORD: tul_psi_admin_password
+      POSTGRES_USER: tul_psi_admin
+      POSTGRES_PASSWORD: tul_psi_admin_password
+      POSTGRES_APP_USER: tul_psi_app
+      POSTGRES_APP_PASSWORD: tul_psi_app_password
     ports:
       - "5432:5432"
+    volumes:
+      - postgres-data-all:/var/lib/postgresql/data
+      - ./database/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
 
   # Backend (Containerized with Hot-Reload)
   backend:
@@ -56,14 +67,17 @@ services:
     volumes:
       - ./backend:/app  # Bind mount for --reload
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/spc
+      - DATABASE_MIGRATION_URL=postgresql+asyncpg://tul_psi_admin:tul_psi_admin_password@db:5432/student_projects
+      - DATABASE_URL=postgresql+asyncpg://tul_psi_app:tul_psi_app_password@db:5432/student_projects
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - LOG_LEVEL=debug
     ports:
       - "8000:8000"
     depends_on:
-      - db
-      - otel-collector
+      db:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
 
   # Frontend (Optional: For Full-Stack Demo)
   frontend:
@@ -75,6 +89,8 @@ services:
     depends_on:
       - backend
 
+volumes:
+  postgres-data-all:
 ```      
 
 ## 3. Development Workflow: Dual-Mode
@@ -96,7 +112,7 @@ This is the **preferred daily workflow**:
 Add `azure-identity` to `backend/requirements.txt` and update `backend/db/session.py` to support Entra ID tokens when `AZURE_MANAGED_IDENTITY_ENABLED=true`.
 
 ## 5. OTel Collector Configuration (`infrastructure/otel-collector-config.yaml`)
-Configure receivers for OTLP and exporters for both the local `monitoring-stack` and the future Azure `azuremonitor`.
+Configure receivers for OTLP (gRPC) and exporters for both the local `monitoring-stack` and the future Azure `azuremonitor`.
 
 ## 6. Backend OTel Instrumentation
-Instrument the backend code with the native OTel instrumentors (for HTTP server and outbound DB). Configure it to connect to local OTel collector.
+Instrument the backend code with the native OTel instrumentors (for HTTP server and outbound DB). Configure it to connect to local OTel collector via gRPC (`opentelemetry-exporter-otlp-proto-grpc`).

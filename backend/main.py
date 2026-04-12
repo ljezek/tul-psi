@@ -13,6 +13,7 @@ from api.courses import router as courses_router
 from api.health import router as health_router
 from api.projects import router as projects_router
 from api.users import router as users_router
+from observability import setup_otel
 from settings import get_settings
 
 
@@ -48,6 +49,9 @@ _configure_logging()
 
 settings = get_settings()
 app = FastAPI(title="Student Projects Catalogue API")
+
+# Setup OpenTelemetry BEFORE including routers to ensure all requests are traced.
+setup_otel(app)
 
 # Configure CORS
 app.add_middleware(

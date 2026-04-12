@@ -47,7 +47,7 @@ npm run dev   # starts on http://localhost:3000
 Copy `.env.example` to `.env` and set the variables:
 
 ```env
-VITE_API_URL=http://localhost:8000   # Backend API base URL (FastAPI)
+VITE_API_URL=http://127.0.0.1:8000   # Backend API base URL (FastAPI)
 ```
 
 All `VITE_` prefixed variables are available via `import.meta.env` and are

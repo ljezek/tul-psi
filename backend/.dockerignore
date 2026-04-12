@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.vscode/
+.git/
+.env
+student_projects_catalogue_backend.egg-info/
