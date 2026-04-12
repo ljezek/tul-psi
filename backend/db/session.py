@@ -4,7 +4,6 @@ from collections.abc import AsyncGenerator
 from functools import lru_cache
 from typing import Any
 
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from settings import get_settings
@@ -40,7 +39,7 @@ def _session_factory() -> async_sessionmaker[AsyncSession]:
     This keeps unit tests (which mock get_session) free of real DB configuration.
     """
     settings = get_settings()
-    
+
     # Base configuration for the engine.
     engine_kwargs: dict[str, Any] = {
         "echo": False,
