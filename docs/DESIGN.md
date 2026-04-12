@@ -377,12 +377,69 @@ All endpoints are prefixed with `/api/v1`. Authenticated routes rely on an **Htt
 }
 ```
 
-## Infrastructure & Deployment
+## ☁️ Infrastructure & Deployment
 
-> [!NOTE]
-> TODO(ljezek): Populate this once we move to the start of final milestone - Cloud deployment.
+The cloud infrastructure design for Student Projects Catalogue prioritizes **Zero-Trust security**, **Infrastructure-as-Code (IaC)**, and **extreme cost efficiency** to operate within the $100 Azure for Students credit.
 
-Azure cloud environment setup, resource selection, and the CI/CD pipeline architecture
+```mermaid
+graph TB
+    subgraph "Public Internet"
+        SWA[Azure Static Web Apps<br/>'Frontend']
+        GH[GitHub Actions]
+    end
+
+    subgraph "rg-spc-shared-pl (Poland Central)"
+        ACR[Azure Container Registry<br/>'Basic SKU']
+        UAMI[User Managed Identity<br/>'GH Deployer']
+        
+        subgraph "vnet-spc-shared (10.0.0.0/16)"
+            subgraph "snet-db (10.0.5.0/28)"
+                DB[(PostgreSQL Flexible Server<br/>'Shared Instance')]
+            end
+            
+            subgraph "snet-dev (10.0.1.0/23)"
+                ACA_DEV[FastAPI Backend - Dev]
+                OTEL_DEV[OTel Sidecar - Dev]
+            end
+
+            subgraph "snet-prod (10.0.3.0/23)"
+                ACA_PROD[FastAPI Backend - Prod]
+                OTEL_PROD[OTel Sidecar - Prod]
+            end
+        end
+    end
+
+    SWA -- "HTTPS / JSON" --> ACA_DEV
+    GH -- "OIDC / Bicep" --> UAMI
+    UAMI -- "Deploy" --> ACA_DEV
+    ACA_DEV -- "Managed Identity" --> DB
+    ACA_DEV -- "gRPC" --> OTEL_DEV
+    OTEL_DEV -- "Traces/Logs" --> AI_DEV[Application Insights - Dev]
+    ACA_PROD -- "Managed Identity" --> DB
+    ACA_PROD -- "gRPC" --> OTEL_PROD
+    OTEL_PROD -- "Traces/Logs" --> AI_PROD[Application Insights - Prod]
+```
+
+### 🔒 Security & Identity
+* **OIDC Authentication**: GitHub Actions authenticates to Azure via OpenID Connect (OIDC) using Federated Identity Credentials. No long-lived secrets are stored in GitHub.
+
+* **Passwordless Database**: The PostgreSQL server is configured with Microsoft Entra ID authentication only. Apps use System-Assigned Managed Identities to generate short-lived access tokens for DB connection.
+
+* **Private Networking**: The PostgreSQL instance has no public IP. It is only accessible via the `snet-db` delegated subnet.
+
+### 💰 Cost Management
+* **Scale-to-Zero**: Azure Container Apps are configured with minReplicas: 0. Compute costs are only incurred during active requests.
+
+* **Shared DB**: A single `Standard_B1ms` instance hosts separate `spc_dev` and `spc_prod` databases.
+
+* **SWA Free Tier**: The React frontend uses the Free tier, providing a global CDN and SSL for $0.
+
+### 🚀 CI/CD Patterns
+* **Infrastructure**: Managed via Azure Bicep. Triggered on changes to `/infrastructure`.
+
+* **Migrations**: Executed via Azure Container App Jobs inside the VNet to reach the private DB.
+
+* **App Deployment**: Independent pipelines for Frontend (to SWA) and Backend (to ACA).
 
 High-level plan:
 
