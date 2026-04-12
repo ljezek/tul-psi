@@ -25,7 +25,9 @@ class TokenProvider:
         # Refresh token 5 minutes before expiry
         if not self._token or self._token.expires_on < (time.time() + 300):
             # The scope for Azure Database for PostgreSQL is always the same.
-            self._token = await self.credential.get_token("https://ossrdbms-aad.database.windows.net/.default")
+            self._token = await self.credential.get_token(
+                "https://ossrdbms-aad.database.windows.net/.default"
+            )
         return self._token.token
 
 
@@ -38,38 +40,25 @@ def _session_factory() -> async_sessionmaker[AsyncSession]:
     This keeps unit tests (which mock get_session) free of real DB configuration.
     """
     settings = get_settings()
-    engine = create_async_engine(
-        settings.database_url,
-        # echo=False keeps SQL statements out of the production log stream;
-        # set to True temporarily when debugging query issues locally.
-        echo=False,
-    )
+    
+    # Base configuration for the engine.
+    engine_kwargs: dict[str, Any] = {
+        "echo": False,
+    }
 
     if settings.azure_managed_identity_enabled:
         token_provider = TokenProvider()
 
-        @event.listens_for(engine.sync_engine, "connect")
-        def add_token(dbapi_connection: Any, connection_record: Any) -> None:
-            """Inject the Entra ID token into the connection parameters.
+        # asyncpg supports passing a 'password' that is an async callable.
+        # This is the standard way to handle Entra ID (Managed Identity) tokens,
+        # as it allows the driver to refresh the token automatically before
+        # establishing new connections in the pool.
+        engine_kwargs["connect_args"] = {"password": token_provider.get_token}
 
-            Since the engine is async but SQLAlchemy events for 'connect' on
-            the sync_engine (which wraps the pool) are synchronous, we must
-            use a trick to get the token. However, asyncpg supports passing
-            a 'password' that can be a callable or a string.
-            """
-            # For asyncpg, we can't easily use the sync event to await a token.
-            # Instead, we configure the engine to use a dynamic password.
-            pass
-
-        # Re-create engine with dynamic password for asyncpg
-        async def get_password() -> str:
-            return await token_provider.get_token()
-
-        engine = create_async_engine(
-            settings.database_url,
-            password=get_password,
-            echo=False,
-        )
+    engine = create_async_engine(
+        settings.database_url,
+        **engine_kwargs,
+    )
 
     return async_sessionmaker(engine, expire_on_commit=False)
 

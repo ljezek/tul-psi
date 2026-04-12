@@ -422,23 +422,18 @@ graph TB
 
 ### 🔒 Security & Identity
 * **OIDC Authentication**: GitHub Actions authenticates to Azure via OpenID Connect (OIDC) using Federated Identity Credentials. No long-lived secrets are stored in GitHub.
-
 * **Passwordless Database**: The PostgreSQL server is configured with Microsoft Entra ID authentication only. Apps use System-Assigned Managed Identities to generate short-lived access tokens for DB connection.
-
 * **Private Networking**: The PostgreSQL instance has no public IP. It is only accessible via the `snet-db` delegated subnet.
 
 ### 💰 Cost Management
 * **Scale-to-Zero**: Azure Container Apps are configured with minReplicas: 0. Compute costs are only incurred during active requests.
-
 * **Shared DB**: A single `Standard_B1ms` instance hosts separate `spc_dev` and `spc_prod` databases.
-
 * **SWA Free Tier**: The React frontend uses the Free tier, providing a global CDN and SSL for $0.
 
 ### 🚀 CI/CD Patterns
 * **Infrastructure**: Managed via Azure Bicep. Triggered on changes to `/infrastructure`.
 
 * **Migrations**: Executed via Azure Container App Jobs inside the VNet to reach the private DB.
-
 * **App Deployment**: Independent pipelines for Frontend (to SWA) and Backend (to ACA).
 
 High-level plan:
@@ -482,7 +477,10 @@ flowchart LR
 
 ### Instrumentation
 
-Both the backend and the React frontend emit telemetry signals via the OpenTelemetry SDK.
+Both the backend and the React frontend emit telemetry signals via the OpenTelemetry SDK. 
+
+> [!IMPORTANT]
+> Both Frontend and Backend utilize **OTLP/HTTP** (:4318) for telemetry export. While gRPC is the industry standard for backend services, OTLP/HTTP is used here to ensure seamless local development across all platforms, specifically avoiding `grpcio` compilation issues on Windows ARM64 (Snapdragon) environments.
 
 **Backend** (Python `opentelemetry-sdk`):
 

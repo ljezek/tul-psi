@@ -72,7 +72,7 @@ services:
       - APP_ENV=local
       - DATABASE_MIGRATION_URL=postgresql+asyncpg://tul_psi_admin:tul_psi_admin@db:5432/student_projects
       - DATABASE_URL=postgresql+asyncpg://tul_psi_app:tul_psi_app@db:5432/student_projects
-      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - LOG_LEVEL=debug
     ports:
       - "8000:8000"
