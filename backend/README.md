@@ -96,8 +96,8 @@ uvicorn main:app --reload
 
 Any extra arguments passed to `start.sh` are forwarded directly to `uvicorn`.
 
-The API will be available at <http://localhost:8000>.  
-Interactive docs (Swagger UI) at <http://localhost:8000/docs>.
+The API will be available at <http://127.0.0.1:8000>.  
+Interactive docs (Swagger UI) at <http://127.0.0.1:8000/docs>.
 
 ## Available Commands
 

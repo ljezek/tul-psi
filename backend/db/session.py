@@ -2,10 +2,32 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from functools import lru_cache
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from settings import get_settings
+
+
+class TokenProvider:
+    """Provides and caches Entra ID tokens for Azure Database for PostgreSQL."""
+
+    def __init__(self) -> None:
+        from azure.identity.aio import DefaultAzureCredential
+
+        self.credential = DefaultAzureCredential()
+        self._token: Any = None
+
+    async def get_token(self) -> str:
+        import time
+
+        # Refresh token 5 minutes before expiry
+        if not self._token or self._token.expires_on < (time.time() + 300):
+            # The scope for Azure Database for PostgreSQL is always the same.
+            self._token = await self.credential.get_token(
+                "https://ossrdbms-aad.database.windows.net/.default"
+            )
+        return self._token.token
 
 
 @lru_cache(maxsize=1)
@@ -16,12 +38,27 @@ def _session_factory() -> async_sessionmaker[AsyncSession]:
     means that importing this module does not require DATABASE_URL to be set.
     This keeps unit tests (which mock get_session) free of real DB configuration.
     """
+    settings = get_settings()
+
+    # Base configuration for the engine.
+    engine_kwargs: dict[str, Any] = {
+        "echo": False,
+    }
+
+    if settings.azure_managed_identity_enabled:
+        token_provider = TokenProvider()
+
+        # asyncpg supports passing a 'password' that is an async callable.
+        # This is the standard way to handle Entra ID (Managed Identity) tokens,
+        # as it allows the driver to refresh the token automatically before
+        # establishing new connections in the pool.
+        engine_kwargs["connect_args"] = {"password": token_provider.get_token}
+
     engine = create_async_engine(
-        get_settings().database_url,
-        # echo=False keeps SQL statements out of the production log stream;
-        # set to True temporarily when debugging query issues locally.
-        echo=False,
+        settings.database_url,
+        **engine_kwargs,
     )
+
     return async_sessionmaker(engine, expire_on_commit=False)
 
 

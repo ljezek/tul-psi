@@ -1,0 +1,86 @@
+services:
+  # 1. Traces (Jaeger All-in-One)
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    ports:
+      - "16686:16686" # Jaeger UI
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  # 2. Metrics (Prometheus)
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./infrastructure/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  # 3. Visualization (Grafana)
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3001:3000"   # Grafana UI
+    volumes:
+      - ./infrastructure/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    depends_on:
+      - prometheus
+      - jaeger
+
+  # 4. Standalone OTel Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    volumes:
+      - ./infrastructure/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "8889:8889"   # Prometheus metrics scrape endpoint
+    depends_on:
+      - jaeger
+      - prometheus
+
+  # 5. Database
+  db:
+    image: postgres:17-alpine
+    container_name: tul-psi-db-all
+    environment:
+      POSTGRES_DB: student_projects
+      POSTGRES_ADMIN_USER: tul_psi_admin
+      POSTGRES_ADMIN_PASSWORD: tul_psi_admin
+      POSTGRES_USER: tul_psi_admin
+      POSTGRES_PASSWORD: tul_psi_admin
+      POSTGRES_APP_USER: tul_psi_app
+      POSTGRES_APP_PASSWORD: tul_psi_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data-all:/var/lib/postgresql/data
+      - ./database/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tul_psi_admin -d student_projects"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 6. Backend
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app  # Bind mount for --reload
+    environment:
+      - APP_ENV=local
+      - DATABASE_MIGRATION_URL=postgresql+asyncpg://tul_psi_admin:tul_psi_admin@db:5432/student_projects
+      - DATABASE_URL=postgresql+asyncpg://tul_psi_app:tul_psi_app@db:5432/student_projects
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - LOG_LEVEL=debug
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+volumes:
+  postgres-data-all:

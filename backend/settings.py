@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # HMAC-SHA256 is the recommended symmetric signing algorithm for JWTs.
     jwt_algorithm: str = "HS256"
 
+    # Support for Entra ID (Azure Managed Identity) for DB authentication.
+    azure_managed_identity_enabled: bool = False
+
     @model_validator(mode="after")
     def _check_insecure_defaults_in_production(self) -> Settings:
         """Raise at startup when the JWT secret placeholder is used in production.
