@@ -105,7 +105,7 @@ async def create_course(
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A course with code '{body.code}' already exists or another integrity constraint was violated.",
+            detail=f"Course with code '{body.code}' exists or integrity constraint violated.",
         ) from None
     except Exception:
         logger.exception("Failed to create course", extra={"code": body.code})
