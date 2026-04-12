@@ -441,7 +441,7 @@ class ProjectsService:
                             self._session, lecturer_project_ids, user.id
                         )
                     )
-                    for pid, ev in raw_lecturer_pevals_map.items():
+                    for pid in lecturer_project_ids:
                         # Fetch peer feedback if results are unlocked for these lecturer projects.
                         p_obj = next((p for p, _ in rows if p.id == pid), None)
                         if p_obj and p_obj.results_unlocked:
@@ -460,9 +460,9 @@ class ProjectsService:
                                     _to_peer_feedback_detail(fb) for fb in raw_pfeedback
                                 ]
                         else:
-                            # Results locked: lecturer only sees their own draft/submission
-                            # Admin sees their own if they have one.
-                            if pid not in project_evals:
+                            # Results locked: lecturer/admin only sees their own draft/submission
+                            ev = raw_lecturer_pevals_map.get(pid)
+                            if ev and pid not in project_evals:
                                 project_evals[pid] = [_to_project_evaluation_detail(ev)]
 
         return [
