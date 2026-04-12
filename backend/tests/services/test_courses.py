@@ -386,7 +386,11 @@ async def test_create_course_calls_db_create_and_commits() -> None:
         term=CourseTerm.WINTER,
         project_type=ProjectType.TEAM,
         min_score=50,
+        owner_email="owner@tul.cz",
     )
+
+    owner_user = MagicMock(spec=User)
+    owner_user.id = 100
 
     with (
         patch(
@@ -409,10 +413,21 @@ async def test_create_course_calls_db_create_and_commits() -> None:
             new_callable=AsyncMock,
             return_value=[],
         ),
+        patch(
+            "services.courses.get_or_create_user",
+            new_callable=AsyncMock,
+            return_value=(owner_user, True),
+        ),
+        patch(
+            "services.courses.add_course_lecturer",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_add_lecturer,
     ):
         result = await CoursesService(session).create_course(data, current_user)
 
     session.commit.assert_called_once()
+    mock_add_lecturer.assert_called_once_with(session, 10, 100)
     assert result is not None
     assert result.id == 10
 

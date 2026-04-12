@@ -1,12 +1,15 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus } from 'lucide-react';
+import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock, Trash2, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, addCourseLecturer, ApiError } from '@/api';
-import { CourseDetail, ProjectPublic } from '@/types';
+import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, lockProject, addCourseLecturer, updateCourse, ApiError, deleteProject, deleteProjectMember } from '@/api';
+import { CourseDetail, ProjectPublic, UserRole, CourseUpdate } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Modal } from '@/components/ui/Modal';
+import { CourseForm } from '@/components/admin/CourseForm';
+import { Button } from '@/components/ui/Button';
 
 export const CourseProjects = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +39,11 @@ export const CourseProjects = () => {
   const [addingMemberTo, setAddingMemberTo] = useState<number | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberError, setMemberError] = useState<string | null>(null);
+
+  // Edit Course State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   
   const loadData = async () => {
     try {
@@ -130,6 +138,54 @@ export const CourseProjects = () => {
     }
   };
 
+  const handleRelockResults = async (projectId: number) => {
+    if (!window.confirm(t('admin.confirm_relock'))) return;
+    try {
+      await lockProject(projectId);
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: number) => {
+    if (!window.confirm(t('common.confirm_action'))) return;
+    try {
+      await deleteProject(projectId);
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
+    }
+  };
+
+  const handleDeleteMember = async (projectId: number, userId: number) => {
+    if (!window.confirm(t('common.confirm_action'))) return;
+    try {
+      await deleteProjectMember(projectId, userId);
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected');
+      alert(msg);
+    }
+  };
+
+  const handleUpdateCourse = async (data: CourseUpdate) => {
+    if (!course) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      await updateCourse(course.id, data);
+      setIsEditModalOpen(false);
+      await loadData();
+    } catch (err) {
+      setEditError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const sortedProjects = useMemo(() => {
     return [...projects].sort((a, b) => {
       if (a.academic_year !== b.academic_year) {
@@ -138,6 +194,13 @@ export const CourseProjects = () => {
       return a.title.localeCompare(b.title);
     });
   }, [projects]);
+
+  const isCourseOwner = useMemo(() => {
+    if (!user || !course) return false;
+    return course.lecturers.some(l => l.email === user.email);
+  }, [user, course]);
+
+  const canSeeEvaluations = user?.role === UserRole.ADMIN || isCourseOwner;
 
   const availableYears = useMemo(() => 
     Array.from(new Set(projects.map(p => p.academic_year))).sort((a, b) => b - a),
@@ -163,7 +226,6 @@ export const CourseProjects = () => {
       </div>
 
       {/* Course Header */}
-      {/* TODO: Course editing (admin only) */}
       <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -182,7 +244,15 @@ export const CourseProjects = () => {
               <span>{course.lecturers.map(l => l.name).join(', ')}</span>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              {t('admin.edit_course')}
+            </Button>
             <button
               onClick={() => setShowAddLecturerForm(!showAddLecturerForm)}
               className="inline-flex items-center px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-colors font-black text-sm shadow-sm"
@@ -401,10 +471,21 @@ export const CourseProjects = () => {
                     
                     <div className="flex items-center gap-2">
                       <Users size={14} className="text-slate-400" />
-                      <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-2 gap-y-2">
+                      <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-3 gap-y-2">
                         {!project.results_unlocked ? (
-                          project.members.length > 0 ? project.members.map((m, idx) => (
-                            <span key={m.id}>{m.name || m.email}{idx < project.members.length - 1 ? ',' : ''}</span>
+                          project.members.length > 0 ? project.members.map((m) => (
+                            <span key={m.id} className="flex items-center gap-1 group/member bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                              {m.name || m.email}
+                              {(user?.role === UserRole.ADMIN || isCourseOwner) && (
+                                <button
+                                  onClick={() => handleDeleteMember(project.id, m.id)}
+                                  className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/member:opacity-100"
+                                  title={t('common.delete')}
+                                >
+                                  <X size={12} />
+                                </button>
+                              )}
+                            </span>
                           )) : <span className="italic">{t('lecturer.no_members')}</span>
                         ) : (
                           project.members.map(member => {
@@ -486,19 +567,21 @@ export const CourseProjects = () => {
 
                     <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
                       <div className="flex items-center gap-6 flex-wrap">
-                        <div className="flex items-center gap-1.5 text-xs font-bold">
-                          {userEval ? (
-                            userEval.submitted ? (
-                              <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700">{t('lecturer.eval_submitted')}</span></>
+                        {canSeeEvaluations && (
+                          <div className="flex items-center gap-1.5 text-xs font-bold">
+                            {userEval ? (
+                              userEval.submitted ? (
+                                <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700">{t('lecturer.eval_submitted')}</span></>
+                              ) : (
+                                <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700">{t('lecturer.eval_draft')}</span></>
+                              )
                             ) : (
-                              <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700">{t('lecturer.eval_draft')}</span></>
-                            )
-                          ) : (
-                            <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500">{t('lecturer.eval_not_done')}</span></>
-                          )}
-                        </div>
+                              <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500">{t('lecturer.eval_not_done')}</span></>
+                            )}
+                          </div>
+                        )}
 
-                        {!project.results_unlocked && (
+                        {canSeeEvaluations && !project.results_unlocked && (
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2 text-slate-400">
                               <Users size={14} />
@@ -517,7 +600,25 @@ export const CourseProjects = () => {
                       </div>
 
                       <div className="flex gap-2">
-                        {!project.results_unlocked && (
+                        {!project.results_unlocked && (user?.role === UserRole.ADMIN || isCourseOwner) && (
+                          <button
+                            onClick={() => handleDeleteProject(project.id)}
+                            className="p-2.5 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors flex items-center justify-center border border-slate-200 hover:border-red-200"
+                            title={t('common.delete')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {user?.role === UserRole.ADMIN && project.results_unlocked && (
+                          <button
+                            onClick={() => handleRelockResults(project.id)}
+                            className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors flex items-center justify-center border border-red-200"
+                            title={t('admin.relock_results')}
+                          >
+                            <Lock className="w-4 h-4" />
+                          </button>
+                        )}
+                        {!project.results_unlocked && (user?.role === UserRole.ADMIN || isCourseOwner) && (
                           <button
                             onClick={() => handleUnlockResults(project.id)}
                             className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-colors flex items-center justify-center border border-amber-200"
@@ -534,12 +635,14 @@ export const CourseProjects = () => {
                             {t('student.show_results')}
                           </Link>
                         ) : (
-                          <Link
-                            to={`/lecturer/project/${project.id}/evaluate`}
-                            className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
-                          >
-                            {userEval ? t('lecturer.edit_evaluation') : t('lecturer.evaluate')}
-                          </Link>
+                          canSeeEvaluations && (
+                            <Link
+                              to={`/lecturer/project/${project.id}/evaluate`}
+                              className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
+                            >
+                              {userEval ? t('lecturer.edit_evaluation') : t('lecturer.evaluate')}
+                            </Link>
+                          )
                         )}
                       </div>
                     </div>
@@ -550,6 +653,21 @@ export const CourseProjects = () => {
           })
         )}
       </div>
+
+      {/* Edit Course Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={t('admin.edit_course')}
+        size="xl"
+      >
+        <CourseForm
+          initialData={course}
+          onSubmit={handleUpdateCourse}
+          isLoading={editLoading}
+          error={editError}
+        />
+      </Modal>
     </div>
   );
 };

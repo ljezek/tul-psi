@@ -23,7 +23,23 @@ export interface UserPublic {
   is_active: boolean;
 }
 
+export interface UserCreate {
+  email: string;
+  name?: string | null;
+  github_alias?: string | null;
+  role: UserRole;
+  is_active?: boolean;
+}
+
+export interface AdminUserUpdate {
+  name?: string | null;
+  github_alias?: string | null;
+  role?: UserRole | null;
+  is_active?: boolean | null;
+}
+
 export interface LecturerPublic {
+  id: number;
   name: string;
   github_alias: string | null;
   email: string | null;
@@ -200,6 +216,7 @@ export interface CourseCreate {
   term: CourseTerm;
   project_type: ProjectType;
   min_score: number;
+  owner_email: string;
   syllabus?: string | null;
   peer_bonus_budget?: number | null;
   evaluation_criteria?: EvaluationCriterion[];

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_optional_current_user, require_current_user
 from db.session import get_session
-from models.user import User, UserRole
+from models.user import User
 from schemas.courses import (
     CourseCreate,
     CourseDetail,
@@ -91,18 +91,21 @@ async def create_course(
     Only admins may call this endpoint.  Raises HTTP 401 when the request is
     unauthenticated and HTTP 403 when the caller is not an admin.
     """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create courses.",
-        )
     try:
         return await service.create_course(body, current_user)
-    except IntegrityError:
-        logger.warning("Course creation failed: duplicate code.", extra={"code": body.code})
+    except CoursePermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except IntegrityError as exc:
+        logger.warning(
+            "Course creation failed: integrity error.",
+            extra={"code": body.code, "error": str(exc.orig) if hasattr(exc, "orig") else str(exc)},
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A course with code '{body.code}' already exists.",
+            detail=f"Course with code '{body.code}' exists or integrity constraint violated.",
         ) from None
     except Exception:
         logger.exception("Failed to create course", extra={"code": body.code})

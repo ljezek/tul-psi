@@ -1,6 +1,8 @@
 import { config } from './config';
 import {
   UserPublic,
+  UserCreate,
+  AdminUserUpdate,
   ProjectPublic,
   ProjectUpdate,
   AddMemberBody,
@@ -14,7 +16,6 @@ import {
   ProjectEvaluationCreate,
   CourseEvaluationSubmit,
   CourseEvaluationFormResponse,
-  EvaluationOverviewResponse,
   CourseTerm,
   MemberPublic
 } from './types';
@@ -90,12 +91,30 @@ export async function logout(): Promise<void> {
   });
 }
 
+export async function getUsers(): Promise<UserPublic[]> {
+  return apiFetch<UserPublic[]>('/api/v1/users');
+}
+
+export async function createUser(data: UserCreate): Promise<UserPublic> {
+  return apiFetch<UserPublic>('/api/v1/users', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getCurrentUser(): Promise<UserPublic> {
   return apiFetch<UserPublic>('/api/v1/users/me');
 }
 
 export async function updateCurrentUser(data: { name?: string; github_alias?: string | null }): Promise<UserPublic> {
   return apiFetch<UserPublic>('/api/v1/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateUser(id: number, data: AdminUserUpdate): Promise<UserPublic> {
+  return apiFetch<UserPublic>(`/api/v1/users/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
@@ -192,6 +211,12 @@ export async function unlockProject(projectId: number): Promise<ProjectPublic> {
   });
 }
 
+export async function lockProject(projectId: number): Promise<ProjectPublic> {
+  return apiFetch<ProjectPublic>(`/api/v1/projects/${projectId}/lock`, {
+    method: 'POST',
+  });
+}
+
 export async function getCourseEvaluation(projectId: number): Promise<CourseEvaluationFormResponse> {
   return apiFetch<CourseEvaluationFormResponse>(`/api/v1/projects/${projectId}/course-evaluation`);
 }
@@ -203,7 +228,13 @@ export async function submitCourseEvaluation(projectId: number, data: CourseEval
   });
 }
 
-export async function getEvaluationOverview(courseId: number, year?: number): Promise<EvaluationOverviewResponse> {
-  const path = `/api/v1/courses/${courseId}/evaluation-overview${year ? `?year=${year}` : ''}`;
-  return apiFetch<EvaluationOverviewResponse>(path);
+export async function deleteProject(projectId: number): Promise<void> {
+  const path = `/api/v1/projects/${projectId}`;
+  return apiFetch<void>(path, { method: 'DELETE' });
 }
+
+export async function deleteProjectMember(projectId: number, userId: number): Promise<void> {
+  const path = `/api/v1/projects/${projectId}/members/${userId}`;
+  return apiFetch<void>(path, { method: 'DELETE' });
+}
+

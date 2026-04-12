@@ -1,12 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, Users, FolderOpen, AlertCircle } from 'lucide-react';
+import { BookOpen, Users, FolderOpen, AlertCircle, Plus, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourses, ApiError } from '@/api';
-import { CourseListItem } from '@/types';
+import { getCourses, createCourse, ApiError, getCourse, updateCourse } from '@/api';
+import { CourseListItem, UserRole, CourseCreate, CourseUpdate, CourseDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { CourseForm } from '@/components/admin/CourseForm';
 
 export const LecturerHome = () => {
   const { t } = useLanguage();
@@ -14,6 +17,11 @@ export const LecturerHome = () => {
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<CourseDetail | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchCourses = async () => {
     try {
@@ -36,8 +44,48 @@ export const LecturerHome = () => {
     fetchCourses();
   }, []);
 
+  const handleOpenCreate = () => {
+    setEditingCourse(null);
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = async (courseId: number) => {
+    try {
+      setFormLoading(true);
+      const detail = await getCourse(courseId);
+      setEditingCourse(detail);
+      setIsModalOpen(true);
+    } catch {
+      alert(t('courseDetail.error_fetching'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleSubmitCourse = async (data: CourseCreate | CourseUpdate) => {
+    setFormLoading(true);
+    setFormError(null);
+    try {
+      if (editingCourse) {
+        await updateCourse(editingCourse.id, data as CourseUpdate);
+      } else {
+        await createCourse(data as CourseCreate);
+      }
+      setIsModalOpen(false);
+      fetchCourses();
+    } catch (_err) {
+      setFormError(_err instanceof ApiError && typeof _err.detail === 'string' ? _err.detail : t('login.error_unexpected'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   const filteredCourses = useMemo(() => {
     if (!user) return [];
+    if (user.role === UserRole.ADMIN) {
+      return [...courses].sort((a, b) => a.code.localeCompare(b.code));
+    }
     return courses.filter(course => course.lecturer_names.includes(user.name))
       .sort((a, b) => a.code.localeCompare(b.code));
   }, [courses, user]);
@@ -46,17 +94,25 @@ export const LecturerHome = () => {
   if (error) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error} onRetry={fetchCourses} retryLabel={t('error.retry')} /></div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
       {/* TODO: Add evaluation overview table (stretch goal) */}
-      <header className="mb-12">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-          {t('lecturer.title')}
-        </h1>
-        <div className="flex items-center gap-2 text-slate-500 font-medium">
-          <div className="w-2 h-2 rounded-full bg-tul-blue animate-pulse" />
-          {t('lecturer.subtitle')}
-        </div>
-      </header>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <header>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+            {t('lecturer.title')}
+          </h1>
+          <div className="flex items-center gap-2 text-slate-500 font-medium">
+            <div className="w-2 h-2 rounded-full bg-tul-blue animate-pulse" />
+            {t('lecturer.subtitle')}
+          </div>
+        </header>
+        {user?.role === UserRole.ADMIN && (
+          <Button onClick={handleOpenCreate} className="flex items-center gap-2 shadow-lg shadow-tul-blue/20">
+            <Plus size={18} />
+            {t('admin.create_course')}
+          </Button>
+        )}
+      </div>
 
       {filteredCourses.length === 0 ? (
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
@@ -70,18 +126,24 @@ export const LecturerHome = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCourses.map((course) => {
+            const isUserLecturer = course.lecturer_names.includes(user?.name || '');
             return (
               <div
                 key={course.id}
-                className="group bg-white rounded-3xl border border-tul-blue/40 ring-1 ring-tul-blue/10 bg-tul-blue/[0.01] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col"
+                className={`group bg-white rounded-3xl border ${isUserLecturer ? 'border-tul-blue ring-2 ring-tul-blue/5' : 'border-slate-200'} shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 overflow-hidden flex flex-col`}
               >
                 <div className="p-8 flex-grow space-y-6">
                   <div>
-                    <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-tul-blue group-hover:border-tul-blue/30 transition-colors inline-block mb-3">
+                    <Link
+                      to={`/lecturer/course/${course.id}`}
+                      className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-tul-blue group-hover:border-tul-blue/30 transition-colors inline-block mb-3"
+                    >
                       {course.code}
-                    </span>
+                    </Link>
                     <h3 className="text-2xl font-black text-slate-800 line-clamp-2">
-                      {course.name}
+                      <Link to={`/lecturer/course/${course.id}`} className="hover:text-tul-blue transition-colors">
+                        {course.name}
+                      </Link>
                     </h3>
                   </div>
 
@@ -89,7 +151,11 @@ export const LecturerHome = () => {
                     <div className="flex items-start gap-2">
                       <Users size={16} className="text-slate-400 shrink-0 mt-0.5" />
                       <div className="text-sm font-bold text-slate-500 line-clamp-2">
-                        {course.lecturer_names.join(', ') || '—'}
+                        {course.lecturer_names.map((name, idx) => (
+                          <span key={idx} className={name === user?.name ? 'text-tul-blue font-black underline decoration-tul-blue/30 underline-offset-4' : ''}>
+                            {name}{idx < course.lecturer_names.length - 1 ? ', ' : ''}
+                          </span>
+                        )) || '—'}
                       </div>
                     </div>
                     
@@ -118,19 +184,44 @@ export const LecturerHome = () => {
                   </div>
                 </div>
 
-                <div className="p-6 pt-0 mt-auto">
+                <div className="p-6 pt-0 mt-auto flex gap-2">
                   <Link
                     to={`/lecturer/course/${course.id}`}
-                    className="block w-full text-center px-4 py-3 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue text-sm font-black rounded-xl transition-colors border border-slate-200 hover:border-tul-blue"
+                    className="flex-1 text-center px-4 py-3 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue text-sm font-black rounded-xl transition-colors border border-slate-200 hover:border-tul-blue"
                   >
                     {t('lecturer.manage_projects')}
                   </Link>
+                  {(user?.role === UserRole.ADMIN || course.lecturer_names.includes(user?.name || '')) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleOpenEdit(course.id)}
+                      className="px-3"
+                      title={t('admin.edit_course')}
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Admin Create/Edit Course Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingCourse ? t('admin.edit_course') : t('admin.create_course')}
+        size="xl"
+      >
+        <CourseForm
+          initialData={editingCourse}
+          onSubmit={handleSubmitCourse}
+          isLoading={formLoading}
+          error={formError}
+        />
+      </Modal>
     </div>
   );
 };

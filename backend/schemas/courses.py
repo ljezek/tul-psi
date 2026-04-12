@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectType
 from schemas.projects import LecturerPublic
+from validators import validate_tul_email
 
 
 class CourseStats(BaseModel):
@@ -92,7 +93,14 @@ class CourseCreate(BaseModel):
     term: CourseTerm
     project_type: ProjectType
     min_score: int
+    owner_email: EmailStr
     syllabus: str | None = None
+
+    @field_validator("owner_email")
+    @classmethod
+    def _validate_owner_email(cls, v: str) -> str:
+        return validate_tul_email(v)
+
     # Null means no peer-bonus-point scheme for this course.
     peer_bonus_budget: int | None = None
     evaluation_criteria: list[EvaluationCriterion] = Field(default_factory=list)

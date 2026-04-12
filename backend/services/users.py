@@ -9,7 +9,9 @@ from db.users import get_user as db_get_user
 from db.users import get_users as db_get_users
 from models.user import User, UserRole
 from schemas.users import AdminUserUpdate, UserCreate, UserPublic, UserUpdate
-from validators import require_user_id
+from services.email import EmailSender, EmailTemplate
+from settings import get_settings
+from validators import derive_display_name, require_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -123,10 +125,13 @@ class UsersService:
         if current_user.role != UserRole.ADMIN:
             raise PermissionDeniedError("Only admins can create users.")
 
+        # Derive a human-readable name from the email local part when none is provided.
+        resolved_name = body.name if body.name is not None else derive_display_name(body.email)
+
         user, created = await db_get_or_create_user(
             self._session,
             email=body.email,
-            name=body.name,
+            name=resolved_name,
             github_alias=body.github_alias,
             role=body.role,
         )
@@ -137,6 +142,23 @@ class UsersService:
         user.is_active = body.is_active
 
         await self._session.commit()
+
+        # Send invitation email.
+        _settings = get_settings()
+        EmailSender(app_env=_settings.app_env).send(
+            EmailTemplate.user_invite(
+                to=body.email,
+                role=body.role.value.lower(),
+                portal_url=_settings.frontend_url,
+            )
+        )
+        # Note: We should probably have a better "welcome" email template,
+        # but for now we reuse the OTP notification pattern or just log it.
+        logger.info(
+            "User created by admin and invite sent.",
+            extra={"email": body.email, "role": body.role},
+        )
+
         return UserPublic(
             id=require_user_id(user),
             email=user.email,

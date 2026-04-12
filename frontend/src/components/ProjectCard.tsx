@@ -1,20 +1,24 @@
 import { Link } from 'react-router-dom';
-import { ExternalLink, Users, Tag } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { ExternalLink, Users, Tag, Settings } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
-import { ProjectPublic } from '@/types';
+import { ProjectPublic, UserRole } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
 
 export interface ProjectCardProps {
   project: ProjectPublic;
+  onEditCourse?: (courseId: number) => void;
 }
 
-export const ProjectCard = ({ project }: ProjectCardProps) => {
+export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
   const { t } = useLanguage();
   const { user } = useAuth();
 
   const isMember = project.members.some(m => m.id === user?.id);
+  const isCourseOwner = project.course.lecturers.some(l => l.email === user?.email);
+  const canEditCourse = user?.role === UserRole.ADMIN || isCourseOwner;
 
   // Truncate members list
   const memberNames = project.members.map(m => m.name.split(' ')[0]);
@@ -31,12 +35,26 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
 
       {/* Header Area */}
       <div className="p-4 flex justify-between items-start gap-2 relative z-10 pointer-events-none">
-        <Link
-          to={`/courses/${project.course.id}`}
-          className="pointer-events-auto px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider hover:bg-tul-blue/20 transition-colors"
-        >
-          {project.course.code}
-        </Link>
+        <div className="flex gap-2 items-center pointer-events-auto">
+          <Link
+            to={`/courses/${project.course.id}`}
+            className="px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider hover:bg-tul-blue/20 transition-colors"
+          >
+            {project.course.code}
+          </Link>
+          {canEditCourse && onEditCourse && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onEditCourse(project.course.id);
+              }}
+              className="p-1 text-slate-400 hover:text-tul-blue hover:bg-slate-100 rounded-lg transition-all"
+              title={t('admin.edit_course')}
+            >
+              <Settings size={14} />
+            </button>
+          )}
+        </div>
         <span className="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded">
           {project.academic_year}/{project.academic_year + 1}
         </span>
@@ -47,9 +65,13 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
         <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-tul-blue transition-colors">
           {project.title}
         </h3>
-        <p className="text-slate-600 text-sm line-clamp-2 mb-4">
-          {project.description || t('project.no_description')}
-        </p>
+        <div className="text-slate-600 text-sm line-clamp-2 mb-4 prose-compact">
+          {project.description ? (
+            <ReactMarkdown>{project.description}</ReactMarkdown>
+          ) : (
+            t('project.no_description')
+          )}
+        </div>
 
         {/* Technologies */}
         <div className="flex flex-wrap gap-1 mb-4">

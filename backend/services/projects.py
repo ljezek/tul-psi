@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.auth import get_or_create_user
@@ -40,6 +41,9 @@ from db.projects import (
 )
 from db.projects import (
     get_project as db_get_project,
+)
+from db.projects import (
+    lock_project_results as db_lock_project_results,
 )
 from db.projects import (
     unlock_project_results as db_unlock_project_results,
@@ -153,6 +157,7 @@ def _build_project(
             links=c.links,
             lecturers=[
                 LecturerPublic(
+                    id=require_user_id(u),
                     name=u.name,
                     github_alias=u.github_alias,
                     email=(u.email if authenticated else None),
@@ -418,14 +423,16 @@ class ProjectsService:
                 for pid, fbs in raw_pfeedback_map.items():
                     peer_feedback[pid] = [_to_peer_feedback_detail(fb) for fb in fbs]
 
-            # 2. Lecturer logic: fetch evaluations for projects where user is a lecturer
+            # 2. Lecturer/Admin logic: fetch evaluations
             if user.role in (UserRole.ADMIN, UserRole.LECTURER):
-                # Identify which projects the user is a lecturer for
+                # Identify which projects the user is a lecturer for (Admins see all)
                 lecturer_project_ids = []
                 for p, c in rows:
                     if p.id is not None and c.id is not None:
-                        # Check if user is in lecturers_by_course[c.id]
-                        if any(lect.id == user.id for lect in lecturers_by_course.get(c.id, [])):
+                        # Admins see all projects; Lecturers only see their assigned courses
+                        if user.role == UserRole.ADMIN or any(
+                            lect.id == user.id for lect in lecturers_by_course.get(c.id, [])
+                        ):
                             lecturer_project_ids.append(p.id)
 
                 if lecturer_project_ids:
@@ -435,11 +442,11 @@ class ProjectsService:
                             self._session, lecturer_project_ids, user.id
                         )
                     )
-                    for pid, ev in raw_lecturer_pevals_map.items():
+                    for pid in lecturer_project_ids:
                         # Fetch peer feedback if results are unlocked for these lecturer projects.
                         p_obj = next((p for p, _ in rows if p.id == pid), None)
                         if p_obj and p_obj.results_unlocked:
-                            # Results are unlocked: lecturers see EVERYTHING
+                            # Results are unlocked: lecturers/admins see EVERYTHING
                             if pid not in project_evals:
                                 raw_all_pevals = await get_project_evaluations(self._session, pid)
                                 project_evals[pid] = [
@@ -454,8 +461,9 @@ class ProjectsService:
                                     _to_peer_feedback_detail(fb) for fb in raw_pfeedback
                                 ]
                         else:
-                            # Results locked: lecturer only sees their own draft/submission
-                            if pid not in project_evals:
+                            # Results locked: lecturer/admin only sees their own draft/submission
+                            ev = raw_lecturer_pevals_map.get(pid)
+                            if ev and pid not in project_evals:
                                 project_evals[pid] = [_to_project_evaluation_detail(ev)]
 
         return [
@@ -527,28 +535,29 @@ class ProjectsService:
         if row is None:
             return None
 
-        p, c = row
-        project_id_list = [p.id] if p.id is not None else []
-        course_id_list = [c.id] if c.id is not None else []
+        project, course = row
+        project_id_list = [project.id] if project.id is not None else []
+        course_id_list = [course.id] if course.id is not None else []
         members_by_project = await get_project_members(self._session, project_id_list)
         lecturers_by_course = await get_course_lecturers(self._session, course_id_list)
         eval_counts = await get_evaluation_counts_for_projects(self._session, project_id_list)
 
         project_evaluations: list[ProjectEvaluationDetail] | None = None
+
         course_evaluations: list[CourseEvaluationDetail] | None = None
         received_peer_feedback: list[PeerFeedbackDetail] | None = None
         authored_peer_feedback: list[PeerFeedbackDetail] | None = None
 
-        if p.results_unlocked:
+        if project.results_unlocked:
             raw_project_evaluations = await get_project_evaluations(self._session, project_id)
             project_evaluations = [
                 _to_project_evaluation_detail(ev) for ev in raw_project_evaluations
             ]
 
             if user.role in (UserRole.ADMIN, UserRole.LECTURER):
-                if c.id is not None:
+                if course.id is not None:
                     raw_course_evaluations = await get_course_evaluations(
-                        self._session, c.id, academic_year=p.academic_year
+                        self._session, course.id, academic_year=project.academic_year
                     )
                     course_evaluations = [
                         _to_course_evaluation_detail(ev) for ev in raw_course_evaluations
@@ -578,7 +587,7 @@ class ProjectsService:
         # Students always see their own course evaluation status (draft or submitted)
         # only if they are members of the project.
         if user.role == UserRole.STUDENT and user.id is not None:
-            members = members_by_project.get(p.id, [])
+            members = members_by_project.get(project.id, [])
             is_member = any(m.id == user.id for m in members)
             if is_member:
                 raw_my_eval = await get_course_evaluation_by_student(
@@ -588,17 +597,21 @@ class ProjectsService:
                     course_evaluations = [_to_course_evaluation_detail(raw_my_eval)]
 
         return _build_project(
-            p,
-            c,
-            members_by_project.get(p.id, []) if p.id is not None else [],
-            lecturers_by_course.get(c.id, []) if c.id is not None else [],
+            project,
+            course,
+            members_by_project.get(project.id, []) if project.id is not None else [],
+            lecturers_by_course.get(course.id, []) if course.id is not None else [],
             authenticated=True,
             project_evaluations=project_evaluations,
             course_evaluations=course_evaluations,
             received_peer_feedback=received_peer_feedback,
             authored_peer_feedback=authored_peer_feedback,
-            submitted_lecturer_count=eval_counts.get(p.id, (0, 0))[0] if p.id is not None else 0,
-            submitted_student_count=eval_counts.get(p.id, (0, 0))[1] if p.id is not None else 0,
+            submitted_lecturer_count=eval_counts.get(project.id, (0, 0))[0]
+            if project.id is not None
+            else 0,
+            submitted_student_count=eval_counts.get(project.id, (0, 0))[1]
+            if project.id is not None
+            else 0,
         )
 
     async def _check_write_permission(self, project_id: int, user: User) -> tuple[Project, Course]:
@@ -857,6 +870,34 @@ class ProjectsService:
         await self._session.commit()
 
         return await self.get_project_detail(project_id, requester)
+
+    async def lock_project(self, project_id: int, requester: User) -> ProjectPublic:
+        """Set ``results_unlocked=False`` on the project identified by *project_id*.
+
+        Raises ``LookupError`` when the project does not exist.
+        Raises ``PermissionError`` when *requester* is not an admin or assigned lecturer.
+
+        Returns the updated ``ProjectPublic``.
+        """
+        tracer = trace.get_tracer(__name__)
+
+        with tracer.start_as_current_span("service.lock_project") as span:
+            span.set_attribute("project_id", project_id)
+            span.set_attribute("requester_id", requester.id or 0)
+
+            row = await db_get_project(self._session, project_id)
+            if row is None:
+                raise LookupError(f"Project {project_id} not found.")
+
+            _p, course = row
+            if course.id is None:
+                raise ValueError(f"Course returned from DB has no id: {course!r}")
+
+            await require_course_manage_access(self._session, course.id, requester)
+            await db_lock_project_results(self._session, project_id)
+            await self._session.commit()
+
+            return await self.get_project_detail(project_id, requester)
 
     async def get_project_evaluation(
         self,

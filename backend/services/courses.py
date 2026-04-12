@@ -46,7 +46,7 @@ from schemas.projects import AddUserBody, LecturerPublic
 from services.auth import is_admin_or_course_lecturer, require_course_manage_access
 from services.email import EmailSender, EmailTemplate
 from settings import get_settings
-from validators import derive_display_name
+from validators import derive_display_name, require_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ def _lecturer_public(user: User, *, include_email: bool) -> LecturerPublic:
     only be the case when the requesting user holds a valid session.
     """
     return LecturerPublic(
+        id=require_user_id(user),
         name=user.name,
         github_alias=user.github_alias,
         email=user.email if include_email else None,
@@ -182,10 +183,9 @@ class CoursesService:
 
         include_email = current_user is not None
         lecturer_ids = {u.id for u in lecturer_users if u.id is not None}
-        show_evaluations = is_admin_or_course_lecturer(current_user, lecturer_ids)
 
         course_evaluations: list[CourseEvaluationPublic] | None = None
-        if show_evaluations:
+        if is_admin_or_course_lecturer(current_user, lecturer_ids):
             raw = await get_course_evaluations(self._session, cid)
             course_evaluations = [_course_evaluation_public(ev) for ev in raw]
 
@@ -222,6 +222,18 @@ class CoursesService:
 
         created_by = current_user.id
         course = await db_create_course(self._session, data, created_by)
+
+        # Resolve owner email to a user and assign as lecturer.
+        owner, _ = await get_or_create_user(
+            self._session,
+            data.owner_email,
+            derive_display_name(data.owner_email),
+            github_alias=None,
+            role=UserRole.LECTURER,
+        )
+
+        await add_course_lecturer(self._session, _require_course_id(course.id), owner.id)
+
         await self._session.commit()
 
         # Fetch the full detail (includes lecturers list — empty for a new course).
