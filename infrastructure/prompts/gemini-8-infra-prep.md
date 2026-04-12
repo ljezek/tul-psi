@@ -97,3 +97,6 @@ Add `azure-identity` to `backend/requirements.txt` and update `backend/db/sessio
 
 ## 5. OTel Collector Configuration (`infrastructure/otel-collector-config.yaml`)
 Configure receivers for OTLP and exporters for both the local `monitoring-stack` and the future Azure `azuremonitor`.
+
+## 6. Backend OTel Instrumentation
+Instrument the backend code with the native OTel instrumentors (for HTTP server and outbound DB). Configure it to connect to local OTel collector.
