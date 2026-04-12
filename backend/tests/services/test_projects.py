@@ -1105,6 +1105,7 @@ async def test_service_lock_project_sets_results_unlocked() -> None:
             new_callable=AsyncMock,
             return_value=[],
         ),
+        patch("services.projects.trace"),
         patch.object(session, "commit", new_callable=AsyncMock),
     ):
         result = await ProjectsService(session).lock_project(5, user)

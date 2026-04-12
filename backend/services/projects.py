@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+
+from opentelemetry import trace
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -878,8 +880,6 @@ class ProjectsService:
 
         Returns the updated ``ProjectPublic``.
         """
-        from opentelemetry import trace
-
         tracer = trace.get_tracer(__name__)
 
         with tracer.start_as_current_span("service.lock_project") as span:
