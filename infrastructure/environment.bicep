@@ -8,7 +8,7 @@ param acrName string
 param acrResourceGroup string
 param dbHost string
 param dbName string
-param containerImage string = 'mcr.microsoft.com/azuredigitaltwins/samples/hello-container:latest'
+param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 // --- Monitoring (Per Environment) ---
 module monitoring './modules/monitoring.bicep' = {

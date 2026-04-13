@@ -94,11 +94,14 @@ az deployment group validate \
                adminPrincipalName=$(az ad signed-in-user show --query userPrincipalName -o tsv)
 
 # Validate environment-specific infrastructure (e.g., dev)
+# Note: Get the full subnetId from the outputs of your 'shared' deployment:
+# az deployment group show -g rg-spc-shared-pl -n network-deployment --query properties.outputs.snetDevId.value -o tsv
+
 az deployment group validate \
   --resource-group rg-spc-dev-pl \
   --template-file infrastructure/environment.bicep \
   --parameters env=dev \
-               subnetId="/subscriptions/.../subnets/snet-dev" \
+               subnetId="/subscriptions/ca830bff-0330-40f0-8d49-a18d5db67e9c/resourceGroups/rg-spc-shared-pl/providers/Microsoft.Network/virtualNetworks/vnet-spc-shared/subnets/snet-dev" \
                acrName="acrtulspc" \
                acrResourceGroup="rg-spc-shared-pl" \
                dbHost="psql-spc-shared.postgres.database.azure.com" \
@@ -134,8 +137,7 @@ The first deployment must follow a specific order because components depend on e
 ## 4. Architecture Notes
 
 - **Zero-Trust:** No passwords or secrets are stored in GitHub or Azure Key Vault. All services use **Managed Identities**.
-- **Initial Deployment:** The first infrastructure deployment uses a public "hello-world" image (`mcr.microsoft.com/...`) because the ACR is initially empty. 
-- **Image Preservation:** The `infrastructure.yml` workflow is designed to detect if the Container App already exists. If it does, it fetches the current image (e.g., `acrtulspc.azurecr.io/backend:SHA`) and passes it back to Bicep. This prevents infrastructure updates from reverting your app to the "hello-world" placeholder.
+- **Initial Deployment:** The first infrastructure deployment uses a public "hello-world" image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`) because the ACR is initially empty. Furtehr deployments should pass `containerImage=acrtulspc.azurecr.io/backend:latest` to Bicep.
 - **Scale-to-Zero:** The backend (Azure Container Apps) is configured with `minReplicas: 0`. It costs $0 when not in use.
 - **Permission Split:** 
     - The `job-spc-dev-migrate` uses a **DDL Identity** (PostgreSQL Admin) for schema changes.
