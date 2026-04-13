@@ -1,0 +1,19 @@
+name: Infrastructure Gate
+on:
+  pull_request:
+    paths:
+      - 'infrastructure/**'
+    branches: [ main ]
+
+jobs:
+  test-infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Static Analysis (az bicep build)
+        run: |
+          mkdir -p infrastructure/dist
+          # Building the entry points validates all referenced modules
+          az bicep build --file infrastructure/shared.bicep --outfile infrastructure/dist/shared.json
+          az bicep build --file infrastructure/environment.bicep --outfile infrastructure/dist/environment.json

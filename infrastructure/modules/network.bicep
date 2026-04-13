@@ -15,7 +15,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
       {
         name: 'snet-db'
         properties: {
-          addressPrefix: '10.0.5.0/28'
+          addressPrefix: '10.0.4.0/28'
           delegations: [
             {
               name: 'delegation'
@@ -29,7 +29,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
       {
         name: 'snet-dev'
         properties: {
-          addressPrefix: '10.0.1.0/23'
+          addressPrefix: '10.0.0.0/23'
           delegations: [
             {
               name: 'delegation'
@@ -43,7 +43,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
       {
         name: 'snet-prod'
         properties: {
-          addressPrefix: '10.0.3.0/23'
+          addressPrefix: '10.0.2.0/23'
           delegations: [
             {
               name: 'delegation'

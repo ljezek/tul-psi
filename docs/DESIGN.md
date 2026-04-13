@@ -396,18 +396,17 @@ graph TB
             subgraph "snet-db (10.0.5.0/28)"
                 DB[(PostgreSQL Flexible Server<br/>'Shared Instance')]
             end
-            
-            subgraph "snet-dev (10.0.1.0/23)"
+
+            subgraph "snet-dev (10.0.0.0/23)"
                 ACA_DEV[FastAPI Backend - Dev]
                 OTEL_DEV[OTel Sidecar - Dev]
             end
 
-            subgraph "snet-prod (10.0.3.0/23)"
+            subgraph "snet-prod (10.0.2.0/23)"
                 ACA_PROD[FastAPI Backend - Prod]
                 OTEL_PROD[OTel Sidecar - Prod]
             end
-        end
-    end
+        end    end
 
     SWA -- "HTTPS / JSON" --> ACA_DEV
     GH -- "OIDC / Bicep" --> UAMI
