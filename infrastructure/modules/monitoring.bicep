@@ -2,7 +2,7 @@ param location string
 param prefix string
 param env string
 
-resource law 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' [truncated]
+// Remove truncated or unnecessary resource
 resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: 'law-${prefix}-${env}'
   location: location

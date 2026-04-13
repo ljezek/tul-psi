@@ -60,7 +60,7 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 - `AZURE_DB_ADMIN_NAME`: Your personal Entra ID Display Name or Email.
 
 ### Step 4: Set GitHub Secrets
-
+### Step 4: Use Azure Login in Workflows
 Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure) to retrieve the Cloud access token in your GitHub workflow.
 
 ---
