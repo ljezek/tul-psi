@@ -11,7 +11,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     volumes:
-      - ./infrastructure/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
 
@@ -21,7 +21,7 @@ services:
     ports:
       - "3001:3000"   # Grafana UI
     volumes:
-      - ./infrastructure/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./infrastructure/monitoring/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
     depends_on:
       - prometheus
       - jaeger
@@ -30,7 +30,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.111.0
     volumes:
-      - ./infrastructure/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - ./infrastructure/monitoring/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     ports:
       - "8889:8889"   # Prometheus metrics scrape endpoint
