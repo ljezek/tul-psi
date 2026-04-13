@@ -405,7 +405,8 @@ graph TB
             subgraph "snet-prod (10.0.2.0/23)"
                 ACA_PROD[FastAPI Backend - Prod]
                 OTEL_PROD[OTel Sidecar - Prod]
-            end
+        end
+    end
         end    end
 
     SWA -- "HTTPS / JSON" --> ACA_DEV
