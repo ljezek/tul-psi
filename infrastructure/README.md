@@ -86,18 +86,18 @@ This checks if the deployment would succeed without actually creating resources.
 ```bash
 # Validate shared infrastructure
 az deployment group validate \
-  --resource-group rg-spc-shared \
+  --resource-group rg-spc-shared-pl \
   --template-file infrastructure/shared.bicep \
   --parameters adminPrincipalId=$(az ad signed-in-user show --query id -o tsv) \
                adminPrincipalName=$(az ad signed-in-user show --query userPrincipalName -o tsv)
 
 # Validate environment-specific infrastructure (e.g., dev)
 az deployment group validate \
-  --resource-group rg-spc-dev \
+  --resource-group rg-spc-dev-pl \
   --template-file infrastructure/environment.bicep \
   --parameters env=dev \
                subnetId="/subscriptions/.../subnets/snet-dev" \
-               acrName="acr-spc-shared" \
+               acrName="acr-spc-shared-pl" \
                dbHost="psql-spc-shared.postgres.database.azure.com" \
                dbName="spc_dev"
 ```
