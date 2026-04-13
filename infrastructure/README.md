@@ -59,7 +59,6 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 - `AZURE_DB_ADMIN_ID`: Your personal Entra ID Object ID (to be the initial DB admin).
 - `AZURE_DB_ADMIN_NAME`: Your personal Entra ID Display Name or Email.
 
-### Step 4: Set GitHub Secrets
 ### Step 4: Use Azure Login in Workflows
 Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure) to retrieve the Cloud access token in your GitHub workflow.
 
@@ -70,12 +69,13 @@ Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/sec
 The first deployment must follow a specific order because components depend on each other.
 
 1.  **Trigger Infrastructure:** Go to **Actions > Infrastructure Deployment** and run it manually (for `dev`). This creates the VNet, ACR, and the Database.
-2.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**. This will:
+2.  **Create DB Users:** Bicep cannot reach inside the PostgreSQL engine to run GRANT statements. Manually create the roles for the app and migrator managed identities. See [database/init-db.sh](../database/init-db.sh).
+3.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**. This will:
     - Build the Docker image.
     - Push it to the new ACR.
     - Run the Migration Job to set up the DB schema.
     - Update the Container App.
-3.  **Trigger Frontend:** Go to **Actions > Frontend Deployment (Dev)**. This will build and deploy the React app to Azure Static Web Apps.
+4.  **Trigger Frontend:** Go to **Actions > Frontend Deployment (Dev)**. This will build and deploy the React app to Azure Static Web Apps.
 
 ---
 
