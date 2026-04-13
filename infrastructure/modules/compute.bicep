@@ -5,7 +5,19 @@ param subnetId string
 param acrName string
 param dbHost string
 param dbName string
+param location string
+param prefix string
+param env string
+param subnetId string
+param acrName string
+param dbHost string
+param dbName string
 param aiConnectionString string
+param lawId string
+
+resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
+  name: last(split(lawId, '/'))
+}
 
 // --- ACA Environment ---
 resource env_aca 'Microsoft.App/managedEnvironments@2023-05-01' = {
@@ -71,7 +83,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
           image: '${acrName}.azurecr.io/backend:latest'
           env: [
             { name: 'DATABASE_URL', value: 'postgresql+psycopg://${app_identity.properties.principalId}@${dbHost}:5432/${dbName}' }
-            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
+            { name: 'DATABASE_URL', value: 'postgresql+psycopg://${app_identity.name}@${dbHost}:5432/${dbName}' }
           ]
           resources: {
             cpu: json('0.5')
@@ -121,7 +133,7 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           ]
         }
       ]
-    }
+            { name: 'DATABASE_URL', value: 'postgresql+psycopg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
   }
 }
 
