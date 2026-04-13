@@ -1,0 +1,86 @@
+name: "Infrastructure Deployment"
+
+on:
+  push:
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-shared:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create Shared RG
+        run: az group create --name rg-spc-shared-pl --location polandcentral
+
+      - name: Deploy Shared Bicep
+        id: shared_deploy
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: rg-spc-shared-pl
+          template: ./infrastructure/shared.bicep
+          parameters: >
+            adminPrincipalId=${{ secrets.AZURE_DB_ADMIN_ID }}
+            adminPrincipalName=${{ secrets.AZURE_DB_ADMIN_NAME }}
+
+  deploy-env:
+    needs: deploy-shared
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Shared Outputs
+        id: shared_outputs
+        run: |
+          ACR_NAME=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.acrName.value -o tsv)
+          DB_HOST=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.dbHost.value -o tsv)
+          SNET_ID=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.snetDevId.value -o tsv)
+          echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
+          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+          echo "SNET_ID=$SNET_ID" >> $GITHUB_ENV
+
+      - name: Create Env RG
+        run: az group create --name rg-spc-${{ env.ENV_NAME }}-pl --location polandcentral
+
+      - name: Deploy Env Bicep
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: rg-spc-${{ env.ENV_NAME }}-pl
+          template: ./infrastructure/environment.bicep
+          parameters: >
+            env=${{ env.ENV_NAME }}
+            subnetId=${{ env.SNET_ID }}
+            acrName=${{ env.ACR_NAME }}
+            dbHost=${{ env.DB_HOST }}
+            dbName=spc_${{ env.ENV_NAME }}
