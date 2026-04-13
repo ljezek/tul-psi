@@ -393,7 +393,7 @@ graph TB
         UAMI[User Managed Identity<br/>'GH Deployer']
         
         subgraph "vnet-spc-shared (10.0.0.0/16)"
-            subgraph "snet-db (10.0.5.0/28)"
+            subgraph "snet-db (10.0.4.0/28)"
                 DB[(PostgreSQL Flexible Server<br/>'Shared Instance')]
             end
 
