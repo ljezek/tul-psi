@@ -2,7 +2,7 @@ param location string
 param prefix string
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
-  name: 'acr${replace(prefix, '-', '')}'
+  name: 'acrtul${replace(prefix, '-', '')}'
   location: location
   sku: {
     name: 'Basic'

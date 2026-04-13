@@ -139,6 +139,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# Infrastructure
+infrastructure/dist/
+
 # Python
 __pycache__/
 *.py[cod]

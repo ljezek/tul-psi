@@ -390,19 +390,19 @@ graph TB
 
     subgraph "rg-spc-shared-pl (Poland Central)"
         ACR[Azure Container Registry<br/>'Basic SKU']
-        UAMI[User Managed Identity<br/>'GH Deployer']
+        FEDGH[Service Principal<br/>'gh-actions-spc-main']
         
         subgraph "vnet-spc-shared (10.0.0.0/16)"
-            subgraph "snet-db (10.0.5.0/28)"
+            subgraph "snet-db (10.0.4.0/28)"
                 DB[(PostgreSQL Flexible Server<br/>'Shared Instance')]
             end
-            
-            subgraph "snet-dev (10.0.1.0/23)"
+
+            subgraph "snet-dev (10.0.0.0/23)"
                 ACA_DEV[FastAPI Backend - Dev]
                 OTEL_DEV[OTel Sidecar - Dev]
             end
 
-            subgraph "snet-prod (10.0.3.0/23)"
+            subgraph "snet-prod (10.0.2.0/23)"
                 ACA_PROD[FastAPI Backend - Prod]
                 OTEL_PROD[OTel Sidecar - Prod]
             end
@@ -410,8 +410,8 @@ graph TB
     end
 
     SWA -- "HTTPS / JSON" --> ACA_DEV
-    GH -- "OIDC / Bicep" --> UAMI
-    UAMI -- "Deploy" --> ACA_DEV
+    GH -- "OIDC / Bicep" --> FEDGH
+    FEDGH -- "Deploy" --> ACA_DEV
     ACA_DEV -- "Managed Identity" --> DB
     ACA_DEV -- "gRPC" --> OTEL_DEV
     OTEL_DEV -- "Traces/Logs" --> AI_DEV[Application Insights - Dev]

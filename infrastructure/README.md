@@ -25,24 +25,28 @@ APP_NAME="gh-actions-spc"
 
 az login
 
-# Create the app and service principal
+# Create the app registration
 az ad app create --display-name $APP_NAME
-# Note the appId (Client ID) from the output
 
-# Get the Object ID of the service principal
+# Get IDs
 APP_ID=$(az ad app list --display-name $APP_NAME --query "[0].appId" -o tsv)
-OBJECT_ID=$(az ad app show --id $APP_ID --query id -o tsv)
+APP_OBJECT_ID=$(az ad app show --id $APP_ID --query id -o tsv)
 
-# Assign 'Contributor' role to the subscription
-az role assignment create --role Contributor --assignee $OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID"
+# Create the Service Principal (Identity, instance of the App registration) within the tenant
+# This is CRITICAL for login and role assignment
+az ad sp create --id $APP_ID
+SP_OBJECT_ID=$(az ad sp show --id $APP_ID --query id -o tsv)
+
+# Assign 'Contributor' role to the Service Principal
+az role assignment create --role Contributor --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID"
 ```
 
 ### Step 2: Configure Federated Identity Credentials
 This links your GitHub repository to the Azure App. This works for `ljezek/tul-psi` repo.
 
 ```bash
-# For the main branch
-az ad app federated-credential create --id $OBJECT_ID --parameters '{
+# For the main branch (Use the APP_OBJECT_ID)
+az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "name": "gh-actions-spc-main",
   "issuer": "https://token.actions.githubusercontent.com",
   "subject": "repo:ljezek/tul-psi:ref:refs/heads/main",
@@ -61,6 +65,51 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 
 ### Step 4: Use Azure Login in Workflows
 Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure) to retrieve the Cloud access token in your GitHub workflow.
+
+---
+
+## 2.5 Local Validation & Testing
+
+To avoid deployment failures due to syntax or configuration errors (like invalid CIDR notations), validate your Bicep files locally before pushing.
+
+### 1. Static Analysis (Linting)
+The Azure CLI or Bicep CLI automatically lints files during build.
+```bash
+# Build to ARM template (checks syntax and best practices)
+# Output is redirected to ignored dist/ folder
+az bicep build --file infrastructure/shared.bicep --outfile infrastructure/dist/shared.json
+az bicep build --file infrastructure/environment.bicep --outfile infrastructure/dist/environment.json
+```
+
+### 2. Pre-flight Validation
+This checks if the deployment would succeed without actually creating resources. It requires an active Azure session.
+```bash
+# Validate shared infrastructure
+az deployment group validate \
+  --resource-group rg-spc-shared-pl \
+  --template-file infrastructure/shared.bicep \
+  --parameters adminPrincipalId=$(az ad signed-in-user show --query id -o tsv) \
+               adminPrincipalName=$(az ad signed-in-user show --query userPrincipalName -o tsv)
+
+# Validate environment-specific infrastructure (e.g., dev)
+az deployment group validate \
+  --resource-group rg-spc-dev-pl \
+  --template-file infrastructure/environment.bicep \
+  --parameters env=dev \
+               subnetId="/subscriptions/.../subnets/snet-dev" \
+               acrName="acr-spc-shared-pl" \
+               dbHost="psql-spc-shared.postgres.database.azure.com" \
+               dbName="spc_dev"
+```
+
+### 3. What-If Analysis
+See exactly what changes will be applied to your environment.
+```bash
+az deployment group what-if \
+  --resource-group rg-spc-dev \
+  --template-file infrastructure/environment.bicep \
+  --parameters ...
+```
 
 ---
 
