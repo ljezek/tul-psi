@@ -3,15 +3,12 @@ param prefix string
 param env string
 param subnetId string
 param acrName string
+param acrResourceGroup string
 param dbHost string
 param dbName string
 param lawId string
 param aiConnectionString string
-
-// --- ACR Reference ---
-resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' existing = {
-  name: acrName
-}
+param containerImage string
 
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 
@@ -44,13 +41,13 @@ resource app_identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-
   location: location
 }
 
-resource app_acr_pull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, app_identity.id, acrPullRoleDefinitionId)
-  scope: acr
-  properties: {
+module app_acr_pull './acr-role.bicep' = {
+  name: 'app-acr-pull-${env}'
+  scope: resourceGroup(acrResourceGroup)
+  params: {
     principalId: app_identity.properties.principalId
     roleDefinitionId: acrPullRoleDefinitionId
-    principalType: 'ServicePrincipal'
+    acrName: acrName
   }
 }
 
@@ -60,13 +57,13 @@ resource migrator_identity 'Microsoft.ManagedIdentity/userAssignedIdentities@202
   location: location
 }
 
-resource migrator_acr_pull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, migrator_identity.id, acrPullRoleDefinitionId)
-  scope: acr
-  properties: {
+module migrator_acr_pull './acr-role.bicep' = {
+  name: 'migrator-acr-pull-${env}'
+  scope: resourceGroup(acrResourceGroup)
+  params: {
     principalId: migrator_identity.properties.principalId
     roleDefinitionId: acrPullRoleDefinitionId
-    principalType: 'ServicePrincipal'
+    acrName: acrName
   }
 }
 
@@ -100,7 +97,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'backend'
-          image: '${acrName}.azurecr.io/backend:latest'
+          image: containerImage
           env: [
             { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${app_identity.name}@${dbHost}:5432/${dbName}' }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
@@ -146,7 +143,7 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
       containers: [
         {
           name: 'migrator'
-          image: '${acrName}.azurecr.io/backend:latest'
+          image: containerImage
           command: ['alembic', 'upgrade', 'head']
           env: [
             { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }

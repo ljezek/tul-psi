@@ -5,8 +5,10 @@ param prefix string = 'spc'
 param env string
 param subnetId string
 param acrName string
+param acrResourceGroup string
 param dbHost string
 param dbName string
+param containerImage string = 'mcr.microsoft.com/azuredigitaltwins/samples/hello-container:latest'
 
 // --- Monitoring (Per Environment) ---
 module monitoring './modules/monitoring.bicep' = {
@@ -27,8 +29,10 @@ module compute './modules/compute.bicep' = {
     env: env
     subnetId: subnetId
     acrName: acrName
+    acrResourceGroup: acrResourceGroup
     dbHost: dbHost
     dbName: dbName
+    containerImage: containerImage
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
   }

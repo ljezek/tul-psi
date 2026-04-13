@@ -72,6 +72,11 @@ jobs:
           echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
           echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
           echo "SNET_ID=$SNET_ID" >> $GITHUB_ENV
+          
+          # Try to get the current image to avoid reverting to hello-world
+          # If the app doesn't exist yet, it will use the Bicep default
+          CURRENT_IMAGE=$(az containerapp show -n ca-spc-${{ env.ENV_NAME }}-backend -g rg-spc-${{ env.ENV_NAME }}-pl --query "properties.template.containers[0].image" -o tsv 2>/dev/null || echo "")
+          echo "CURRENT_IMAGE=$CURRENT_IMAGE" >> $GITHUB_ENV
 
       - name: Create Env RG
         run: az group create --name rg-spc-${{ env.ENV_NAME }}-pl --location polandcentral
@@ -87,5 +92,7 @@ jobs:
             env=${{ env.ENV_NAME }}
             subnetId=${{ env.SNET_ID }}
             acrName=${{ env.ACR_NAME }}
+            acrResourceGroup=rg-spc-shared-pl
             dbHost=${{ env.DB_HOST }}
             dbName=spc_${{ env.ENV_NAME }}
+            ${{ env.CURRENT_IMAGE != '' && format('containerImage={0}', env.CURRENT_IMAGE) || '' }}

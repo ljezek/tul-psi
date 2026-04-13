@@ -37,8 +37,10 @@ APP_OBJECT_ID=$(az ad app show --id $APP_ID --query id -o tsv)
 az ad sp create --id $APP_ID
 SP_OBJECT_ID=$(az ad sp show --id $APP_ID --query id -o tsv)
 
-# Assign 'Contributor' role to the Service Principal
+# Assign 'Contributor' and 'User Access Administrator' roles to the Service Principal
+# 'User Access Administrator' is required for Bicep to create Role Assignments (e.g., AcrPull)
 az role assignment create --role Contributor --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID"
+az role assignment create --role "User Access Administrator" --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID"
 ```
 
 ### Step 2: Configure Federated Identity Credentials
@@ -97,7 +99,8 @@ az deployment group validate \
   --template-file infrastructure/environment.bicep \
   --parameters env=dev \
                subnetId="/subscriptions/.../subnets/snet-dev" \
-               acrName="acr-spc-shared-pl" \
+               acrName="acrtulspc" \
+               acrResourceGroup="rg-spc-shared-pl" \
                dbHost="psql-spc-shared.postgres.database.azure.com" \
                dbName="spc_dev"
 ```
@@ -131,6 +134,8 @@ The first deployment must follow a specific order because components depend on e
 ## 4. Architecture Notes
 
 - **Zero-Trust:** No passwords or secrets are stored in GitHub or Azure Key Vault. All services use **Managed Identities**.
+- **Initial Deployment:** The first infrastructure deployment uses a public "hello-world" image (`mcr.microsoft.com/...`) because the ACR is initially empty. 
+- **Image Preservation:** The `infrastructure.yml` workflow is designed to detect if the Container App already exists. If it does, it fetches the current image (e.g., `acrtulspc.azurecr.io/backend:SHA`) and passes it back to Bicep. This prevents infrastructure updates from reverting your app to the "hello-world" placeholder.
 - **Scale-to-Zero:** The backend (Azure Container Apps) is configured with `minReplicas: 0`. It costs $0 when not in use.
 - **Permission Split:** 
     - The `job-spc-dev-migrate` uses a **DDL Identity** (PostgreSQL Admin) for schema changes.
