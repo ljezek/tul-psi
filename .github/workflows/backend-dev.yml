@@ -1,0 +1,65 @@
+name: "Backend Deployment (Dev)"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      acr_name: ${{ steps.get_acr.outputs.acr_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Shared Outputs
+        id: get_acr
+        run: |
+          ACR_NAME=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.acrName.value -o tsv)
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Docker image
+        run: |
+          az acr login --name ${{ steps.get_acr.outputs.acr_name }}
+          docker build -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }} -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:latest ./backend
+          docker push ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
+          docker push ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:latest
+
+  migrate-and-deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run Migrations Job
+        run: |
+          az containerapp job start \
+            --name job-spc-dev-migrate \
+            --resource-group rg-spc-dev-pl \
+            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
+
+      - name: Update Backend App
+        run: |
+          az containerapp update \
+            --name ca-spc-dev-backend \
+            --resource-group rg-spc-dev-pl \
+            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}

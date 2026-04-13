@@ -36,7 +36,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.111.0
     volumes:
-      - ./infrastructure/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+      - ./infrastructure/monitoring/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     depends_on:
       - monitoring-stack
@@ -111,7 +111,7 @@ This is the **preferred daily workflow**:
 ## 4. Backend: Azure Managed Identity Support
 Add `azure-identity` to `backend/requirements.txt` and update `backend/db/session.py` to support Entra ID tokens when `AZURE_MANAGED_IDENTITY_ENABLED=true`.
 
-## 5. OTel Collector Configuration (`infrastructure/otel-collector-config.yaml`)
+## 5. OTel Collector Configuration (`infrastructure/monitoring/otel-collector-config.yaml`)
 Configure receivers for OTLP (gRPC) and exporters for both the local `monitoring-stack` and the future Azure `azuremonitor`.
 
 ## 6. Backend OTel Instrumentation
