@@ -390,7 +390,7 @@ graph TB
 
     subgraph "rg-spc-shared-pl (Poland Central)"
         ACR[Azure Container Registry<br/>'Basic SKU']
-        UAMI[User Managed Identity<br/>'GH Deployer']
+        FEDGH[Service Principal<br/>'gh-actions-spc-main']
         
         subgraph "vnet-spc-shared (10.0.0.0/16)"
             subgraph "snet-db (10.0.4.0/28)"
@@ -410,8 +410,8 @@ graph TB
     end
 
     SWA -- "HTTPS / JSON" --> ACA_DEV
-    GH -- "OIDC / Bicep" --> UAMI
-    UAMI -- "Deploy" --> ACA_DEV
+    GH -- "OIDC / Bicep" --> FEDGH
+    FEDGH -- "Deploy" --> ACA_DEV
     ACA_DEV -- "Managed Identity" --> DB
     ACA_DEV -- "gRPC" --> OTEL_DEV
     OTEL_DEV -- "Traces/Logs" --> AI_DEV[Application Insights - Dev]
