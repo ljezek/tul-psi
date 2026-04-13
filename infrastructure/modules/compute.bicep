@@ -5,14 +5,6 @@ param subnetId string
 param acrName string
 param dbHost string
 param dbName string
-param location string
-param prefix string
-param env string
-param subnetId string
-param acrName string
-param dbHost string
-param dbName string
-param aiConnectionString string
 param lawId string
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
@@ -82,8 +74,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'backend'
           image: '${acrName}.azurecr.io/backend:latest'
           env: [
-            { name: 'DATABASE_URL', value: 'postgresql+psycopg://${app_identity.properties.principalId}@${dbHost}:5432/${dbName}' }
-            { name: 'DATABASE_URL', value: 'postgresql+psycopg://${app_identity.name}@${dbHost}:5432/${dbName}' }
+            { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${app_identity.name}@${dbHost}:5432/${dbName}' }
           ]
           resources: {
             cpu: json('0.5')
@@ -129,11 +120,11 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           image: '${acrName}.azurecr.io/backend:latest'
           command: ['alembic', 'upgrade', 'head']
           env: [
-            { name: 'DATABASE_URL', value: 'postgresql+psycopg://${migrator_identity.properties.principalId}@${dbHost}:5432/${dbName}' }
+            { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
           ]
         }
       ]
-            { name: 'DATABASE_URL', value: 'postgresql+psycopg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
+    }
   }
 }
 

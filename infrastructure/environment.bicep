@@ -29,7 +29,6 @@ module compute './modules/compute.bicep' = {
     acrName: acrName
     dbHost: dbHost
     dbName: dbName
-    aiConnectionString: monitoring.outputs.connectionString
     lawId: monitoring.outputs.workspaceId
   }
 }
