@@ -39,6 +39,8 @@ jobs:
         id: shared_deploy
         uses: azure/arm-deploy@v2
         with:
+          scope: resourcegroup
+          deploymentName: shared-deployment
           resourceGroupName: rg-spc-shared-pl
           template: ./infrastructure/shared.bicep
           parameters: >
@@ -76,6 +78,8 @@ jobs:
       - name: Deploy Env Bicep
         uses: azure/arm-deploy@v2
         with:
+          scope: resourcegroup
+          deploymentName: env-deployment-${{ env.ENV_NAME }}
           resourceGroupName: rg-spc-${{ env.ENV_NAME }}-pl
           template: ./infrastructure/environment.bicep
           parameters: >

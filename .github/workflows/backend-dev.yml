@@ -13,6 +13,8 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      acr_name: ${{ steps.get_acr.outputs.acr_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,16 +26,17 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Get Shared Outputs
+        id: get_acr
         run: |
           ACR_NAME=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.acrName.value -o tsv)
-          echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker image
         run: |
-          az acr login --name ${{ env.ACR_NAME }}
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }} -t ${{ env.ACR_NAME }}.azurecr.io/backend:latest ./backend
-          docker push ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
-          docker push ${{ env.ACR_NAME }}.azurecr.io/backend:latest
+          az acr login --name ${{ steps.get_acr.outputs.acr_name }}
+          docker build -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }} -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:latest ./backend
+          docker push ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
+          docker push ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:latest
 
   migrate-and-deploy:
     needs: build-and-push
@@ -51,11 +54,11 @@ jobs:
           az containerapp job start \
             --name job-spc-dev-migrate \
             --resource-group rg-spc-dev-pl \
-            --image ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
+            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
 
       - name: Update Backend App
         run: |
           az containerapp update \
             --name ca-spc-dev-backend \
             --resource-group rg-spc-dev-pl \
-            --image ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
+            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}

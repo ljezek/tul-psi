@@ -30,6 +30,7 @@ module compute './modules/compute.bicep' = {
     dbHost: dbHost
     dbName: dbName
     aiConnectionString: monitoring.outputs.connectionString
+    lawId: monitoring.outputs.workspaceId
   }
 }
 

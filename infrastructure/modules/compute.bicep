@@ -22,6 +22,7 @@ resource env_aca 'Microsoft.App/managedEnvironments@2023-05-01' = {
         sharedKey: law.listKeys().primarySharedKey
       }
     }
+
   }
 }
 
