@@ -160,7 +160,9 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
 // --- Static Web App ---
 resource frontend_swa 'Microsoft.Web/staticSites@2022-09-01' = {
   name: 'swa-${prefix}-${env}'
-  location: location
+  // Static Web Apps is a globally distributed service not available in all regions.
+  // Therefore we hardcode the location to westeurope (it's only used for metadata storage).
+  location: 'westeurope'
   sku: {
     name: 'Free'
     tier: 'Free'
