@@ -406,7 +406,8 @@ graph TB
                 ACA_PROD[FastAPI Backend - Prod]
                 OTEL_PROD[OTel Sidecar - Prod]
             end
-        end    end
+        end
+    end
 
     SWA -- "HTTPS / JSON" --> ACA_DEV
     GH -- "OIDC / Bicep" --> UAMI
