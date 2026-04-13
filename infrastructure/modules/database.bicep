@@ -5,6 +5,7 @@ param subnetId string
 param vnetId string
 param adminPrincipalId string
 param adminPrincipalName string
+param adminPrincipalType string = 'User'
 
 resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' = {
   name: 'psql-${prefix}-${env}'
@@ -26,6 +27,25 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview'
       activeDirectoryAuth: 'Enabled'
       passwordAuth: 'Disabled'
     }
+  }
+}
+
+// Databases are required as resources in Flexible Server Bicep
+resource db_dev 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
+  parent: postgres
+  name: 'spc_dev'
+  properties: {
+    charset: 'UTF8'
+    collation: 'en_US.utf8'
+  }
+}
+
+resource db_prod 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
+  parent: postgres
+  name: 'spc_prod'
+  properties: {
+    charset: 'UTF8'
+    collation: 'en_US.utf8'
   }
 }
 
@@ -51,7 +71,7 @@ resource postgresAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators
   name: adminPrincipalId
   properties: {
     principalName: adminPrincipalName
-    principalType: 'User' // or 'ServicePrincipal' depending on how OIDC is set up
+    principalType: adminPrincipalType
     tenantId: subscription().tenantId
   }
 }

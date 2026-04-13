@@ -6,6 +6,14 @@ param acrName string
 param dbHost string
 param dbName string
 param lawId string
+param aiConnectionString string
+
+// --- ACR Reference ---
+resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' existing = {
+  name: acrName
+}
+
+var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: last(split(lawId, '/'))
@@ -36,10 +44,30 @@ resource app_identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-
   location: location
 }
 
+resource app_acr_pull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, app_identity.id, acrPullRoleDefinitionId)
+  scope: acr
+  properties: {
+    principalId: app_identity.properties.principalId
+    roleDefinitionId: acrPullRoleDefinitionId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // --- Migrator Identity ---
 resource migrator_identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-${env}-migrator'
   location: location
+}
+
+resource migrator_acr_pull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, migrator_identity.id, acrPullRoleDefinitionId)
+  scope: acr
+  properties: {
+    principalId: migrator_identity.properties.principalId
+    roleDefinitionId: acrPullRoleDefinitionId
+    principalType: 'ServicePrincipal'
+  }
 }
 
 // --- Backend App ---
@@ -75,6 +103,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
           image: '${acrName}.azurecr.io/backend:latest'
           env: [
             { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${app_identity.name}@${dbHost}:5432/${dbName}' }
+            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
           ]
           resources: {
             cpu: json('0.5')
