@@ -6,7 +6,8 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Sentinel used as the default for jwt_secret so it can be detected at runtime.
-_JWT_SECRET_PLACEHOLDER = "changeme-override-in-production"  # noqa: S105
+# Must be at least 32 characters for HS256 algorithm.
+_JWT_SECRET_PLACEHOLDER = "changeme-override-in-production!"  # noqa: S105
 
 
 class Settings(BaseSettings):
