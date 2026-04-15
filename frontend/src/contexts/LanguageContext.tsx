@@ -333,6 +333,16 @@ const translations: Record<string, Record<Language, string>> = {
   'common.actions': { cs: 'Akce', en: 'Actions' },
   'common.search': { cs: 'Hledat', en: 'Search' },
   'common.all': { cs: 'Všechny', en: 'All' },
+
+  // Feedback Form
+  'feedback.button': { cs: 'Nahlásit chybu / Zpětná vazba', en: 'Report Bug / Feedback' },
+  'feedback.title': { cs: 'Odeslat zpětnou vazbu', en: 'Submit Feedback' },
+  'feedback.label_email': { cs: 'Váš email (volitelně)', en: 'Your email (optional)' },
+  'feedback.label_text': { cs: 'Vaše zpráva', en: 'Your message' },
+  'feedback.placeholder_text': { cs: 'Jak vám můžeme pomoci? Co nefunguje nebo co by šlo zlepšit?', en: 'How can we help you? What is not working or what could be improved?' },
+  'feedback.submit': { cs: 'Odeslat', en: 'Submit' },
+  'feedback.success': { cs: 'Děkujeme! Vaše zpětná vazba byla odeslána.', en: 'Thank you! Your feedback has been submitted.' },
+  'feedback.error': { cs: 'Omlouváme se, odeslání se nezdařilo. Zkuste to prosím později.', en: 'Sorry, submission failed. Please try again later.' },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);

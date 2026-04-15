@@ -164,7 +164,7 @@ export const CourseDetailView = () => {
             >
               {canManageLecturers && course.lecturers.length > 1 && (
                 <button
-                  onClick={() => lecturer.email && handleRemoveLecturer(lecturer.email)}
+                  onClick={() => handleRemoveLecturer(lecturer.id)}
                   className="absolute -top-2 -right-2 p-1 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover/lecturer:opacity-100 transition-all"
                   title={t('common.delete')}
                 >

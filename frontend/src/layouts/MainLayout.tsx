@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { ProfileDropdown } from '@/components/ProfileDropdown';
+import { FeedbackButton } from '@/components/FeedbackButton';
 
 export const MainLayout = () => {
   const { t, language, setLanguage } = useLanguage();
@@ -88,6 +89,8 @@ export const MainLayout = () => {
                   <span>{language}</span>
                 </button>
 
+                <FeedbackButton />
+
                 {user ? (
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-3">
@@ -133,6 +136,9 @@ export const MainLayout = () => {
           <div id="mobile-nav-menu" className="md:hidden bg-white border-t border-slate-100 p-6 space-y-6 animate-in slide-in-from-top-4 duration-300">
             <div className="flex flex-col gap-3">
               <NavLinks />
+              <div className="pt-2 border-t border-slate-50 md:hidden">
+                <FeedbackButton />
+              </div>
             </div>
             
             <div className="pt-6 border-t border-slate-100">

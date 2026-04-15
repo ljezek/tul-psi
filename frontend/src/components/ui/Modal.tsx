@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -39,20 +40,20 @@ export const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }:
     xl: 'max-w-4xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
       <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity animate-fade-in" 
+        className="absolute inset-0" 
         onClick={onClose} 
       />
       <div 
-        className={`relative w-full ${sizeClasses[size]} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200`}
+        className={`relative w-full ${sizeClasses[size]} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
           <h3 id="modal-title" className="text-lg font-black text-slate-900 uppercase tracking-widest">
             {title}
           </h3>
@@ -66,17 +67,19 @@ export const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }:
         </div>
 
         {/* Content */}
-        <div className="px-6 py-6 max-h-[80vh] overflow-y-auto">
+        <div className="px-6 py-6 overflow-y-auto">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 shrink-0">
             {footer}
           </div>
         )}
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
