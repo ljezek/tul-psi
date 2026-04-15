@@ -31,6 +31,7 @@ jobs:
   build-and-deploy-preview:
     needs: test-and-lint-frontend
     runs-on: ubuntu-latest
+    environment: dev # Use dev environment for preview secrets
     permissions:
       id-token: write # Required for OIDC
       contents: read
@@ -47,6 +48,18 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Fetch Backend URL and SWA Token
+        id: fetch_secrets
+        run: |
+          # 1. Fetch Backend URL
+          BACKEND_URL=$(az containerapp show -n ca-spc-dev-backend -g rg-spc-dev-pl --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "backend_url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+          
+          # 2. Fetch Temporary SWA Deployment Token
+          az extension add --name static-webapp
+          SWA_TOKEN=$(az staticwebapp secrets list -n swa-spc-dev -g rg-spc-dev-pl --query "properties.apiKey" -o tsv)
+          echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
+
       - name: Build And Deploy Staging
         id: build_deploy
         uses: Azure/static-web-apps-deploy@v1
@@ -55,6 +68,9 @@ jobs:
           app_location: "frontend"
           output_location: "dist"
           app_build_command: "npm run build"
-          # Tokenless deployment using OIDC credentials from azure/login
+          # Uses the temporary token fetched in the previous step
+          azure_static_web_apps_api_token: ${{ steps.fetch_secrets.outputs.swa_token }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          azure_static_web_apps_api_token: "" # Explicitly empty to trigger RBAC
+        env:
+          VITE_API_URL: ${{ steps.fetch_secrets.outputs.backend_url }}
+          VITE_LOGIC_APP_FEEDBACK_URL: ${{ secrets.VITE_LOGIC_APP_FEEDBACK_URL }}

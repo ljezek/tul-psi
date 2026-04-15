@@ -71,14 +71,6 @@ az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "subject": "repo:ljezek/tul-psi:ref:refs/heads/main",
   "audiences": ["api://AzureADTokenExchange"]
 }'
-
-# For Pull Requests (CRITICAL for staging previews in Static Web Apps)
-az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
-  "name": "gh-actions-spc-pr",
-  "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:ljezek/tul-psi:pull_request",
-  "audiences": ["api://AzureADTokenExchange"]
-}'
 ```
 ### Step 3: Set GitHub Secrets & Variables
 In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
