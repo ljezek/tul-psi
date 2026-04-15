@@ -67,6 +67,15 @@ export const FeedbackButton = () => {
     }
   };
 
+  const isConfigured = config.logicAppFeedbackUrl && config.logicAppFeedbackUrl.startsWith('http');
+
+  if (!isConfigured) {
+    if (import.meta.env.DEV) {
+      console.warn('FeedbackButton: VITE_LOGIC_APP_FEEDBACK_URL is not configured.');
+    }
+    return null;
+  }
+
   return (
     <>
       <button
