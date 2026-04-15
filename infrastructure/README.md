@@ -46,8 +46,18 @@ APP_OBJECT_ID=$(az ad app show --id $APP_ID --query id -o tsv)
 az ad sp create --id $APP_ID
 SP_OBJECT_ID=$(az ad sp show --id $APP_ID --query id -o tsv)
 
-# Assign 'Contributor' role to the Service Principal
-az role assignment create --role Contributor --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID"
+# Create resource groups and assign roles to the Service Principal scoped to each Resource Group.
+# Note: Roles must be assigned for EACH environment (shared, dev, prod)
+# Not assigning roles at Subscription level to follow the Principle of Least Privilege.
+
+# 1. Create Resource Groups
+# 2. Assign 'Contributor' and 'User Access Administrator' to the SP for each RG
+# User Access Administrator is required for Bicep to create Role Assignments (e.g., AcrPull)
+for rg in "rg-spc-shared-pl" "rg-spc-dev-pl" "rg-spc-prod-pl"; do
+  az group create --name "$rg" --location polandcentral
+  az role assignment create --role Contributor --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$rg"
+  az role assignment create --role "User Access Administrator" --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$rg"
+done
 ```
 
 ### Step 2: Configure Federated Identity Credentials
@@ -71,6 +81,8 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 - `AZURE_SUBSCRIPTION_ID`: Your Azure Subscription ID.
 - `AZURE_DB_ADMIN_ID`: Your personal Entra ID Object ID (to be the initial DB admin).
 - `AZURE_DB_ADMIN_NAME`: Your personal Entra ID Display Name or Email.
+
+These are not secrets but rather properties that need to be accessible to the GitHub workflows (but they're not secret).
 
 ### Step 4: Use Azure Login in Workflows
 Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure) to retrieve the Cloud access token in your GitHub workflow.
@@ -101,12 +113,16 @@ az deployment group validate \
                adminPrincipalName=$(az ad signed-in-user show --query userPrincipalName -o tsv)
 
 # Validate environment-specific infrastructure (e.g., dev)
+# Note: Get the full subnetId from the outputs of your 'shared' deployment:
+# az deployment group show -g rg-spc-shared-pl -n network-deployment --query properties.outputs.snetDevId.value -o tsv
+
 az deployment group validate \
   --resource-group rg-spc-dev-pl \
   --template-file infrastructure/environment.bicep \
   --parameters env=dev \
-               subnetId="/subscriptions/.../subnets/snet-dev" \
-               acrName="acr-spc-shared-pl" \
+               subnetId="/subscriptions/ca830bff-0330-40f0-8d49-a18d5db67e9c/resourceGroups/rg-spc-shared-pl/providers/Microsoft.Network/virtualNetworks/vnet-spc-shared/subnets/snet-dev" \
+               acrName="acrtulspc" \
+               acrResourceGroup="rg-spc-shared-pl" \
                dbHost="psql-spc-shared.postgres.database.azure.com" \
                dbName="spc_dev"
 ```
@@ -142,6 +158,7 @@ The first deployment must follow a specific order because components depend on e
 ## 4. Architecture Notes
 
 - **Zero-Trust:** No passwords or secrets are stored in GitHub or Azure Key Vault. All services use **Managed Identities**.
+- **Initial Deployment:** The first infrastructure deployment uses a public "hello-world" image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`) because the ACR is initially empty. Furtehr deployments should pass `containerImage=acrtulspc.azurecr.io/backend:latest` to Bicep.
 - **Scale-to-Zero:** The backend (Azure Container Apps) is configured with `minReplicas: 0`. It costs $0 when not in use.
 - **Permission Split:** 
     - The `job-spc-dev-migrate` uses a **DDL Identity** (PostgreSQL Admin) for schema changes.
