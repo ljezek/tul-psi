@@ -13,11 +13,11 @@ jobs:						        # Joby se pouští paralelně
         working-directory: ./prototype
     steps:					        # Stepy v rámci jobu běží sekvenčně
       - name: Checkout code 		# 1: Stáhni kód z repo do toho Ubuntu
-        uses: actions/checkout@v4	# Reference na existující akci
+        uses: actions/checkout@v6	# Reference na existující akci
       - name: Setup Node.js		    # 2: Nainstaluj prostředí (Node.js)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Install dependencies  # 3: Nainstaluj závislosti
         run: npm ci
       - name: Run Lint			    # 4: Spusť linter
