@@ -50,6 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
+    environment: ${{ github.event.inputs.environment || 'dev' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -89,4 +90,5 @@ jobs:
             acrResourceGroup=rg-spc-shared-pl
             dbHost=${{ env.DB_HOST }}
             dbName=spc_${{ env.ENV_NAME }}
+            jwtSecret=${{ secrets.JWT_SECRET }}
             ${{ env.CURRENT_IMAGE != '' && format('containerImage={0}', env.CURRENT_IMAGE) || '' }}

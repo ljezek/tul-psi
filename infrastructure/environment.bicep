@@ -9,6 +9,8 @@ param acrResourceGroup string
 param dbHost string
 param dbName string
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+@secure()
+param jwtSecret string
 
 // --- Monitoring (Per Environment) ---
 module monitoring './modules/monitoring.bicep' = {
@@ -33,6 +35,7 @@ module compute './modules/compute.bicep' = {
     dbHost: dbHost
     dbName: dbName
     containerImage: containerImage
+    jwtSecret: jwtSecret
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
   }
