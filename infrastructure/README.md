@@ -37,10 +37,18 @@ APP_OBJECT_ID=$(az ad app show --id $APP_ID --query id -o tsv)
 az ad sp create --id $APP_ID
 SP_OBJECT_ID=$(az ad sp show --id $APP_ID --query id -o tsv)
 
-# Assign 'Contributor' and 'User Access Administrator' roles to the Service Principal
-# 'User Access Administrator' is required for Bicep to create Role Assignments (e.g., AcrPull)
-az role assignment create --role Contributor --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID"
-az role assignment create --role "User Access Administrator" --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID"
+# Create resource groups and assign roles to the Service Principal scoped to each Resource Group.
+# Note: Roles must be assigned for EACH environment (shared, dev, prod)
+# Not assigning roles at Subscription level to follow the Principle of Least Privilege.
+
+# 1. Create Resource Groups
+# 2. Assign 'Contributor' and 'User Access Administrator' to the SP for each RG
+# User Access Administrator is required for Bicep to create Role Assignments (e.g., AcrPull)
+for rg in "rg-spc-shared-pl" "rg-spc-dev-pl" "rg-spc-prod-pl"; do
+  az group create --name "$rg" --location polandcentral
+  az role assignment create --role Contributor --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$rg"
+  az role assignment create --role "User Access Administrator" --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$rg"
+done
 ```
 
 ### Step 2: Configure Federated Identity Credentials
@@ -64,6 +72,8 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
 - `AZURE_SUBSCRIPTION_ID`: Your Azure Subscription ID.
 - `AZURE_DB_ADMIN_ID`: Your personal Entra ID Object ID (to be the initial DB admin).
 - `AZURE_DB_ADMIN_NAME`: Your personal Entra ID Display Name or Email.
+
+These are not secrets but rather properties that need to be accessible to the GitHub workflows (but they're not secret).
 
 ### Step 4: Use Azure Login in Workflows
 Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure) to retrieve the Cloud access token in your GitHub workflow.

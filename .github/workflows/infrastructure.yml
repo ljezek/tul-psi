@@ -33,9 +33,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Create Shared RG
-        run: az group create --name rg-spc-shared-pl --location polandcentral
-
       - name: Deploy Shared Bicep
         id: shared_deploy
         uses: azure/arm-deploy@v2
@@ -77,9 +74,6 @@ jobs:
           # If the app doesn't exist yet, it will use the Bicep default
           CURRENT_IMAGE=$(az containerapp show -n ca-spc-${{ env.ENV_NAME }}-backend -g rg-spc-${{ env.ENV_NAME }}-pl --query "properties.template.containers[0].image" -o tsv 2>/dev/null || echo "")
           echo "CURRENT_IMAGE=$CURRENT_IMAGE" >> $GITHUB_ENV
-
-      - name: Create Env RG
-        run: az group create --name rg-spc-${{ env.ENV_NAME }}-pl --location polandcentral
 
       - name: Deploy Env Bicep
         uses: azure/arm-deploy@v2
