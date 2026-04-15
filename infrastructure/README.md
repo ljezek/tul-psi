@@ -2,11 +2,20 @@
 
 This project uses **Azure Bicep** for Infrastructure-as-Code (IaC) and **GitHub Actions** for CI/CD. All deployments use **OpenID Connect (OIDC)** for a zero-secret security model.
 
+## Context
+
+We have 3 GitHub workflows for deployment:
+1. [Infrastructure](../.github/workflows/infrastructure.yml): creates/updates the Azure resources (but not the application code/data).
+2. [Frontend](../.github/workflows/frontend-dev.yml): builds and pushes a new version of the frondent code to the Azure Static Web App.
+3. [Backend](../.github/workflows/backend-dev.yml): builds backend Docker image, runs DB migrations and pushes a new version of the backend image to the created Azure Container App.
+
+See the [Infrastructure section](../docs/DESIGN.md#️-infrastructure--deployment) in the DESIGN document for details about the created Azure resources.
+
 ## 1. Prerequisites
 
 1.  **Azure Subscription:** An active Azure subscription.
 2.  **GitHub Repository:** The code must be pushed to a GitHub repository.
-3.  **Azure CLI:** Installed locally for the initial setup.
+3.  **Azure CLI:** Installed locally for the initial setup - we'll use it in Bash (on Windows in WSL).
 
 ---
 
@@ -101,6 +110,8 @@ az deployment group validate \
                dbHost="psql-spc-shared.postgres.database.azure.com" \
                dbName="spc_dev"
 ```
+
+The validations are only partial, to actually run the deployments locally use `create` instead of the `validate` in the commands above.
 
 ### 3. What-If Analysis
 See exactly what changes will be applied to your environment.
