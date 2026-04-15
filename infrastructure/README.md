@@ -71,6 +71,14 @@ az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "subject": "repo:ljezek/tul-psi:ref:refs/heads/main",
   "audiences": ["api://AzureADTokenExchange"]
 }'
+
+# For Pull Requests (CRITICAL for staging previews in Static Web Apps)
+az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
+  "name": "gh-actions-spc-pr",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:ljezek/tul-psi:pull_request",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
 ```
 ### Step 3: Set GitHub Secrets & Variables
 In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
@@ -85,8 +93,8 @@ These are sensitive values that must be kept secret.
 | `AZURE_SUBSCRIPTION_ID` | Your Azure Subscription ID. | Azure Portal |
 | `AZURE_DB_ADMIN_ID` | Your Entra ID Object ID (Initial DB admin). | `az ad signed-in-user show` |
 | `AZURE_DB_ADMIN_NAME` | Your Entra ID Display Name or Email. | `az ad signed-in-user show` |
+| `GEMINI_API_KEY` | API key for Gemini AI integration (required by GH workflows). | Google AI Studio |
 | `JWT_SECRET` | Secret key for signing session cookies (min 32 chars). | [backend/.env](../backend/.env.example) |
-| `GEMINI_API_KEY` | API key for Gemini AI integration. | Google AI Studio |
 | `VITE_LOGIC_APP_FEEDBACK_URL` | The URL for your Logic App feedback. | Logic app for processing customer feedback |
 
 ### Step 3.5: Configure GitHub Environments
@@ -98,7 +106,6 @@ To manage differences between `dev` and `prod`, use **GitHub Environments**:
 4.  The workflows are already configured to pick the right secrets automatically based on the targeted environment.
 
 ### Step 4: Use Azure Login in Workflows
-...
 
 Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure) to retrieve the Cloud access token in your GitHub workflow.
 

@@ -11,7 +11,7 @@ The **Student Projects Catalogue (SPC)** is a centralized platform for the Facul
 *   **Course Discovery:** List of all courses with detailed syllabus and project links.
 *   **Role-Based Access:** Distinct views for Public, Student, and Lecturer roles.
 *   **Evaluation System:** Multi-criteria project evaluations (Lecturers), course feedback (Students), and peer feedback (Students).
-*   **OTP Authentication:** Secure, passwordless login restricted to `@tul.cz` email addresses.
+*   **OTP Authentication:** Secure, passwordless login restricted to ``@tul.cz`` email addresses.
 
 ### 🛠️ Tech Stack
 *   **Backend:** Python 3.12, FastAPI, SQLModel (SQLAlchemy + Pydantic), PostgreSQL, Alembic.
@@ -108,5 +108,5 @@ npm run dev                # Starts on http://localhost:3000
 
 #### Backend
 *   **Security:** JWT in HttpOnly/Secure cookies. Configure `CORSMiddleware` to strictly allow required origins (e.g., `localhost:3000`).
-*   **Auth:** OTP tokens are single-use, 15-min expiry, @tul.cz only.
+*   **Auth:** OTP tokens are single-use, 15-min expiry, `@tul.cz` only.
 *   **API Design:** Ensure resources include necessary identifiers (IDs) for frontend routing.

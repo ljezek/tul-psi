@@ -104,7 +104,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${app_identity.name}@${dbHost}:5432/${dbName}' }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
             { name: 'JWT_SECRET', value: jwtSecret }
-            { name: 'APP_ENV', value: 'production' }
+            { name: 'APP_ENV', value: env }
           ]
           resources: {
             cpu: json('0.5')
