@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Sentinel used as the default for jwt_secret so it can be detected at runtime.
@@ -27,6 +27,20 @@ class Settings(BaseSettings):
     # List of origins allowed to make cross-origin requests (CORS).
     # In production, this should be restricted to the actual frontend domain.
     allowed_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: str | list[str]) -> str | list[str]:
+        """Support comma-separated strings or JSON lists for CORS origins."""
+        if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            return [i.strip() for i in v.split(",")]
+        return v
 
     # Secret key used to sign JWT session cookies.
     # Must be a long, random string; override in production via the JWT_SECRET env var.

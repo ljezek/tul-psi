@@ -105,6 +105,9 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
             { name: 'JWT_SECRET', value: jwtSecret }
             { name: 'APP_ENV', value: env }
+            { name: 'ALLOWED_ORIGINS', value: 'https://${frontend_swa.properties.defaultHostname}' }
+            { name: 'FRONTEND_URL', value: 'https://${frontend_swa.properties.defaultHostname}' }
+            { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
           ]
           resources: {
             cpu: json('0.5')
@@ -150,7 +153,8 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           image: containerImage
           command: ['alembic', 'upgrade', 'head']
           env: [
-            { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
+            { name: 'DATABASE_MIGRATION_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
+            { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
           ]
         }
       ]
