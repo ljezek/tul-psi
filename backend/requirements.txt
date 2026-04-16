@@ -21,8 +21,6 @@ opentelemetry-instrumentation-sqlalchemy==0.57b0
 opentelemetry-instrumentation-asyncpg==0.57b0
 opentelemetry-instrumentation-logging==0.57b0
 azure-identity==1.19.0
-# Install the package itself so importlib.metadata.version() resolves its version at runtime.
--e .
 
 # Testing
 pytest==8.3.5
