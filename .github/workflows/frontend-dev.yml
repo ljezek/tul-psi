@@ -33,7 +33,7 @@ jobs:
           echo "backend_url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
           
           # 2. Fetch Temporary SWA Deployment Token
-          az extension add --name static-webapp
+          az extension add --name staticwebapp
           SWA_TOKEN=$(az staticwebapp secrets list -n swa-spc-dev -g rg-spc-dev-pl --query "properties.apiKey" -o tsv)
           echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
 

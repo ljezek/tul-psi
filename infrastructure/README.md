@@ -64,11 +64,27 @@ done
 This links your GitHub repository to the Azure App. This works for `ljezek/tul-psi` repo.
 
 ```bash
-# For the main branch (Use the APP_OBJECT_ID)
+# For the main branch (Required for Infrastructure & Backend workflows)
 az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "name": "gh-actions-spc-main",
   "issuer": "https://token.actions.githubusercontent.com",
   "subject": "repo:ljezek/tul-psi:ref:refs/heads/main",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+# For the 'dev' environment (Required for Frontend & Environment-specific workflows)
+az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
+  "name": "gh-actions-spc-dev",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:ljezek/tul-psi:environment:dev",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+# For Pull Requests (Required if not using environments in PRs, or for general PR triggers)
+az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
+  "name": "gh-actions-spc-pr",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:ljezek/tul-psi:pull_request",
   "audiences": ["api://AzureADTokenExchange"]
 }'
 ```
