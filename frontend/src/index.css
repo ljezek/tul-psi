@@ -1,6 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-tul-blue: #0077c8;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
 
 @layer base {
   body {
