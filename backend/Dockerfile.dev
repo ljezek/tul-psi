@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy source code (optional if using bind mounts, but good for completeness)
 COPY . .
 
+# Install the project itself in editable mode so it's registered in the environment.
+RUN pip install --no-cache-dir -e .
+
 # Ensure start.sh is executable and owned by appuser
 RUN chmod +x start.sh && \
     chown -R appuser:appuser /app
