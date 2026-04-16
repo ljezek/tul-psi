@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
@@ -14,6 +15,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom', 'react-markdown'],
+          'icons': ['lucide-react'],
+        },
+      },
     },
   },
   test: {

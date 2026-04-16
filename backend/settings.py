@@ -6,7 +6,8 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Sentinel used as the default for jwt_secret so it can be detected at runtime.
-_JWT_SECRET_PLACEHOLDER = "changeme-override-in-production"  # noqa: S105
+# Must be at least 32 characters for HS256 algorithm.
+_JWT_SECRET_PLACEHOLDER = "changeme-override-in-production!"  # noqa: S105
 
 
 class Settings(BaseSettings):
@@ -44,9 +45,9 @@ class Settings(BaseSettings):
         session cookies — all tokens would be forgeable with the well-known default.
         Override ``JWT_SECRET`` via the environment variable in non-local deployments.
         """
-        if self.app_env == "production" and self.jwt_secret == _JWT_SECRET_PLACEHOLDER:
+        if self.app_env != "local" and self.jwt_secret == _JWT_SECRET_PLACEHOLDER:
             raise ValueError(
-                "JWT_SECRET must be overridden in production. "
+                f"JWT_SECRET must be overridden in the '{self.app_env}' environment. "
                 "Set the JWT_SECRET environment variable to a long, random string."
             )
         return self

@@ -14,10 +14,11 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: dev
     outputs:
       acr_name: ${{ steps.get_acr.outputs.acr_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Azure Login
         uses: azure/login@v2
@@ -59,7 +60,9 @@ jobs:
 
       - name: Update Backend App
         run: |
+          FRONTEND_URL=$(az staticwebapp show -n swa-spc-dev -g rg-spc-dev-pl --query "defaultHostname" -o tsv)
           az containerapp update \
             --name ca-spc-dev-backend \
             --resource-group rg-spc-dev-pl \
-            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
+            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }} \
+            --set-env-vars FRONTEND_URL=https://$FRONTEND_URL

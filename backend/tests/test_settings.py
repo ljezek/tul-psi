@@ -7,10 +7,22 @@ from settings import _JWT_SECRET_PLACEHOLDER, Settings
 
 def test_settings_raises_in_production_with_placeholder_jwt_secret() -> None:
     """Settings must refuse to start in production when jwt_secret is still the placeholder."""
-    with pytest.raises(ValueError, match="JWT_SECRET must be overridden in production"):
+    expected_error = "JWT_SECRET must be overridden in the 'production' environment"
+    with pytest.raises(ValueError, match=expected_error):
         Settings(
             database_url="postgresql+asyncpg://x:x@localhost/x",
             app_env="production",
+            jwt_secret=_JWT_SECRET_PLACEHOLDER,
+        )
+
+
+def test_settings_raises_in_dev_with_placeholder_jwt_secret() -> None:
+    """Settings must refuse to start in dev when jwt_secret is still the placeholder."""
+    expected_error = "JWT_SECRET must be overridden in the 'dev' environment"
+    with pytest.raises(ValueError, match=expected_error):
+        Settings(
+            database_url="postgresql+asyncpg://x:x@localhost/x",
+            app_env="dev",
             jwt_secret=_JWT_SECRET_PLACEHOLDER,
         )
 

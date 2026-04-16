@@ -9,6 +9,8 @@ param dbName string
 param lawId string
 param aiConnectionString string
 param containerImage string
+@secure()
+param jwtSecret string
 
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 
@@ -101,6 +103,8 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
           env: [
             { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${app_identity.name}@${dbHost}:5432/${dbName}' }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
+            { name: 'JWT_SECRET', value: jwtSecret }
+            { name: 'APP_ENV', value: env }
           ]
           resources: {
             cpu: json('0.5')
