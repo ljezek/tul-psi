@@ -30,7 +30,8 @@ jobs:
       - name: Get Shared Outputs
         id: get_acr
         run: |
-          ACR_NAME=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.acrName.value -o tsv)
+          echo "Fetching ACR name from resource group..."
+          ACR_NAME=$(az acr list -g rg-spc-shared-pl --query "[0].name" -o tsv)
           echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker image

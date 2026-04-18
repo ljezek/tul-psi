@@ -61,9 +61,20 @@ jobs:
       - name: Get Shared Outputs
         id: shared_outputs
         run: |
-          ACR_NAME=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.acrName.value -o tsv)
-          DB_HOST=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.dbHost.value -o tsv)
-          SNET_ID=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs.snetDevId.value -o tsv)
+          # Fetch resource identifiers directly from the resource group.
+          # We avoid 'az deployment group show' outputs as they rely on deployment history
+          # which is pruned by Azure and would break workflows when infra isn't redeployed frequently.
+          
+          echo "Fetching ACR name..."
+          ACR_NAME=$(az acr list -g rg-spc-shared-pl --query "[0].name" -o tsv)
+          
+          echo "Fetching Database Host..."
+          DB_HOST=$(az postgres flexible-server list -g rg-spc-shared-pl --query "[0].fullyQualifiedDomainName" -o tsv)
+
+          echo "Fetching Subnet ID for ${{ env.ENV_NAME }}..."
+          SNET_NAME="snet-${{ env.ENV_NAME }}"
+          SNET_ID=$(az network vnet subnet show -g rg-spc-shared-pl --vnet-name vnet-spc-shared -n $SNET_NAME --query id -o tsv)
+
           echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
           echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
           echo "SNET_ID=$SNET_ID" >> $GITHUB_ENV
