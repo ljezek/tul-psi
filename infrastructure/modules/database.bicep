@@ -139,18 +139,19 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
         local dbname=$1
         local environment=$2
         echo "Bootstrapping $dbname for $environment..."
-        
         psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${dbname} sslmode=require" <<EOF
           -- 1. Create Roles for Managed Identities
+          -- Note: pgaadauth_create_principal is a custom Azure PG extension function
           DO \$$
           BEGIN
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-' || environment || '-migrator') THEN
-              PERFORM pgaadauth_create_principal('id-spc-' || environment || '-migrator', false, false);
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${environment}-migrator') THEN
+              PERFORM pgaadauth_create_principal('id-spc-${environment}-migrator', false, false);
             END IF;
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-' || environment || '-app') THEN
-              PERFORM pgaadauth_create_principal('id-spc-' || environment || '-app', false, false);
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${environment}-app') THEN
+              PERFORM pgaadauth_create_principal('id-spc-${environment}-app', false, false);
             END IF;
           END \$$;
+
 
           -- 2. Grant Permissions
           -- The migrator needs to manage schema (DDL)
