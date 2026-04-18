@@ -175,8 +175,45 @@ az deployment group what-if \
 The first deployment must follow a specific order because components depend on each other.
 
 1.  **Trigger Infrastructure:** Go to **Actions > Infrastructure Deployment** and run it manually (for `dev`). This creates the VNet, ACR, and the Database.
-2.  **Create DB Users:** Bicep cannot reach inside the PostgreSQL engine to run GRANT statements. Manually create the roles for the app and migrator managed identities. See [database/init-db.sh](../database/init-db.sh).
-3.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**. This will:
+2.  **Create DB Users:** Bicep creates the server but cannot run SQL statements inside it. You must manually create the roles for the Managed Identities.
+
+    ### 🐘 PostgreSQL User Setup (One-time)
+
+    Connect to the PostgreSQL server as the Entra ID admin (your account) using `psql` or Azure Portal Query Editor. You must be in a network that can reach the VNet (e.g., via a jumpbox or VPN, or by temporarily enabling public access if not in production).
+
+    Run the following SQL for **EACH** database (`spc_dev` and `spc_prod`):
+
+    ```sql
+    -- 1. Create roles for Managed Identities (Identity Names must match exactly)
+    -- Repeat for 'id-spc-dev-app' and 'id-spc-dev-migrator' (or 'prod' equivalents)
+    SELECT * FROM pgaadauth_create_principal('id-spc-dev-migrator', false, false);
+    SELECT * FROM pgaadauth_create_principal('id-spc-dev-app', false, false);
+
+    -- 2. Grant DDL Permissions to the Migrator
+    -- The migrator needs to create tables and manage schema. 
+    -- Making it the owner of the public schema is the cleanest way for Alembic.
+    ALTER SCHEMA public OWNER TO "id-spc-dev-migrator";
+    GRANT ALL PRIVILEGES ON DATABASE spc_dev TO "id-spc-dev-migrator";
+
+    -- 3. Grant DML-only Permissions to the App
+    -- Ensure the App cannot alter the schema (DDL), only data (DML).
+    GRANT CONNECT ON DATABASE spc_dev TO "id-spc-dev-app";
+    GRANT USAGE ON SCHEMA public TO "id-spc-dev-app";
+
+    -- Grant access to existing tables (if any)
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "id-spc-dev-app";
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "id-spc-dev-app";
+
+    -- CRITICAL: Automatically grant permissions on tables created by the migrator in the future
+    ALTER DEFAULT PRIVILEGES FOR ROLE "id-spc-dev-migrator" IN SCHEMA public 
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "id-spc-dev-app";
+
+    ALTER DEFAULT PRIVILEGES FOR ROLE "id-spc-dev-migrator" IN SCHEMA public 
+    GRANT USAGE, SELECT ON SEQUENCES TO "id-spc-dev-app";
+    ```
+
+3.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**.
+ This will:
     - Build the Docker image.
     - Push it to the new ACR.
     - Run the Migration Job to set up the DB schema.

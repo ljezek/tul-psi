@@ -21,6 +21,9 @@ class MigrationSettings(BaseSettings):
     # DATABASE_URL in environments that use a single DB user.
     database_migration_url: str
 
+    # Support for Entra ID (Azure Managed Identity) for DB authentication.
+    azure_managed_identity_enabled: bool = False
+
 
 @lru_cache
 def get_migration_settings() -> MigrationSettings:

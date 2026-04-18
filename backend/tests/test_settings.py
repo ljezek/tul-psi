@@ -45,3 +45,28 @@ def test_settings_allows_custom_jwt_secret_in_production() -> None:
         jwt_secret="a-very-long-and-random-secret-for-production",  # noqa: S106
     )
     assert s.app_env == "production"
+
+
+def test_allowed_origins_parsing() -> None:
+    """Settings must parse allowed_origins from both comma-separated strings and JSON lists."""
+    # Comma-separated string
+    s1 = Settings(
+        database_url="postgresql+asyncpg://x:x@localhost/x",
+        allowed_origins="http://localhost:3000,https://spc.tul.cz",
+    )
+    assert s1.allowed_origins == ["http://localhost:3000", "https://spc.tul.cz"]
+
+    # Single origin
+    s2 = Settings(
+        database_url="postgresql+asyncpg://x:x@localhost/x",
+        allowed_origins="https://spc.tul.cz",
+    )
+    assert s2.allowed_origins == ["https://spc.tul.cz"]
+
+    # JSON list (starts with [)
+    s3 = Settings(
+        database_url="postgresql+asyncpg://x:x@localhost/x",
+        allowed_origins='["http://localhost:3000", "https://spc.tul.cz"]',
+    )
+    # Pydantic parses JSON automatically before the validator if it's a valid JSON for a list
+    assert s3.allowed_origins == ["http://localhost:3000", "https://spc.tul.cz"]

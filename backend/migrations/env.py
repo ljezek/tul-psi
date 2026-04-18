@@ -69,11 +69,20 @@ async def run_migrations_online() -> None:
     (asyncpg) consistent with the application driver so that a separate
     sync driver is not required.
     """
+    migration_settings = get_migration_settings()
+    engine_kwargs = {
+        "poolclass": NullPool,
+    }
+
+    if migration_settings.azure_managed_identity_enabled:
+        from db.token_provider import TokenProvider
+
+        token_provider = TokenProvider()
+        engine_kwargs["connect_args"] = {"password": token_provider.get_token}
+
     connectable = create_async_engine(
-        config.get_main_option("sqlalchemy.url"),
-        # NullPool is appropriate for short-lived migration processes —
-        # it avoids holding idle connections open after the run completes.
-        poolclass=NullPool,
+        migration_settings.database_migration_url,
+        **engine_kwargs,
     )
 
     try:
