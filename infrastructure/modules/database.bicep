@@ -3,6 +3,7 @@ param prefix string
 param env string
 param subnetId string
 param vnetId string
+param scriptsSubnetId string
 
 // --- Identity for DB Setup/Bootstrap ---
 // PostgreSQL Flexible Server (Private Access) cannot be reached from the Azure Portal Query Editor
@@ -14,6 +15,8 @@ resource idDbSetup 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31'
 }
 
 // --- Storage Account for Infrastructure Scripts (Shared) ---
+// Note: When running Deployment Scripts in a VNet, the storage account must be
+// accessible from that VNet. We enable trusted services to satisfy Azure requirements.
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: 'st${prefix}${env}scripts' 
   location: location
@@ -25,6 +28,32 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     accessTier: 'Hot'
     allowBlobPublicAccess: false
     minimumTlsVersion: 'TLS1_2'
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Allow'
+    }
+  }
+}
+
+// RBAC: The setup identity needs to manage files in the storage account used by the script
+resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, idDbSetup.id, 'BlobContributor')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-401d-a4c0-51b698d373c1')
+    principalId: idDbSetup.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource filePrivilegedContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, idDbSetup.id, 'FilePrivilegedContributor')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566334-7451-4059-ad61-67d79814f0a1')
+    principalId: idDbSetup.properties.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -114,7 +143,7 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       containerGroupName: 'cg-${prefix}-${env}-db-bootstrap'
       subnetIds: [
         {
-          id: subnetId
+          id: scriptsSubnetId
         }
       ]
     }

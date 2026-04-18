@@ -54,6 +54,25 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
           ]
         }
       }
+      {
+        name: 'snet-scripts'
+        properties: {
+          addressPrefix: '10.0.5.0/28'
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.Storage'
+            }
+          ]
+          delegations: [
+            {
+              name: 'delegation'
+              properties: {
+                serviceName: 'Microsoft.ContainerInstance/containerGroups'
+              }
+            }
+          ]
+        }
+      }
     ]
   }
 }
@@ -62,3 +81,4 @@ output vnetId string = vnet.id
 output snetDbId string = vnet.properties.subnets[0].id
 output snetDevId string = vnet.properties.subnets[1].id
 output snetProdId string = vnet.properties.subnets[2].id
+output snetScriptsId string = vnet.properties.subnets[3].id
