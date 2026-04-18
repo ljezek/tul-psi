@@ -15,8 +15,6 @@ resource idDbSetup 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31'
 }
 
 // --- Storage Account for Infrastructure Scripts (Shared) ---
-// Note: When running Deployment Scripts in a VNet, the storage account must be
-// accessible from that VNet. We enable trusted services to satisfy Azure requirements.
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: 'st${prefix}${env}scripts' 
   location: location
@@ -36,12 +34,27 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-// RBAC: The setup identity needs to manage files in the storage account used by the script
-resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, idDbSetup.id, 'BlobContributor')
+// Built-in Role Definitions (using full resource IDs for maximum reliability)
+var roleStorageAccountContributorId = '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/17d104fd-6a85-4003-90d5-455b7661002e'
+var roleStorageBlobDataContributorId = '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-401d-a4c0-51b698d373c1'
+var roleStorageFileDataPrivilegedContributorId = '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/69566334-7451-4059-ad61-67d79814f0a1'
+
+// RBAC: The setup identity needs to manage the storage account and files
+resource storageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, idDbSetup.id, 'StorageAccountContributor')
   scope: storageAccount
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-401d-a4c0-51b698d373c1')
+    roleDefinitionId: roleStorageAccountContributorId
+    principalId: idDbSetup.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, idDbSetup.id, 'BlobDataContributor')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: roleStorageBlobDataContributorId
     principalId: idDbSetup.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -51,7 +64,7 @@ resource filePrivilegedContributor 'Microsoft.Authorization/roleAssignments@2022
   name: guid(storageAccount.id, idDbSetup.id, 'FilePrivilegedContributor')
   scope: storageAccount
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566334-7451-4059-ad61-67d79814f0a1')
+    roleDefinitionId: roleStorageFileDataPrivilegedContributorId
     principalId: idDbSetup.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -136,6 +149,9 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   dependsOn: [
     postgresAdmin
     db_dev
+    storageContributor
+    blobContributor
+    filePrivilegedContributor
   ]
   properties: {
     azCliVersion: '2.50.0'

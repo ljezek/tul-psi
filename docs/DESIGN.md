@@ -174,19 +174,33 @@ erDiagram
 ["Python", "FastAPI", "React", "PostgreSQL"]
 ```
 
-### Database Migrations
+### Database Lifecycle & Migrations
 
-Schema changes are managed with **Alembic** (the standard migration tool for SQLModel/SQLAlchemy).
+The database setup is divided into three distinct phases to ensure security, automation, and consistency across environments:
+
+### 1. Infrastructure Initialization (Bicep)
+Occurs during the **infrastructure release**. A Bicep `deploymentScript` (ACI-based) runs inside the VNet to bootstrap the PostgreSQL server:
+- It creates the `migrator` role (DDL/Schema owner) and the `app` role (DML/Data access).
+- It grants the `migrator` role the ability to manage the `public` schema.
+- This phase enforces the principle of least privilege at the database engine level.
+
+### 2. Schema Management (Alembic)
+Occurs during every **backend deployment** and **local startup**. Schema changes are managed with **Alembic**:
 
 | Command | Purpose |
 |---|---|
-| `alembic revision --autogenerate -m "<description>"` | Generate a migration file from model diff |
+| `alembic revision --autogenerate -m "..."` | Generate a migration file from model diff |
 | `alembic upgrade head` | Apply all pending migrations |
 | `alembic downgrade -1` | Roll back the last migration |
 
 * Migration files live in `migrations/versions/`.
-* Every migration **must** include a working `downgrade()` function.
-* Migrations are applied automatically on container startup via the `docker-compose.yml` entrypoint.
+* In Azure, migrations are applied automatically by the backend startup script using the `migrator` Managed Identity.
+
+### 3. Data Seeding (`seed.py`)
+Occurs automatically after migrations during startup:
+- **Idempotent:** It checks the `user` table and only runs if it is empty.
+- **Environment-aware:** Loads `seed_dev.sql` for `local`/`dev` (rich test data) and `seed_production.sql` for `production` (minimal setup with the initial admin user).
+- This ensures every fresh environment is immediately usable.
 
 ## Interaction Design
 
