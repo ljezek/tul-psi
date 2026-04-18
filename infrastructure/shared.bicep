@@ -29,6 +29,7 @@ module database './modules/database.bicep' = {
     env: 'shared'
     subnetId: network.outputs.snetDbId
     vnetId: network.outputs.vnetId
+    scriptsSubnetId: network.outputs.snetScriptsId
   }
 }
 

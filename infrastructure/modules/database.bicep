@@ -3,6 +3,7 @@ param prefix string
 param env string
 param subnetId string
 param vnetId string
+param scriptsSubnetId string
 
 // --- Identity for DB Setup/Bootstrap ---
 // PostgreSQL Flexible Server (Private Access) cannot be reached from the Azure Portal Query Editor
@@ -25,6 +26,48 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     accessTier: 'Hot'
     allowBlobPublicAccess: false
     minimumTlsVersion: 'TLS1_2'
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          id: scriptsSubnetId
+          action: 'Allow'
+        }
+      ]
+    }
+  }
+}
+
+// RBAC: The setup identity needs to manage the storage account and files
+resource storageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, idDbSetup.id, 'StorageAccountContributor')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')
+    principalId: idDbSetup.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, idDbSetup.id, 'BlobDataContributor')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+    principalId: idDbSetup.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource filePrivilegedContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, idDbSetup.id, 'FilePrivilegedContributor')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd')
+    principalId: idDbSetup.properties.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -107,6 +150,9 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   dependsOn: [
     postgresAdmin
     db_dev
+    storageContributor
+    blobContributor
+    filePrivilegedContributor
   ]
   properties: {
     azCliVersion: '2.50.0'
@@ -114,7 +160,7 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       containerGroupName: 'cg-${prefix}-${env}-db-bootstrap'
       subnetIds: [
         {
-          id: subnetId
+          id: scriptsSubnetId
         }
       ]
     }

@@ -24,5 +24,8 @@ set -euo pipefail
 echo "==> Running database migrations..."
 alembic upgrade head
 
+echo "==> Seeding database..."
+python seed.py
+
 echo "==> Starting application server..."
 exec uvicorn main:app "$@"
