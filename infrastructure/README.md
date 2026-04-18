@@ -6,7 +6,7 @@ This project uses **Azure Bicep** for Infrastructure-as-Code (IaC) and **GitHub 
 
 We have 3 GitHub workflows for deployment:
 1. [Infrastructure](../.github/workflows/infrastructure.yml): creates/updates the Azure resources (but not the application code/data).
-2. [Frontend](../.github/workflows/frontend-dev.yml): builds and pushes a new version of the frondent code to the Azure Static Web App.
+2. [Frontend](../.github/workflows/frontend-dev.yml): builds and pushes a new version of the frontend code to the Azure Static Web App.
 3. [Backend](../.github/workflows/backend-dev.yml): builds backend Docker image, runs DB migrations and pushes a new version of the backend image to the created Azure Container App.
 
 See the [Infrastructure section](../docs/DESIGN.md#️-infrastructure--deployment) in the DESIGN document for details about the created Azure resources.
@@ -15,16 +15,17 @@ See the [Infrastructure section](../docs/DESIGN.md#️-infrastructure--deploymen
 
 1.  **Azure Subscription:** An active Azure subscription.
 2.  **GitHub Repository:** The code must be pushed to a GitHub repository.
-3.  **Azure CLI:** Installed locally for the initial setup - we'll use it in Bash (on Windows in WSL).
+3.  **Azure CLI:** Installed locally for the initial setup.
+4.  **Admin Rights:** You must have permissions to create **Entra ID Role Assignments** (like "Directory Readers").
 
 ---
 
-## 2. Initial Security Setup (OIDC)
+## 2. Initial Security Setup (OIDC & DB Bootstrap)
 
-You must grant GitHub permission to access your Azure subscription without using long-lived secrets.
+You must grant GitHub permission to access your Azure subscription and set up the identity that will bootstrap your database.
 
-### Step 1: Create an Entra ID (Active Directory) App
-Run this locally to create the application and service principal:
+### Step 1: Create Resource Groups & GH Service Principal
+Run this locally to create the core resources:
 
 ```bash
 # Set your variables
@@ -34,34 +35,45 @@ APP_NAME="gh-actions-spc"
 
 az login
 
-# Create the app registration
-az ad app create --display-name $APP_NAME
+# 1. Create Resource Groups
+for rg in "rg-spc-shared-pl" "rg-spc-dev-pl" "rg-spc-prod-pl"; do
+  az group create --name "$rg" --location polandcentral
+done
 
-# Get IDs
+# 2. Create the GH App Registration
+az ad app create --display-name $APP_NAME
 APP_ID=$(az ad app list --display-name $APP_NAME --query "[0].appId" -o tsv)
 APP_OBJECT_ID=$(az ad app show --id $APP_ID --query id -o tsv)
 
-# Create the Service Principal (Identity, instance of the App registration) within the tenant
-# This is CRITICAL for login and role assignment
+# 3. Create the Service Principal
 az ad sp create --id $APP_ID
 SP_OBJECT_ID=$(az ad sp show --id $APP_ID --query id -o tsv)
 
-# Create resource groups and assign roles to the Service Principal scoped to each Resource Group.
-# Note: Roles must be assigned for EACH environment (shared, dev, prod)
-# Not assigning roles at Subscription level to follow the Principle of Least Privilege.
-
-# 1. Create Resource Groups
-# 2. Assign 'Contributor' and 'User Access Administrator' to the SP for each RG
-# User Access Administrator is required for Bicep to create Role Assignments (e.g., AcrPull)
+# 4. Assign roles to the SP for each RG
 for rg in "rg-spc-shared-pl" "rg-spc-dev-pl" "rg-spc-prod-pl"; do
-  az group create --name "$rg" --location polandcentral
   az role assignment create --role Contributor --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$rg"
   az role assignment create --role "User Access Administrator" --assignee $SP_OBJECT_ID --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$rg"
 done
 ```
 
-### Step 2: Configure Federated Identity Credentials
-This links your GitHub repository to the Azure App. This works for `ljezek/tul-psi` repo.
+### Step 2: Create DB Bootstrap Identity (Required for VNet DB Access)
+Because the DB is in a VNet, Bicep uses a temporary script to create roles. This identity needs "Directory Readers" to look up other Managed Identities.
+
+```bash
+# 1. Create the identity in the 'shared' resource group
+az identity create -g rg-spc-shared-pl -n id-spc-shared-db-setup
+
+# 2. Get its IDs
+SETUP_CLIENT_ID=$(az identity show -g rg-spc-shared-pl -n id-spc-shared-db-setup --query clientId -o tsv)
+SETUP_SP_OBJECT_ID=$(az ad sp show --id $SETUP_CLIENT_ID --query id -o tsv)
+
+# 3. Assign 'Directory Readers' role (Scope: Subscription or Tenant)
+# This allows the identity to find 'id-spc-dev-migrator' etc. during DB setup.
+az ad role assignment create --role "Directory Readers" --assignee-object-id $SETUP_SP_OBJECT_ID --scope "/"
+```
+
+### Step 3: Configure Federated Identity Credentials
+Links your GitHub repository to the Azure App. Replace `ljezek/tul-psi` with your actual repo path.
 
 ```bash
 # For the main branch (Required for Infrastructure & Backend workflows)
@@ -80,7 +92,7 @@ az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "audiences": ["api://AzureADTokenExchange"]
 }'
 
-# For Pull Requests (Required if not using environments in PRs, or for general PR triggers)
+# For Pull Requests
 az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "name": "gh-actions-spc-pr",
   "issuer": "https://token.actions.githubusercontent.com",
@@ -88,64 +100,46 @@ az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "audiences": ["api://AzureADTokenExchange"]
 }'
 ```
-### Step 3: Set GitHub Secrets & Variables
-In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 
-#### 🔑 Secrets (Encrypted)
-These are sensitive values that must be kept secret.
+### Step 4: Set GitHub Secrets & Variables
+In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 
 | Name | Description | Source |
 | :--- | :--- | :--- |
 | `AZURE_CLIENT_ID` | The `appId` from Step 1. | Azure Portal |
 | `AZURE_TENANT_ID` | Your Azure Tenant ID. | Azure Portal |
 | `AZURE_SUBSCRIPTION_ID` | Your Azure Subscription ID. | Azure Portal |
-| `AZURE_DB_ADMIN_ID` | Your Entra ID Object ID (Initial DB admin). | `az ad signed-in-user show` |
-| `AZURE_DB_ADMIN_NAME` | Your Entra ID Display Name or Email. | `az ad signed-in-user show` |
-| `GEMINI_API_KEY` | API key for Gemini AI integration (required by GH workflows). | Google AI Studio |
-| `JWT_SECRET` | Secret key for signing session cookies (min 32 chars). | [backend/.env](../backend/.env.example) |
-| `VITE_LOGIC_APP_FEEDBACK_URL` | The URL for your Logic App feedback. | Logic app for processing customer feedback |
+| `GEMINI_API_KEY` | API key for Gemini AI integration. | Google AI Studio |
+| `JWT_SECRET` | Secret key for signing session cookies. | [backend/.env](../backend/.env.example) |
+| `VITE_LOGIC_APP_FEEDBACK_URL` | The URL for your Logic App feedback. | Azure Portal |
 
-### Step 3.5: Configure GitHub Environments
-To manage differences between `dev` and `prod`, use **GitHub Environments**:
-
-1.  In GitHub, go to **Settings > Environments**.
+### Step 5: Configure GitHub Environments
+To manage differences between `dev` and `prod`:
+1.  Go to **Settings > Environments**.
 2.  Create two environments: `dev` and `prod`.
 3.  Add environment-specific secrets (like `JWT_SECRET` and `VITE_LOGIC_APP_FEEDBACK_URL`) directly to these environments.
-4.  The workflows are already configured to pick the right secrets automatically based on the targeted environment.
-
-### Step 4: Use Azure Login in Workflows
-
-Use `azure/login` [GitHub action](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure) to retrieve the Cloud access token in your GitHub workflow.
 
 ---
 
 ## 2.5 Local Validation & Testing
 
-To avoid deployment failures due to syntax or configuration errors (like invalid CIDR notations), validate your Bicep files locally before pushing.
+Validate your Bicep files locally before pushing to avoid deployment failures.
 
 ### 1. Static Analysis (Linting)
-The Azure CLI or Bicep CLI automatically lints files during build.
 ```bash
-# Build to ARM template (checks syntax and best practices)
-# Output is redirected to ignored dist/ folder
 az bicep build --file infrastructure/shared.bicep --outfile infrastructure/dist/shared.json
 az bicep build --file infrastructure/environment.bicep --outfile infrastructure/dist/environment.json
 ```
 
 ### 2. Pre-flight Validation
-This checks if the deployment would succeed without actually creating resources. It requires an active Azure session.
 ```bash
 # Validate shared infrastructure
 az deployment group validate \
   --resource-group rg-spc-shared-pl \
-  --template-file infrastructure/shared.bicep \
-  --parameters adminPrincipalId=$(az ad signed-in-user show --query id -o tsv) \
-               adminPrincipalName=$(az ad signed-in-user show --query userPrincipalName -o tsv)
+  --template-file infrastructure/shared.bicep
 
 # Validate environment-specific infrastructure (e.g., dev)
-# Note: Get the full subnetId from the outputs of your 'shared' deployment:
-# az deployment group show -g rg-spc-shared-pl -n network-deployment --query properties.outputs.snetDevId.value -o tsv
-
+# Note: Get the full subnetId from the outputs of your 'shared' deployment
 az deployment group validate \
   --resource-group rg-spc-dev-pl \
   --template-file infrastructure/environment.bicep \
@@ -154,80 +148,27 @@ az deployment group validate \
                acrName="acrtulspc" \
                acrResourceGroup="rg-spc-shared-pl" \
                dbHost="psql-spc-shared.postgres.database.azure.com" \
-               dbName="spc_dev"
-```
-
-The validations are only partial, to actually run the deployments locally use `create` instead of the `validate` in the commands above.
-
-### 3. What-If Analysis
-See exactly what changes will be applied to your environment.
-```bash
-az deployment group what-if \
-  --resource-group rg-spc-dev \
-  --template-file infrastructure/environment.bicep \
-  --parameters ...
+               dbName="spc_dev" \
+               jwtSecret="not-a-secret-just-for-validation-purposes"
 ```
 
 ---
 
-## 3. First Deployment Sequence
+## 3. Deployment Sequence
 
-The first deployment must follow a specific order because components depend on each other.
+The first deployment follows an automated sequence.
 
-1.  **Trigger Infrastructure:** Go to **Actions > Infrastructure Deployment** and run it manually (for `dev`). This creates the VNet, ACR, and the Database.
-2.  **Create DB Users:** Bicep creates the server but cannot run SQL statements inside it. You must manually create the roles for the Managed Identities.
-
-    ### 🐘 PostgreSQL User Setup (One-time)
-
-    Connect to the PostgreSQL server as the Entra ID admin (your account) using `psql` or Azure Portal Query Editor. You must be in a network that can reach the VNet (e.g., via a jumpbox or VPN, or by temporarily enabling public access if not in production).
-
-    Run the following SQL for **EACH** database (`spc_dev` and `spc_prod`):
-
-    ```sql
-    -- 1. Create roles for Managed Identities (Identity Names must match exactly)
-    -- Repeat for 'id-spc-dev-app' and 'id-spc-dev-migrator' (or 'prod' equivalents)
-    SELECT * FROM pgaadauth_create_principal('id-spc-dev-migrator', false, false);
-    SELECT * FROM pgaadauth_create_principal('id-spc-dev-app', false, false);
-
-    -- 2. Grant DDL Permissions to the Migrator
-    -- The migrator needs to create tables and manage schema. 
-    -- Making it the owner of the public schema is the cleanest way for Alembic.
-    ALTER SCHEMA public OWNER TO "id-spc-dev-migrator";
-    GRANT ALL PRIVILEGES ON DATABASE spc_dev TO "id-spc-dev-migrator";
-
-    -- 3. Grant DML-only Permissions to the App
-    -- Ensure the App cannot alter the schema (DDL), only data (DML).
-    GRANT CONNECT ON DATABASE spc_dev TO "id-spc-dev-app";
-    GRANT USAGE ON SCHEMA public TO "id-spc-dev-app";
-
-    -- Grant access to existing tables (if any)
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "id-spc-dev-app";
-    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "id-spc-dev-app";
-
-    -- CRITICAL: Automatically grant permissions on tables created by the migrator in the future
-    ALTER DEFAULT PRIVILEGES FOR ROLE "id-spc-dev-migrator" IN SCHEMA public 
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "id-spc-dev-app";
-
-    ALTER DEFAULT PRIVILEGES FOR ROLE "id-spc-dev-migrator" IN SCHEMA public 
-    GRANT USAGE, SELECT ON SEQUENCES TO "id-spc-dev-app";
-    ```
-
-3.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**.
- This will:
-    - Build the Docker image.
-    - Push it to the new ACR.
-    - Run the Migration Job to set up the DB schema.
-    - Update the Container App.
-4.  **Trigger Frontend:** Go to **Actions > Frontend Deployment (Dev)**. This will build and deploy the React app to Azure Static Web Apps.
+1.  **Trigger Infrastructure:** Go to **Actions > Infrastructure Deployment** and run it for `dev`. 
+    *   Bicep will adopt the `id-spc-shared-db-setup` identity created in Section 2.
+    *   The `deploymentScript` will automatically create the DB roles for `dev` inside the VNet.
+2.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**.
+3.  **Trigger Frontend:** Go to **Actions > Frontend Deployment (Dev)**.
 
 ---
 
 ## 4. Architecture Notes
 
-- **Zero-Trust:** No passwords or secrets are stored in GitHub or Azure Key Vault. All services use **Managed Identities**.
-- **Initial Deployment:** The first infrastructure deployment uses a public "hello-world" image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`) because the ACR is initially empty. Furtehr deployments should pass `containerImage=acrtulspc.azurecr.io/backend:latest` to Bicep.
-- **Scale-to-Zero:** The backend (Azure Container Apps) is configured with `minReplicas: 0`. It costs $0 when not in use.
-- **Permission Split:** 
-    - The `job-spc-dev-migrate` uses a **DDL Identity** (PostgreSQL Admin) for schema changes.
-    - The `ca-spc-dev-backend` uses an **App Identity** (DML only) for runtime operations.
-- **Monitoring:** Every environment (`dev`, `prod`) has its own **Application Insights** instance for complete isolation.
+- **Zero-Trust:** All services use **Managed Identities**.
+- **Automated Bootstrap:** A Bicep `deploymentScript` handles initial PostgreSQL role creation (`id-spc-dev-migrator` and `id-spc-dev-app`) within the private VNet.
+- **Scale-to-Zero:** The backend is configured with `minReplicas: 0` to minimize costs.
+- **Permission Split:** The Migrator identity has DDL rights (Alembic), while the App identity is restricted to DML operations.

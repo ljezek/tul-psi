@@ -2,9 +2,6 @@ targetScope = 'resourceGroup'
 
 param location string = resourceGroup().location
 param prefix string = 'spc'
-param adminPrincipalId string
-param adminPrincipalName string
-param adminPrincipalType string = 'User'
 
 // --- Network ---
 module network './modules/network.bicep' = {
@@ -32,9 +29,6 @@ module database './modules/database.bicep' = {
     env: 'shared'
     subnetId: network.outputs.snetDbId
     vnetId: network.outputs.vnetId
-    adminPrincipalId: adminPrincipalId
-    adminPrincipalName: adminPrincipalName
-    adminPrincipalType: adminPrincipalType
   }
 }
 
