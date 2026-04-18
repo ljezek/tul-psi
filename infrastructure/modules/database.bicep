@@ -34,17 +34,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-// Built-in Role Definitions (using full resource IDs for maximum reliability)
-var roleStorageAccountContributorId = '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/17d104fd-6a85-4003-90d5-455b7661002e'
-var roleStorageBlobDataContributorId = '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-401d-a4c0-51b698d373c1'
-var roleStorageFileDataPrivilegedContributorId = '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/69566334-7451-4059-ad61-67d79814f0a1'
-
 // RBAC: The setup identity needs to manage the storage account and files
 resource storageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, idDbSetup.id, 'StorageAccountContributor')
   scope: storageAccount
   properties: {
-    roleDefinitionId: roleStorageAccountContributorId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')
     principalId: idDbSetup.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -54,7 +49,7 @@ resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   name: guid(storageAccount.id, idDbSetup.id, 'BlobDataContributor')
   scope: storageAccount
   properties: {
-    roleDefinitionId: roleStorageBlobDataContributorId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
     principalId: idDbSetup.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -64,7 +59,7 @@ resource filePrivilegedContributor 'Microsoft.Authorization/roleAssignments@2022
   name: guid(storageAccount.id, idDbSetup.id, 'FilePrivilegedContributor')
   scope: storageAccount
   properties: {
-    roleDefinitionId: roleStorageFileDataPrivilegedContributorId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd')
     principalId: idDbSetup.properties.principalId
     principalType: 'ServicePrincipal'
   }
