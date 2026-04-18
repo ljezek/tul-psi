@@ -29,7 +29,13 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: 'Allow'
+      defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          id: scriptsSubnetId
+          action: 'Allow'
+        }
+      ]
     }
   }
 }

@@ -66,8 +66,7 @@ async def _run(*, reset: bool) -> None:
         sql_file = Path(__file__).parent / "seed_dev.sql"
 
     if not sql_file.exists():
-        print(f"No seed file found for environment '{settings.app_env}'. Skipping.")
-        return
+        raise FileNotFoundError(f"No seed file found for environment '{settings.app_env}' at {sql_file}")
 
     try:
         async with engine.connect() as conn:
