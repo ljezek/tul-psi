@@ -41,9 +41,6 @@ jobs:
           deploymentName: shared-deployment
           resourceGroupName: rg-spc-shared-pl
           template: ./infrastructure/shared.bicep
-          parameters: >
-            adminPrincipalId=${{ secrets.AZURE_DB_ADMIN_ID }}
-            adminPrincipalName=${{ secrets.AZURE_DB_ADMIN_NAME }}
 
   deploy-env:
     needs: deploy-shared
