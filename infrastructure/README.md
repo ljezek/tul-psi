@@ -24,6 +24,14 @@ See the [Infrastructure section](../docs/DESIGN.md#️-infrastructure--deploymen
 
 You must grant GitHub permission to access your Azure subscription and set up the identity that will bootstrap your database.
 
+### Step 0: Register Resource Providers (Subscription Level)
+Resource providers must be registered once per subscription. Since GitHub only has Resource Group access, you must do this manually (in Bash):
+
+```bash
+az login
+az provider register --namespace Microsoft.ContainerInstance
+```
+
 ### Step 1: Create Resource Groups & GH Service Principal
 Run this locally to create the core resources:
 
@@ -63,13 +71,28 @@ Because the DB is in a VNet, Bicep uses a temporary script to create roles. This
 # 1. Create the identity in the 'shared' resource group
 az identity create -g rg-spc-shared-pl -n id-spc-shared-db-setup
 
-# 2. Get its IDs
-SETUP_CLIENT_ID=$(az identity show -g rg-spc-shared-pl -n id-spc-shared-db-setup --query clientId -o tsv)
-SETUP_SP_OBJECT_ID=$(az ad sp show --id $SETUP_CLIENT_ID --query id -o tsv)
+# 2. Get its ID
+SETUP_PRINCIPAL_ID=$(az identity show -g rg-spc-shared-pl -n id-spc-shared-db-setup --query principalId -o tsv)
 
-# 3. Assign 'Directory Readers' role (Scope: Subscription or Tenant)
-# This allows the identity to find 'id-spc-dev-migrator' etc. during DB setup.
-az ad role assignment create --role "Directory Readers" --assignee-object-id $SETUP_SP_OBJECT_ID --scope "/"
+# 3. Assign Granular Graph Permissions (Least Privilege)
+# These allow the identity to read Entra ID metadata during DB setup.
+GRAPH_ID=$(az ad sp list --filter "displayName eq 'Microsoft Graph'" --query '[0].id' -o tsv)
+
+# 4. Query and assign User.Read.All, GroupMember.Read.All & Application.Read.All to my identity in MS Graph.
+APPROLE_IDS=$(az ad sp show --id "$GRAPH_ID" \
+  --query "appRoles[?value=='User.Read.All' || value=='GroupMember.Read.All' || value=='Application.Read.All'].id" \
+  -o tsv)
+
+# Loop through each AppRole ID and assign it
+for ROLE_ID in $APPROLE_IDS; do
+  az rest --method POST \
+    --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SETUP_PRINCIPAL_ID/appRoleAssignments" \
+    --body "{
+      \"principalId\": \"$SETUP_PRINCIPAL_ID\",
+      \"resourceId\": \"$GRAPH_ID\",
+      \"appRoleId\": \"$ROLE_ID\"
+    }"
+done
 ```
 
 ### Step 3: Configure Federated Identity Credentials
@@ -134,9 +157,7 @@ az bicep build --file infrastructure/environment.bicep --outfile infrastructure/
 ### 2. Pre-flight Validation
 ```bash
 # Validate shared infrastructure
-az deployment group validate \
-  --resource-group rg-spc-shared-pl \
-  --template-file infrastructure/shared.bicep
+az deployment group validate --resource-group rg-spc-shared-pl --template-file infrastructure/shared.bicep
 
 # Validate environment-specific infrastructure (e.g., dev)
 # Note: Get the full subnetId from the outputs of your 'shared' deployment
