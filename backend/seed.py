@@ -18,8 +18,6 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from settings import get_settings
 
-_SQL_FILE = Path(__file__).with_suffix(".sql")
-
 # DELETE order respects FK dependencies — children before parents.
 _RESET_STATEMENTS = [
     "DELETE FROM peer_feedback",
@@ -53,9 +51,23 @@ def _iter_statements(sql: str) -> list[str]:
 
 
 async def _run(*, reset: bool) -> None:
-    """Execute seed.sql against the configured database."""
+    """Execute the environment-specific seed script against the database."""
     settings = get_settings()
     engine = create_async_engine(settings.database_url, echo=False)
+
+    # Determine which SQL file to use based on APP_ENV.
+    # For local/dev we use the same rich seed data (seed_dev.sql).
+    # For production we use the minimal seed data (seed_production.sql).
+    # We look for seed_{app_env}.sql, falling back to seed_dev.sql for local/dev.
+    env_name = settings.app_env
+    sql_file = Path(__file__).parent / f"seed_{env_name}.sql"
+
+    if env_name in ("local", "dev") and not sql_file.exists():
+        sql_file = Path(__file__).parent / "seed_dev.sql"
+
+    if not sql_file.exists():
+        print(f"No seed file found for environment '{settings.app_env}'. Skipping.")
+        return
 
     try:
         async with engine.connect() as conn:
@@ -65,9 +77,17 @@ async def _run(*, reset: bool) -> None:
                     await conn.exec_driver_sql(stmt)
                 await conn.commit()
                 print("Reset complete.")
+            else:
+                # Check if seeding is already done (user table not empty).
+                # This satisfies the "exactly once upon initialization" requirement.
+                result = await conn.exec_driver_sql('SELECT COUNT(*) FROM "user"')
+                count = result.scalar()
+                if count > 0:
+                    print(f"Database already contains {count} users. Skipping seeding.")
+                    return
 
-            print(f"Running {_SQL_FILE.name} …")
-            sql = _SQL_FILE.read_text(encoding="utf-8")
+            print(f"Running {sql_file.name} …")
+            sql = sql_file.read_text(encoding="utf-8")
             for stmt in _iter_statements(sql):
                 await conn.exec_driver_sql(stmt)
             await conn.commit()

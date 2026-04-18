@@ -27,6 +27,13 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+Write-Host "==> Seeding database..."
+python seed.py
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Database seeding failed with exit code $LASTEXITCODE."
+    exit $LASTEXITCODE
+}
+
 Write-Host "==> Starting application server..."
 uvicorn main:app @args
 exit $LASTEXITCODE
