@@ -26,10 +26,7 @@ async def test_token_provider_returns_token():
         token = await provider.get_token()
 
         assert token == "mock-token-123"  # noqa: S105
-        mock_get_token.assert_called_once_with(
-            "https://ossrdbms-aad.database.windows.net/.default"
-        )
-
+        mock_get_token.assert_called_once_with("https://ossrdbms-aad.database.windows.net/.default")
 
 
 @pytest.mark.asyncio
