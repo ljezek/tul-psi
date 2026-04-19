@@ -179,6 +179,8 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           env: [
             { name: 'DATABASE_MIGRATION_URL', value: 'postgresql+asyncpg://${dbHost}:5432/${dbName}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
+            { name: 'APP_ENV', value: env }
+            { name: 'JWT_SECRET', value: jwtSecret }
           ]
         }
       ]
