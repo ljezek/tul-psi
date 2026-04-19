@@ -105,7 +105,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
             { name: 'JWT_SECRET', value: jwtSecret }
             { name: 'APP_ENV', value: env }
-            { name: 'ALLOWED_ORIGINS', value: 'https://${frontend_swa.properties.defaultHostname},https://thankful-hill-0ed6a5603.7.azurestaticapps.net' }
+            { name: 'ALLOWED_ORIGINS', value: 'https://${frontend_swa.properties.defaultHostname}' }
             { name: 'FRONTEND_URL', value: 'https://${frontend_swa.properties.defaultHostname}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
             { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://localhost:4318' }
