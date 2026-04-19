@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-from importlib.metadata import PackageNotFoundError, version
-
 import httpx
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
@@ -11,13 +9,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
+from settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
-
-try:
-    _APP_VERSION: str = version("student-projects-catalogue-backend")
-except PackageNotFoundError:
-    _APP_VERSION = "0.0.0"
 
 router = APIRouter(tags=["health"])
 
@@ -85,6 +79,7 @@ async def _check_otel_collector() -> ComponentCheck:
 )
 async def health(
     session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
 ) -> JSONResponse:
     """Perform health checks and return standardized response."""
     db_check = await _check_database(session)
@@ -103,8 +98,8 @@ async def health(
 
     content = HealthResponse(
         status=overall_status,
-        version=_APP_VERSION,
-        releaseId=_APP_VERSION,
+        version=settings.app_version,
+        releaseId=settings.app_version,
         checks={
             "postgresql:connection": [db_check],
             "otel:collector": [otel_check],

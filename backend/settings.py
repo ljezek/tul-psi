@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     app_name: str = "student-projects-catalogue-backend"
     app_env: str = "local"
+    app_version: str = "0.0.0-local"
 
     # Application connection URL (DML only — no DDL / schema changes).
     # Used by the FastAPI application at runtime.

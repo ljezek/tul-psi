@@ -31,9 +31,9 @@ RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.t
 # Copy application code
 COPY . .
 
-# Install the project itself so importlib.metadata.version() resolves its version at runtime.
-# Dependencies are already installed from wheels.
-RUN pip install --no-cache-dir --no-deps .
+# Set application version from build arg
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
 
 # Ensure the app is owned by appuser
 RUN chown -R appuser:appuser /app

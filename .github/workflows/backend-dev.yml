@@ -37,7 +37,15 @@ jobs:
       - name: Build and Push Docker image
         run: |
           az acr login --name ${{ steps.get_acr.outputs.acr_name }}
-          docker build -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }} -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:latest ./backend
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          # Format: [BaseVersion]-b[RunNumber]+[ShortSHA] (e.g., 0.1.0-b42+a1b2c3d)
+          VERSION="0.1.0-b${{ github.run_number }}+${SHORT_SHA}"
+          echo "Building version: $VERSION"
+          docker build \
+            --build-arg APP_VERSION=$VERSION \
+            -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }} \
+            -t ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:latest \
+            ./backend
           docker push ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
           docker push ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:latest
 
