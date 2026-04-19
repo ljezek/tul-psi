@@ -41,59 +41,66 @@ def setup_otel(app: FastAPI) -> None:
         logger.info("OpenTelemetry already initialized, skipping setup.")
         return
 
-    settings = get_settings()
-
-    # Discover the package version from importlib.metadata (set in pyproject.toml)
     try:
-        version = metadata.version(settings.app_name)
-    except metadata.PackageNotFoundError:
-        version = "unknown"
+        settings = get_settings()
 
-    resource = Resource(
-        attributes={
-            SERVICE_NAME: settings.app_name,
-            SERVICE_VERSION: version,
-            DEPLOYMENT_ENVIRONMENT: settings.app_env,
-        }
-    )
+        # Discover the package version from importlib.metadata (set in pyproject.toml)
+        try:
+            version = metadata.version(settings.app_name)
+        except metadata.PackageNotFoundError:
+            version = "unknown"
 
-    # If the endpoint is empty or not set, OTLP exporters will be bypassed.
-    otel_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT") or None
-
-    # 1. Tracing
-    tracer_provider = TracerProvider(resource=resource)
-    trace.set_tracer_provider(tracer_provider)
-    if otel_endpoint:
-        tracer_provider.add_span_processor(
-            BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otel_endpoint}/v1/traces"))
+        resource = Resource(
+            attributes={
+                SERVICE_NAME: settings.app_name,
+                SERVICE_VERSION: version,
+                DEPLOYMENT_ENVIRONMENT: settings.app_env,
+            }
         )
 
-    # 2. Metrics
-    if otel_endpoint:
-        metric_reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(endpoint=f"{otel_endpoint}/v1/metrics"),
-            export_interval_millis=5000,
-        )
-        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-        metrics.set_meter_provider(meter_provider)
+        # If the endpoint is empty or not set, OTLP exporters will be bypassed.
+        otel_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT") or None
 
-    # 3. Logs
-    logger_provider = LoggerProvider(resource=resource)
-    _logs.set_logger_provider(logger_provider)
-    if otel_endpoint:
-        logger_provider.add_log_record_processor(
-            BatchLogRecordProcessor(OTLPLogExporter(endpoint=f"{otel_endpoint}/v1/logs"))
-        )
+        # 1. Tracing
+        tracer_provider = TracerProvider(resource=resource)
+        trace.set_tracer_provider(tracer_provider)
+        if otel_endpoint:
+            tracer_provider.add_span_processor(
+                BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otel_endpoint}/v1/traces"))
+            )
 
-    # Attach OTel Logging Handler to root logger
-    handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
-    logging.getLogger().addHandler(handler)
+        # 2. Metrics
+        if otel_endpoint:
+            metric_reader = PeriodicExportingMetricReader(
+                OTLPMetricExporter(endpoint=f"{otel_endpoint}/v1/metrics"),
+                export_interval_millis=5000,
+            )
+            meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+            metrics.set_meter_provider(meter_provider)
 
-    # 4. Instrumentations
-    FastAPIInstrumentor.instrument_app(app)
-    AsyncPGInstrumentor().instrument(capture_parameters=True)
-    SQLAlchemyInstrumentor().instrument()
-    LoggingInstrumentor().instrument(set_logging_format=False)
+        # 3. Logs
+        logger_provider = LoggerProvider(resource=resource)
+        _logs.set_logger_provider(logger_provider)
+        if otel_endpoint:
+            logger_provider.add_log_record_processor(
+                BatchLogRecordProcessor(OTLPLogExporter(endpoint=f"{otel_endpoint}/v1/logs"))
+            )
 
-    _OTEL_INITIALIZED = True
-    logger.info("OpenTelemetry initialization complete.")
+        # Attach OTel Logging Handler to root logger
+        handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
+        logging.getLogger().addHandler(handler)
+
+        # 4. Instrumentations
+        FastAPIInstrumentor.instrument_app(app)
+        AsyncPGInstrumentor().instrument(capture_parameters=True)
+        SQLAlchemyInstrumentor().instrument()
+        LoggingInstrumentor().instrument(set_logging_format=False)
+
+        _OTEL_INITIALIZED = True
+        logger.info("OpenTelemetry initialization complete.")
+    except Exception as exc:
+        # Fallback to sys.stderr in case the logging system itself is compromised
+        import sys
+
+        print(f"ERROR: Failed to initialize OpenTelemetry: {exc}", file=sys.stderr)
+        logger.exception("Failed to initialize OpenTelemetry. Telemetry will be disabled.")

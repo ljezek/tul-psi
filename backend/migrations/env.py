@@ -78,7 +78,10 @@ async def run_migrations_online() -> None:
         from db.token_provider import TokenProvider
 
         token_provider = TokenProvider()
-        engine_kwargs["connect_args"] = {"password": token_provider.get_token}
+        engine_kwargs["connect_args"] = {
+            "password": token_provider.get_token,
+            "ssl": True,
+        }
 
     connectable = create_async_engine(
         migration_settings.database_migration_url,

@@ -14,31 +14,30 @@ processors:
     detectors: [env]
 
 exporters:
-  # Traces
-  otlp/jaeger:
-    endpoint: jaeger:4317
-    tls:
-      insecure: true
+  # Traces/Logs/Metrics for Azure Monitor
+  azuremonitor:
+    connection_string: "${env:APPLICATIONINSIGHTS_CONNECTION_STRING}"
 
-  # Metrics
-  prometheus:
-    endpoint: 0.0.0.0:8889
-
-  # Logs (optional: send to stdout for debugging)
+  # Keep debug for container logs visibility
   debug:
     verbosity: basic
 
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
       processors: [resourcedetection, batch]
-      exporters: [otlp/jaeger, debug]
+      exporters: [azuremonitor, debug]
     logs:
       receivers: [otlp]
       processors: [resourcedetection, batch]
-      exporters: [debug]
+      exporters: [azuremonitor, debug]
     metrics:
       receivers: [otlp]
       processors: [resourcedetection, batch]
-      exporters: [prometheus, debug]
+      exporters: [azuremonitor, debug]
