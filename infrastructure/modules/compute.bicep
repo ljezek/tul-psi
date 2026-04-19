@@ -105,13 +105,31 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
             { name: 'JWT_SECRET', value: jwtSecret }
             { name: 'APP_ENV', value: env }
-            { name: 'ALLOWED_ORIGINS', value: 'https://${frontend_swa.properties.defaultHostname}' }
+            { name: 'ALLOWED_ORIGINS', value: (env == 'prod' ? 'https://${frontend_swa.properties.defaultHostname}' : '*') }
             { name: 'FRONTEND_URL', value: 'https://${frontend_swa.properties.defaultHostname}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
+            { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://localhost:4318' }
           ]
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
+          }
+        }
+        {
+          name: 'otel-collector'
+          image: 'otel/opentelemetry-collector-contrib:latest'
+          env: [
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: aiConnectionString
+            }
+          ]
+          args: [
+            '--config=etc/otel-collector-config.yaml'
+          ]
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
           }
         }
       ]

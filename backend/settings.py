@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     def assemble_cors_origins(cls, v: str | list[str]) -> str | list[str]:
         """Support comma-separated strings or JSON lists for CORS origins."""
         if isinstance(v, str):
+            if v == "*":
+                return ["*"]
             if v.startswith("[") and v.endswith("]"):
                 import json
 
