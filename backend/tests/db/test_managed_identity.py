@@ -11,6 +11,25 @@ from settings import Settings
 
 
 @pytest.mark.asyncio
+async def test_token_provider_uses_client_id_from_settings():
+    """Verify that TokenProvider passes azure_client_id to DefaultAzureCredential."""
+    mock_settings = Settings(
+        database_url="postgresql+asyncpg://localhost/test",
+        azure_client_id="test-client-id",
+        jwt_secret="dummy-secret-for-testing-only-12345",  # noqa: S106
+    )
+
+    with (
+        patch("settings.get_settings", return_value=mock_settings),
+        patch("azure.identity.aio.DefaultAzureCredential") as mock_credential_class,
+    ):
+        TokenProvider()
+
+        # Check that DefaultAzureCredential was instantiated with the correct client ID
+        mock_credential_class.assert_called_once_with(managed_identity_client_id="test-client-id")
+
+
+@pytest.mark.asyncio
 async def test_token_provider_returns_token():
     """Verify that TokenProvider calls DefaultAzureCredential with the correct scope."""
     mock_token = MagicMock()

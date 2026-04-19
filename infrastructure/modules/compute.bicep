@@ -108,6 +108,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'ALLOWED_ORIGINS', value: 'https://${frontend_swa.properties.defaultHostname}' }
             { name: 'FRONTEND_URL', value: 'https://${frontend_swa.properties.defaultHostname}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
+            { name: 'AZURE_CLIENT_ID', value: app_identity.properties.clientId }
             { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://localhost:4318' }
           ]
           resources: {
@@ -177,6 +178,7 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           env: [
             { name: 'DATABASE_MIGRATION_URL', value: 'postgresql+asyncpg://${dbHost}:5432/${dbName}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
+            { name: 'AZURE_CLIENT_ID', value: migrator_identity.properties.clientId }
             { name: 'APP_ENV', value: env }
             { name: 'JWT_SECRET', value: jwtSecret }
           ]
