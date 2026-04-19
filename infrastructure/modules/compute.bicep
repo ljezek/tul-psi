@@ -123,9 +123,10 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: aiConnectionString
             }
-          ]
-          args: [
-            '--config=etc/otel-collector-config.yaml'
+            {
+              name: 'OTEL_CONFIG_CONTENT'
+              value: 'receivers:\n  otlp:\n    protocols:\n      grpc:\n        endpoint: 0.0.0.0:4317\n      http:\n        endpoint: 0.0.0.0:4318\n        cors:\n          allowed_origins: ["*"]\n\nprocessors:\n  batch:\n  resourcedetection:\n    detectors: [env]\n\nexporters:\n  azuremonitor:\n    connection_string: "${env:APPLICATIONINSIGHTS_CONNECTION_STRING}"\n  debug:\n    verbosity: basic\n\nservice:\n  pipelines:\n    traces:\n      receivers: [otlp]\n      processors: [resourcedetection, batch]\n      exporters: [azuremonitor, debug]\n    logs:\n      receivers: [otlp]\n      processors: [resourcedetection, batch]\n      exporters: [azuremonitor, debug]\n    metrics:\n      receivers: [otlp]\n      processors: [resourcedetection, batch]\n      exporters: [azuremonitor, debug]'
+            }
           ]
           resources: {
             cpu: json('0.25')
