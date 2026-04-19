@@ -130,48 +130,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'OTEL_CONFIG_CONTENT'
-              value: '''
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
-        cors:
-          allowed_origins: ["*"]
-
-processors:
-  batch:
-  resourcedetection:
-    detectors: [env]
-
-exporters:
-  azuremonitor:
-    connection_string: "$${env:APPLICATIONINSIGHTS_CONNECTION_STRING}"
-  debug:
-    verbosity: basic
-
-extensions:
-  health_check:
-    endpoint: 0.0.0.0:13133
-
-service:
-  extensions: [health_check]
-  pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [resourcedetection, batch]
-      exporters: [azuremonitor, debug]
-    logs:
-      receivers: [otlp]
-      processors: [resourcedetection, batch]
-      exporters: [azuremonitor, debug]
-    metrics:
-      receivers: [otlp]
-      processors: [resourcedetection, batch]
-      exporters: [azuremonitor, debug]
-'''
+              value: loadTextContent('../monitoring/otel-collector-config.azure.yaml')
             }
           ]
           resources: {
