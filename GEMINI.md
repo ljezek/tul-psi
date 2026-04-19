@@ -107,6 +107,7 @@ npm run dev                # Starts on http://localhost:3000
     *   **User Profile:** Profile editing is handled via a dedicated `/profile` route and a unified `<ProfileForm />` component. Always link to `/profile` for user settings.
 
 #### Backend
+*   **Quality Control:** BEFORE declaring backend changes ready for review, you MUST run `ruff format .`, `ruff check .`, and `pytest` from the `backend/` directory to ensure code quality and prevent regressions.
 *   **Security:** JWT in HttpOnly/Secure cookies. Configure `CORSMiddleware` to strictly allow required origins (e.g., `localhost:3000`).
 *   **Auth:** OTP tokens are single-use, 15-min expiry, `@tul.cz` only.
 *   **API Design:** Ensure resources include necessary identifiers (IDs) for frontend routing.
