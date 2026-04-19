@@ -11,14 +11,12 @@ receivers:
 processors:
   batch:
   resourcedetection:
-    detectors: [env]
+    detectors: [env, azure]
 
 exporters:
-  # Traces/Logs/Metrics for Azure Monitor
   azuremonitor:
     connection_string: "${env:APPLICATIONINSIGHTS_CONNECTION_STRING}"
 
-  # Keep debug for container logs visibility
   debug:
     verbosity: basic
 

@@ -23,6 +23,7 @@ class MigrationSettings(BaseSettings):
 
     # Support for Entra ID (Azure Managed Identity) for DB authentication.
     azure_managed_identity_enabled: bool = False
+    azure_client_id: str | None = None
 
 
 @lru_cache

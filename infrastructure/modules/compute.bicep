@@ -101,7 +101,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'backend'
           image: containerImage
           env: [
-            { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${dbHost}:5432/${dbName}' }
+            { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${app_identity.name}@${dbHost}:5432/${dbName}' }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: aiConnectionString }
             { name: 'JWT_SECRET', value: jwtSecret }
             { name: 'APP_ENV', value: env }
@@ -176,7 +176,7 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           image: containerImage
           command: ['alembic', 'upgrade', 'head']
           env: [
-            { name: 'DATABASE_MIGRATION_URL', value: 'postgresql+asyncpg://${dbHost}:5432/${dbName}' }
+            { name: 'DATABASE_MIGRATION_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
             { name: 'AZURE_CLIENT_ID', value: migrator_identity.properties.clientId }
             { name: 'APP_ENV', value: env }
