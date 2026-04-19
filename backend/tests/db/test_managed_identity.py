@@ -37,6 +37,7 @@ async def test_session_factory_uses_token_provider_when_enabled():
         database_url="postgresql+asyncpg://localhost/test",
         azure_managed_identity_enabled=True,
         app_env="dev",
+        jwt_secret="dummy-secret-for-testing-only-12345"
     )
 
     # 2. Patch get_settings and clear lru_cache for _session_factory
@@ -71,6 +72,7 @@ async def test_session_factory_forces_ssl_in_non_local_env():
         database_url="postgresql+asyncpg://localhost/test",
         azure_managed_identity_enabled=False,
         app_env="dev",
+        jwt_secret="dummy-secret-for-testing-only-12345"
     )
 
     with (
