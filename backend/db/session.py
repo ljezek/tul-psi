@@ -32,7 +32,10 @@ def _session_factory() -> async_sessionmaker[AsyncSession]:
         # This is the standard way to handle Entra ID (Managed Identity) tokens,
         # as it allows the driver to refresh the token automatically before
         # establishing new connections in the pool.
-        engine_kwargs["connect_args"] = {"password": token_provider.get_token}
+        engine_kwargs["connect_args"] = {
+            "password": token_provider.get_token,
+            "ssl": True,
+        }
 
     engine = create_async_engine(
         settings.database_url,
