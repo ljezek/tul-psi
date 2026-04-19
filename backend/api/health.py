@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+
 import httpx
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
