@@ -61,6 +61,7 @@ class Settings(BaseSettings):
 
     # Support for Entra ID (Azure Managed Identity) for DB authentication.
     azure_managed_identity_enabled: bool = False
+    azure_client_id: str | None = None
 
     # Health check URL for the OTel collector sidecar/service.
     # In Azure, it's typically http://localhost:13133.
