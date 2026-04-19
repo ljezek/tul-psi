@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     # Support for Entra ID (Azure Managed Identity) for DB authentication.
     azure_managed_identity_enabled: bool = False
 
+    # Health check URL for the OTel collector sidecar/service.
+    # In Azure, it's typically http://localhost:13133.
+    # In local Docker Compose, it's http://otel-collector:13133.
+    otel_collector_health_url: str = "http://localhost:13133"
+
     @model_validator(mode="after")
     def _validate_settings(self) -> Settings:
         """Validate critical configuration after loading from environment."""

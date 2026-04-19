@@ -8,6 +8,7 @@ from httpx import AsyncClient
 
 from db.session import get_session
 from main import app
+from settings import get_settings
 
 
 @pytest.fixture(autouse=True)
@@ -22,10 +23,15 @@ def _mock_dependencies() -> Generator[None, None, None]:
     app.dependency_overrides.pop(get_session, None)
 
 
+def _get_otel_url() -> str:
+    """Helper to get the currently configured OTel health URL."""
+    return get_settings().otel_collector_health_url
+
+
 async def test_health_returns_200_when_healthy(client: AsyncClient, respx_mock) -> None:
     """GET /health must respond with HTTP 200 and 'pass' status when all services are up."""
     # Mock OTel collector health check
-    respx_mock.get("http://localhost:13133").respond(status_code=200)
+    respx_mock.get(_get_otel_url()).respond(status_code=200)
 
     response = await client.get("/health")
 
@@ -46,7 +52,7 @@ async def test_health_returns_503_when_db_down(client: AsyncClient, respx_mock) 
     app.dependency_overrides[get_session] = lambda: mock_session
 
     # Mock OTel collector as healthy
-    respx_mock.get("http://localhost:13133").respond(status_code=200)
+    respx_mock.get(_get_otel_url()).respond(status_code=200)
 
     response = await client.get("/health")
 
@@ -61,7 +67,7 @@ async def test_health_returns_200_with_warn_when_otel_down(client: AsyncClient, 
     """GET /health must respond with HTTP 200 and 'warn' status
     when OTel is down (optional dependency)."""
     # Mock OTel collector failure
-    respx_mock.get("http://localhost:13133").respond(status_code=500)
+    respx_mock.get(_get_otel_url()).respond(status_code=500)
 
     response = await client.get("/health")
 
@@ -74,7 +80,7 @@ async def test_health_returns_200_with_warn_when_otel_down(client: AsyncClient, 
 
 async def test_health_contains_version_and_release_id(client: AsyncClient, respx_mock) -> None:
     """GET /health response must contain version and releaseId."""
-    respx_mock.get("http://localhost:13133").respond(status_code=200)
+    respx_mock.get(_get_otel_url()).respond(status_code=200)
 
     response = await client.get("/health")
     data = response.json()
