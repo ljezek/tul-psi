@@ -81,7 +81,7 @@ jobs:
           
           # Try to get the current image to avoid reverting to hello-world
           # If the app doesn't exist yet, it will use the Bicep default
-          CURRENT_IMAGE=$(az containerapp show -n ca-spc-${{ env.ENV_NAME }}-backend -g rg-spc-${{ env.ENV_NAME }}-pl --query "properties.template.containers[0].image" -o tsv 2>/dev/null || echo "")
+          CURRENT_IMAGE=$(az containerapp show -n ca-spc-${{ env.ENV_NAME }}-backend -g rg-spc-${{ env.ENV_NAME }}-pl --query "properties.template.containers[?name=='backend'].image" -o tsv 2>/dev/null || echo "")
           echo "CURRENT_IMAGE=$CURRENT_IMAGE" >> $GITHUB_ENV
 
       - name: Deploy Env Bicep

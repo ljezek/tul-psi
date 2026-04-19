@@ -15,10 +15,15 @@ class Settings(BaseSettings):
 
     app_name: str = "student-projects-catalogue-backend"
     app_env: str = "local"
+    app_version: str = "0.0.0-local"
 
     # Application connection URL (DML only — no DDL / schema changes).
     # Used by the FastAPI application at runtime.
-    database_url: str
+    database_url: str | None = None
+
+    # Migration connection URL (DDL — high privilege).
+    # Used only by the Alembic migration job.
+    database_migration_url: str | None = None
 
     # Public base URL of the frontend SPA (e.g. https://spc.tul.cz in production).
     # Included in outgoing email bodies so recipients can navigate to the portal.
@@ -58,13 +63,15 @@ class Settings(BaseSettings):
     azure_managed_identity_enabled: bool = False
 
     @model_validator(mode="after")
-    def _check_insecure_defaults_in_production(self) -> Settings:
-        """Raise at startup when the JWT secret placeholder is used in production.
+    def _validate_settings(self) -> Settings:
+        """Validate critical configuration after loading from environment."""
+        # 1. Ensure at least one database connection URL is provided.
+        if not self.database_url and not self.database_migration_url:
+            raise ValueError(
+                "At least one of DATABASE_URL or DATABASE_MIGRATION_URL must be provided."
+            )
 
-        This prevents a misconfigured deployment from silently accepting forged
-        session cookies — all tokens would be forgeable with the well-known default.
-        Override ``JWT_SECRET`` via the environment variable in non-local deployments.
-        """
+        # 2. Raise at startup when the JWT secret placeholder is used in production.
         if self.app_env != "local" and self.jwt_secret == _JWT_SECRET_PLACEHOLDER:
             raise ValueError(
                 f"JWT_SECRET must be overridden in the '{self.app_env}' environment. "
