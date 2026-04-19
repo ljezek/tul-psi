@@ -52,9 +52,8 @@ async def _check_database(session: AsyncSession) -> ComponentCheck:
         return ComponentCheck(status="fail", componentType="datastore", output=str(exc))
 
 
-async def _check_otel_collector() -> ComponentCheck:
+async def _check_otel_collector(url: str) -> ComponentCheck:
     """Check optional OTel collector availability."""
-    url = "http://localhost:13133"
     try:
         async with httpx.AsyncClient(timeout=0.5) as client:
             response = await client.get(url)
@@ -84,7 +83,7 @@ async def health(
 ) -> JSONResponse:
     """Perform health checks and return standardized response."""
     db_check = await _check_database(session)
-    otel_check = await _check_otel_collector()
+    otel_check = await _check_otel_collector(settings.otel_collector_health_url)
 
     # Database is CRITICAL: fail if it's down
     # OTel is OPTIONAL: warn if it's down, but keep overall status as 'pass' (or 'warn')
@@ -105,7 +104,7 @@ async def health(
             "postgresql:connection": [db_check],
             "otel:collector": [otel_check],
         },
-    ).model_dump()
+    ).model_dump(exclude_none=True)
 
     return JSONResponse(
         content=content,
