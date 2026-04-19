@@ -52,12 +52,18 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Update Migrations Job Image
+        run: |
+          az containerapp job update \
+            --name job-spc-dev-migrate \
+            --resource-group rg-spc-dev-pl \
+            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
+
       - name: Run Migrations Job
         run: |
           az containerapp job start \
             --name job-spc-dev-migrate \
-            --resource-group rg-spc-dev-pl \
-            --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
+            --resource-group rg-spc-dev-pl
 
       - name: Update Backend App
         run: |
@@ -65,5 +71,6 @@ jobs:
           az containerapp update \
             --name ca-spc-dev-backend \
             --resource-group rg-spc-dev-pl \
+            --container-name backend \
             --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }} \
             --set-env-vars FRONTEND_URL=https://$FRONTEND_URL
