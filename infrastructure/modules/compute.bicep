@@ -117,11 +117,11 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
         }
         {
           name: 'otel-collector'
-          image: 'otel/opentelemetry-collector-contrib:latest'
+          image: 'otel/opentelemetry-collector-contrib:0.111.0'
           command: [
             'sh'
             '-c'
-            'mkdir -p /etc/otelcol-contrib && echo "$OTEL_CONFIG_CONTENT" > /etc/otelcol-contrib/config.yaml && /otelcol-contrib --config /etc/otelcol-contrib/config.yaml'
+            'mkdir -p /tmp/otelcol && echo "$OTEL_CONFIG_CONTENT" > /tmp/otelcol/config.yaml && /otelcol-contrib --config /tmp/otelcol/config.yaml'
           ]
           env: [
             {
