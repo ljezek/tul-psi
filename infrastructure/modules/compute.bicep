@@ -118,6 +118,11 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
         {
           name: 'otel-collector'
           image: 'otel/opentelemetry-collector-contrib:latest'
+          command: [
+            'sh'
+            '-c'
+            'mkdir -p /etc/otelcol-contrib && echo "$OTEL_CONFIG_CONTENT" > /etc/otelcol-contrib/config.yaml && /otelcol-contrib --config /etc/otelcol-contrib/config.yaml'
+          ]
           env: [
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -125,7 +130,48 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'OTEL_CONFIG_CONTENT'
-              value: 'receivers:\n  otlp:\n    protocols:\n      grpc:\n        endpoint: 0.0.0.0:4317\n      http:\n        endpoint: 0.0.0.0:4318\n        cors:\n          allowed_origins: ["*"]\n\nprocessors:\n  batch:\n  resourcedetection:\n    detectors: [env]\n\nexporters:\n  azuremonitor:\n    connection_string: "${env:APPLICATIONINSIGHTS_CONNECTION_STRING}"\n  debug:\n    verbosity: basic\n\nextensions:\n  health_check:\n    endpoint: 0.0.0.0:13133\n\nservice:\n  extensions: [health_check]\n  pipelines:\n    traces:\n      receivers: [otlp]\n      processors: [resourcedetection, batch]\n      exporters: [azuremonitor, debug]\n    logs:\n      receivers: [otlp]\n      processors: [resourcedetection, batch]\n      exporters: [azuremonitor, debug]\n    metrics:\n      receivers: [otlp]\n      processors: [resourcedetection, batch]\n      exporters: [azuremonitor, debug]'
+              value: '''
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["*"]
+
+processors:
+  batch:
+  resourcedetection:
+    detectors: [env]
+
+exporters:
+  azuremonitor:
+    connection_string: "$${env:APPLICATIONINSIGHTS_CONNECTION_STRING}"
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [azuremonitor, debug]
+    logs:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [azuremonitor, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [azuremonitor, debug]
+'''
             }
           ]
           resources: {
