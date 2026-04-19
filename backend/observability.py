@@ -101,5 +101,6 @@ def setup_otel(app: FastAPI) -> None:
     except Exception as exc:
         # Fallback to sys.stderr in case the logging system itself is compromised
         import sys
+
         print(f"ERROR: Failed to initialize OpenTelemetry: {exc}", file=sys.stderr)
         logger.exception("Failed to initialize OpenTelemetry. Telemetry will be disabled.")
