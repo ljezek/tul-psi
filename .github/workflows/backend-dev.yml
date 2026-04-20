@@ -74,6 +74,8 @@ jobs:
             --resource-group rg-spc-dev-pl \
             --query name -o tsv)
           echo "Started execution: $EXECUTION_NAME"
+          
+          # Poll for completion
           for i in $(seq 1 36); do
             STATUS=$(az containerapp job execution show \
               --name job-spc-dev-migrate \
@@ -81,13 +83,32 @@ jobs:
               --job-execution-name "$EXECUTION_NAME" \
               --query "properties.status" -o tsv)
             echo "Status [$i/36]: $STATUS"
-            case "$STATUS" in
-              Succeeded) echo "Job completed successfully."; break ;;
-              Failed|Stopped) echo "Job failed: $STATUS"; exit 1 ;;
-            esac
+            
+            if [[ "$STATUS" == "Succeeded" ]]; then
+              echo "Job completed successfully."
+              exit 0
+            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Stopped" ]]; then
+              echo "Job failed with status: $STATUS"
+              echo "--- Fetching Job Logs ---"
+              # We use a slight delay to ensure logs are available in the console
+              sleep 5
+              az containerapp job execution show \
+                --name job-spc-dev-migrate \
+                --resource-group rg-spc-dev-pl \
+                --job-execution-name "$EXECUTION_NAME" \
+                --query "properties.template.containers[0].name" -o tsv | xargs -I {} \
+              az containerapp job log show \
+                --name job-spc-dev-migrate \
+                --resource-group rg-spc-dev-pl \
+                --job-execution-name "$EXECUTION_NAME" \
+                --container {}
+              exit 1
+            fi
             sleep 10
           done
-          [[ "$STATUS" == "Succeeded" ]] || { echo "Timed out waiting for job."; exit 1; }
+          
+          echo "Timed out waiting for job."
+          exit 1
 
       - name: Update Backend App
         run: |

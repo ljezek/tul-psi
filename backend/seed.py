@@ -53,7 +53,34 @@ def _iter_statements(sql: str) -> list[str]:
 async def _run(*, reset: bool) -> None:
     """Execute the environment-specific seed script against the database."""
     settings = get_settings()
-    engine = create_async_engine(settings.database_url, echo=False)
+    engine_kwargs = {
+        "echo": False,
+    }
+
+    if settings.azure_managed_identity_enabled:
+        from db.token_provider import TokenProvider
+
+        token_provider = TokenProvider()
+
+        # asyncpg supports passing a 'password' that is an async callable.
+        # This is the standard way to handle Entra ID (Managed Identity) tokens,
+        # as it allows the driver to refresh the token automatically before
+        # establishing new connections in the pool.
+        engine_kwargs["connect_args"] = {
+            "password": token_provider.get_token,
+            "ssl": True,
+        }
+    elif settings.app_env != "local":
+        # Force SSL by default in non-local environments if not explicitly disabled.
+        # This prevents "no pg_hba.conf entry ... no encryption" errors when
+        # connecting to cloud databases that require secure transport.
+        if "ssl=disable" not in settings.database_url:
+            engine_kwargs.setdefault("connect_args", {})["ssl"] = True
+
+    engine = create_async_engine(
+        settings.database_url,
+        **engine_kwargs,
+    )
 
     # Determine which SQL file to use based on APP_ENV.
     # For local/dev we use the same rich seed data (seed_dev.sql).
