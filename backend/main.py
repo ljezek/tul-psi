@@ -4,12 +4,13 @@ import logging
 import os
 import sys
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger.json import JsonFormatter
 
 from api.auth import router as auth_router
 from api.courses import router as courses_router
+from api.deps import verify_csrf_token
 from api.health import router as health_router
 from api.projects import router as projects_router
 from api.users import router as users_router
@@ -48,7 +49,10 @@ def _configure_logging() -> None:
 _configure_logging()
 
 settings = get_settings()
-app = FastAPI(title="Student Projects Catalogue API")
+app = FastAPI(
+    title="Student Projects Catalogue API",
+    dependencies=[Depends(verify_csrf_token)],
+)
 
 # Setup OpenTelemetry BEFORE including routers to ensure all requests are traced.
 setup_otel(app)

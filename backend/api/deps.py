@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 
 import jwt
@@ -28,14 +29,8 @@ async def get_current_user(
     Callers that require authentication should treat a ``None`` return value as
     unauthenticated and respond with an appropriate 401/403 themselves.
 
-    CSRF note: per the Double Submit Cookie spec, state-changing requests should
-    also carry an ``X-XSRF-Token`` header. That validation is intentionally
-    deferred (mocked) here while SMTP / frontend integration is still in
-    progress.
-
-    # TODO: Replace the CSRF mock below with real Double Submit Cookie validation
-    # once the frontend sends the ``X-XSRF-Token`` header on state-changing
-    # requests (PATCH, POST, DELETE).
+    CSRF protection is enforced separately via the ``verify_csrf_token``
+    dependency registered at the application level.
     """
     token = request.cookies.get("session")
     if token is None:
@@ -83,6 +78,29 @@ async def require_current_user(
             detail="Authentication is required.",
         )
     return current_user
+
+
+async def verify_csrf_token(request: Request) -> None:
+    """Enforce Double Submit Cookie CSRF protection on state-changing requests.
+
+    Safe methods (GET, HEAD, OPTIONS) are skipped.  For all mutating methods the
+    ``XSRF-TOKEN`` cookie must be present and its value must equal the
+    ``X-XSRF-Token`` request header.  Requests without the cookie (unauthenticated
+    sessions) are allowed through — downstream auth dependencies reject them.
+    """
+    if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
+        return
+
+    cookie_token = request.cookies.get("XSRF-TOKEN")
+    if not cookie_token:
+        return
+
+    header_token = request.headers.get("X-XSRF-Token", "")
+    if not hmac.compare_digest(cookie_token, header_token):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token validation failed.",
+        )
 
 
 async def get_optional_current_user(

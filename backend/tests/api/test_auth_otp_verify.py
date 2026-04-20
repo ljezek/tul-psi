@@ -202,6 +202,28 @@ async def test_otp_verify_success_sets_cookie_and_marks_token_used(
     assert mock_mark_used.call_args[0][1] == mock_token.id
 
 
+async def test_otp_verify_success_sets_xsrf_cookie(client: AsyncClient) -> None:
+    """Successful OTP verification must set non-HttpOnly XSRF-TOKEN cookie for CSRF protection."""
+    mock_user = _make_user()
+    mock_token = _make_token(otp="483921")
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.get_active_otp_token", new_callable=AsyncMock, return_value=mock_token),
+        patch("db.auth.mark_otp_token_used", new_callable=AsyncMock),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/verify",
+            json={"email": "jan.novak@tul.cz", "otp": "483921"},
+        )
+    assert response.status_code == 200
+    assert "XSRF-TOKEN" in response.cookies
+    set_cookie_headers = response.headers.get_list("set-cookie")
+    xsrf_header = next((h for h in set_cookie_headers if "XSRF-TOKEN=" in h), "")
+    assert xsrf_header, "XSRF-TOKEN Set-Cookie header not found"
+    assert "httponly" not in xsrf_header.lower()
+    assert "samesite=strict" in xsrf_header.lower()
+
+
 async def test_otp_verify_jwt_claims_and_expiry(client: AsyncClient) -> None:
     """The session cookie JWT must carry user_id and role claims and expire in ~8 hours."""
     mock_user = _make_user(user_id=42, role=UserRole.STUDENT)
