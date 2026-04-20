@@ -4,6 +4,8 @@ param env string
 param subnetId string
 param vnetId string
 param scriptsSubnetId string
+param tags object
+param lawId string = ''
 
 // --- Identity for DB Setup/Bootstrap ---
 // PostgreSQL Flexible Server (Private Access) cannot be reached from the Azure Portal Query Editor
@@ -12,12 +14,14 @@ param scriptsSubnetId string
 resource idDbSetup 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-${env}-db-setup'
   location: location
+  tags: tags
 }
 
 // --- Storage Account for Infrastructure Scripts (Shared) ---
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: 'st${prefix}${env}scripts' 
   location: location
+  tags: tags
   sku: {
     name: 'Standard_LRS'
   }
@@ -73,6 +77,7 @@ resource filePrivilegedContributor 'Microsoft.Authorization/roleAssignments@2022
 resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' = {
   name: 'psql-${prefix}-${env}'
   location: location
+  tags: tags
   identity: {
     type: 'SystemAssigned'
   }
@@ -96,6 +101,26 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview'
   }
 }
 
+resource postgres_diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(lawId)) {
+  name: 'ds-${postgres.name}'
+  scope: postgres
+  properties: {
+    workspaceId: lawId
+    logs: [
+      {
+        category: 'PostgreSQLLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
+}
+
 // Databases are required as resources in Flexible Server Bicep
 resource db_dev 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
   parent: postgres
@@ -109,12 +134,14 @@ resource db_dev 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: '${prefix}-${env}.postgres.database.azure.com'
   location: 'global'
+  tags: tags
 }
 
 resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: privateDnsZone
   name: '${prefix}-${env}-link'
   location: 'global'
+  tags: tags
   properties: {
     registrationEnabled: false
     virtualNetwork: {

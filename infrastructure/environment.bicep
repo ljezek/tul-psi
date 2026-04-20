@@ -22,6 +22,12 @@ param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
 
+param tags object = {
+  project: 'spc'
+  env: env
+  managedBy: 'bicep'
+}
+
 // --- Monitoring (Per Environment) ---
 module monitoring './modules/monitoring.bicep' = {
   name: 'monitoring-${env}-deployment'
@@ -29,6 +35,7 @@ module monitoring './modules/monitoring.bicep' = {
     location: location
     prefix: prefix
     env: env
+    tags: tags
   }
 }
 
@@ -51,6 +58,7 @@ module compute './modules/compute.bicep' = {
     pgadminAadClientSecret: pgadminAadClientSecret
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
+    tags: tags
   }
 }
 
@@ -68,6 +76,7 @@ module dbBootstrap './modules/database-bootstrap.bicep' = {
     storageAccountName: storageAccountName
     scriptsSubnetId: scriptsSubnetId
     developerIdentityEmail: developerIdentityEmail
+    tags: tags
   }
   dependsOn: [
     compute

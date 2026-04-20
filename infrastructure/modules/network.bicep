@@ -1,10 +1,12 @@
 param location string
+param tags object
 param vnetName string = 'vnet-spc-shared'
 param vnetAddressPrefix string = '10.0.0.0/16'
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   name: vnetName
   location: location
+  tags: tags
   properties: {
     addressSpace: {
       addressPrefixes: [

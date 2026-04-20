@@ -18,6 +18,8 @@ param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
 
+param tags object
+
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var deployPgadminAuth = deployDebugTools && !empty(pgadminAadClientId) && !empty(pgadminAadClientSecret)
 
@@ -29,6 +31,7 @@ resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
 resource env_aca 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: 'cae-${prefix}-${env}'
   location: location
+  tags: tags
   properties: {
     vnetConfiguration: {
       infrastructureSubnetId: subnetId
@@ -48,6 +51,7 @@ resource env_aca 'Microsoft.App/managedEnvironments@2023-05-01' = {
 resource app_identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-${env}-app'
   location: location
+  tags: tags
 }
 
 module app_acr_pull './acr-role.bicep' = {
@@ -64,6 +68,7 @@ module app_acr_pull './acr-role.bicep' = {
 resource migrator_identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-${env}-migrator'
   location: location
+  tags: tags
 }
 
 module migrator_acr_pull './acr-role.bicep' = {
@@ -80,6 +85,7 @@ module migrator_acr_pull './acr-role.bicep' = {
 resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
   name: 'ca-${prefix}-${env}-backend'
   location: location
+  tags: tags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -118,6 +124,17 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_CLIENT_ID', value: app_identity.properties.clientId }
             { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://localhost:4318' }
           ]
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/health'
+                port: 8000
+              }
+              periodSeconds: 30
+              failureThreshold: 3
+            }
+          ]
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -153,10 +170,29 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
+resource backend_app_diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'ds-${backend_app.name}'
+  scope: backend_app
+  properties: {
+    workspaceId: law.id
+    logs: [
+      {
+        category: 'ContainerAppConsoleLogs'
+        enabled: true
+      }
+      {
+        category: 'ContainerAppSystemLogs'
+        enabled: true
+      }
+    ]
+  }
+}
+
 // --- Migration Job ---
 resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
   name: 'job-${prefix}-${env}-migrate'
   location: location
+  tags: tags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -196,10 +232,29 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
   }
 }
 
+resource migration_job_diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'ds-${migration_job.name}'
+  scope: migration_job
+  properties: {
+    workspaceId: law.id
+    logs: [
+      {
+        category: 'ContainerAppConsoleLogs'
+        enabled: true
+      }
+      {
+        category: 'ContainerAppSystemLogs'
+        enabled: true
+      }
+    ]
+  }
+}
+
 // --- Debugging Tools (Conditional) ---
 resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools) {
   name: 'ca-${prefix}-${env}-pgadmin'
   location: location
+  tags: tags
   properties: {
     managedEnvironmentId: env_aca.id
     configuration: {
@@ -240,6 +295,24 @@ resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools
   }
 }
 
+resource pgadmin_diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (deployDebugTools) {
+  name: 'ds-pgadmin'
+  scope: pgadmin
+  properties: {
+    workspaceId: law.id
+    logs: [
+      {
+        category: 'ContainerAppConsoleLogs'
+        enabled: true
+      }
+      {
+        category: 'ContainerAppSystemLogs'
+        enabled: true
+      }
+    ]
+  }
+}
+
 resource pgadmin_auth 'Microsoft.App/containerApps/authConfigs@2023-05-01' = if (deployPgadminAuth) {
   parent: pgadmin
   name: 'current'
@@ -276,6 +349,7 @@ resource frontend_swa 'Microsoft.Web/staticSites@2022-09-01' = {
   // Static Web Apps is a globally distributed service not available in all regions.
   // Therefore we hardcode the location to westeurope (it's only used for metadata storage).
   location: 'westeurope'
+  tags: tags
   sku: {
     name: 'Free'
     tier: 'Free'

@@ -6,7 +6,7 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
         cors:
-          allowed_origins: ["*"]
+          allowed_origins: ["http://localhost:8000"]
 
 processors:
   batch:
