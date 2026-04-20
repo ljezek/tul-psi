@@ -8,7 +8,7 @@ import pytest
 from fastapi import HTTPException, Request
 from httpx import AsyncClient
 
-from api.deps import get_current_user, get_optional_current_user
+from api.deps import get_current_user, get_optional_current_user, verify_csrf_token
 from db.session import get_session
 from main import app
 from models.user import User, UserRole
@@ -222,6 +222,71 @@ async def test_get_optional_current_user_returns_none_without_cookie() -> None:
     result = await get_optional_current_user(request, session)
 
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for verify_csrf_token
+# ---------------------------------------------------------------------------
+
+
+async def test_verify_csrf_token_skips_safe_methods() -> None:
+    """GET, HEAD, OPTIONS, and TRACE must bypass CSRF validation entirely."""
+    for method in ("GET", "HEAD", "OPTIONS", "TRACE"):
+        request = MagicMock(spec=Request)
+        request.method = method
+        await verify_csrf_token(request)
+
+
+async def test_verify_csrf_token_allows_post_without_cookie() -> None:
+    """POST with no XSRF-TOKEN cookie must pass — auth deps handle unauthenticated requests."""
+    request = MagicMock(spec=Request)
+    request.method = "POST"
+    request.cookies = {}
+    await verify_csrf_token(request)
+
+
+async def test_verify_csrf_token_passes_when_header_matches_cookie() -> None:
+    """POST with a matching XSRF-TOKEN cookie and X-XSRF-Token header must pass."""
+    token = "a1b2c3d4e5f6"
+    request = MagicMock(spec=Request)
+    request.method = "POST"
+    request.cookies = {"XSRF-TOKEN": token}
+    request.headers = {"X-XSRF-Token": token}
+    await verify_csrf_token(request)
+
+
+async def test_verify_csrf_token_raises_403_on_header_mismatch() -> None:
+    """POST with a mismatched X-XSRF-Token header must raise HTTP 403."""
+    request = MagicMock(spec=Request)
+    request.method = "POST"
+    request.cookies = {"XSRF-TOKEN": "correct"}
+    request.headers = {"X-XSRF-Token": "wrong"}
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_csrf_token(request)
+    assert exc_info.value.status_code == 403
+
+
+async def test_verify_csrf_token_raises_403_on_missing_header() -> None:
+    """POST with XSRF-TOKEN cookie but no X-XSRF-Token header must raise HTTP 403."""
+    request = MagicMock(spec=Request)
+    request.method = "POST"
+    request.cookies = {"XSRF-TOKEN": "secret"}
+    request.headers = {}
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_csrf_token(request)
+    assert exc_info.value.status_code == 403
+
+
+async def test_verify_csrf_token_enforces_delete_and_patch() -> None:
+    """DELETE and PATCH requests with a mismatched token must also raise HTTP 403."""
+    for method in ("DELETE", "PATCH"):
+        request = MagicMock(spec=Request)
+        request.method = method
+        request.cookies = {"XSRF-TOKEN": "secret"}
+        request.headers = {"X-XSRF-Token": "wrong"}
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_csrf_token(request)
+        assert exc_info.value.status_code == 403
 
 
 async def test_get_optional_current_user_returns_user_for_valid_token() -> None:
