@@ -14,7 +14,8 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: dev # Connects to the 'dev' environment in GitHub Settings
+    timeout-minutes: 30
+    environment: dev
     steps:
       - uses: actions/checkout@v6
 

@@ -18,6 +18,7 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   name: 'ds-${prefix}-${env}-bootstrap'
   location: location
   kind: 'AzureCLI'
+  tags: tags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -130,4 +131,6 @@ echo "SUCCESS: Database bootstrap complete for $ENV."
     retentionInterval: 'P1D'
     cleanupPreference: 'OnSuccess'
   }
+}
+
 }

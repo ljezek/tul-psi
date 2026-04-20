@@ -14,6 +14,7 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: dev
     outputs:
       acr_name: ${{ steps.get_acr.outputs.acr_name }}
@@ -52,6 +53,7 @@ jobs:
   migrate-and-deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Azure Login
         uses: azure/login@v2
@@ -113,9 +115,23 @@ jobs:
       - name: Update Backend App
         run: |
           FRONTEND_URL=$(az staticwebapp show -n swa-spc-dev -g rg-spc-dev-pl --query "defaultHostname" -o tsv)
+          
+          echo "Capturing current active revision for rollback..."
+          PREV_REVISION=$(az containerapp revision list \
+            --name ca-spc-dev-backend \
+            --resource-group rg-spc-dev-pl \
+            --query "[?properties.active].name | [0]" -o tsv)
+          echo "Current active revision: $PREV_REVISION"
+          
+          echo "Updating backend app to new image..."
           az containerapp update \
             --name ca-spc-dev-backend \
             --resource-group rg-spc-dev-pl \
             --container-name backend \
             --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }} \
-            --set-env-vars FRONTEND_URL=https://$FRONTEND_URL
+            --set-env-vars FRONTEND_URL=https://$FRONTEND_URL || \
+          (echo "Deployment failed! Rolling back to revision: $PREV_REVISION" && \
+           az containerapp revision activate \
+             --revision "$PREV_REVISION" \
+             --name ca-spc-dev-backend \
+             --resource-group rg-spc-dev-pl && exit 1)

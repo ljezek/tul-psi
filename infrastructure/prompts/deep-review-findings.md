@@ -242,7 +242,7 @@ form components
 
 ---
 
-## PR 11 — Infrastructure: Health Probes, Diagnostics & CI/CD Hardening
+## PR 10 — Infrastructure: Health Probes, Diagnostics & CI/CD Hardening
 
 **Scope:** `infrastructure/modules/compute.bicep`, `backend/Dockerfile`,
 `.github/workflows/infrastructure.yml`, `.github/workflows/backend-dev.yml`,
@@ -313,7 +313,7 @@ form components
 
 ---
 
-## PR 12 — Infrastructure: pgAdmin Security & Scale-to-Zero Documentation
+## PR 11 — Infrastructure: pgAdmin Security & Scale-to-Zero Documentation
 
 **Scope:** `infrastructure/modules/compute.bicep`, `infrastructure/README.md`
 

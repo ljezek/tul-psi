@@ -3,11 +3,29 @@ targetScope = 'resourceGroup'
 param location string = resourceGroup().location
 param prefix string = 'spc'
 
+param tags object = {
+  project: 'spc'
+  env: 'shared'
+  managedBy: 'bicep'
+}
+
+// --- Monitoring (Shared) ---
+module monitoring './modules/monitoring.bicep' = {
+  name: 'monitoring-shared-deployment'
+  params: {
+    location: location
+    prefix: prefix
+    env: 'shared'
+    tags: tags
+  }
+}
+
 // --- Network ---
 module network './modules/network.bicep' = {
   name: 'network-deployment'
   params: {
     location: location
+    tags: tags
   }
 }
 
@@ -17,6 +35,8 @@ module acr './modules/acr.bicep' = {
   params: {
     location: location
     prefix: prefix
+    tags: tags
+    lawId: monitoring.outputs.workspaceId
   }
 }
 
@@ -30,16 +50,8 @@ module database './modules/database.bicep' = {
     subnetId: network.outputs.snetDbId
     vnetId: network.outputs.vnetId
     scriptsSubnetId: network.outputs.snetScriptsId
-  }
-}
-
-// --- Monitoring (Shared) ---
-module monitoring './modules/monitoring.bicep' = {
-  name: 'monitoring-shared-deployment'
-  params: {
-    location: location
-    prefix: prefix
-    env: 'shared'
+    tags: tags
+    lawId: monitoring.outputs.workspaceId
   }
 }
 

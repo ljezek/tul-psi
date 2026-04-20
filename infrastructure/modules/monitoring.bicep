@@ -1,22 +1,25 @@
 param location string
 param prefix string
 param env string
+param tags object
 
 // Remove truncated or unnecessary resource
 resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: 'law-${prefix}-${env}'
   location: location
+  tags: tags
   properties: {
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 30
+    retentionInDays: (env == 'prod') ? 90 : 30
   }
 }
 
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: 'ai-${prefix}-${env}'
   location: location
+  tags: tags
   kind: 'web'
   properties: {
     Application_Type: 'web'

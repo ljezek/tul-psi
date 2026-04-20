@@ -5,6 +5,7 @@ param vnetAddressPrefix string = '10.0.0.0/16'
 resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   name: vnetName
   location: location
+  tags: tags
   properties: {
     addressSpace: {
       addressPrefixes: [
@@ -82,3 +83,4 @@ output snetDbId string = vnet.properties.subnets[0].id
 output snetDevId string = vnet.properties.subnets[1].id
 output snetProdId string = vnet.properties.subnets[2].id
 output snetScriptsId string = vnet.properties.subnets[3].id
+.id
