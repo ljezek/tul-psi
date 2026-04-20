@@ -12,9 +12,6 @@ param tags object
 
 // A timestamp to ensure the script runs on every deployment
 param forceUpdateTag string = utcNow()
-// Parameterize the Postgres authority URI to work around Bicep validation.
-#disable-next-line no-hardcoded-env-urls
-param ossrdbmsResource string = 'https://ossrdbms-aad.database.windows.net/'
 
 // --- Deployment Script (The "Ad-hoc Setup Job") ---
 // This resource executes SQL commands inside the VNet using the Setup Identity.
@@ -49,7 +46,8 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'DB_NAME', value: dbName }
       { name: 'ENV', value: env }
       { name: 'DEV_EMAIL', value: developerIdentityEmail }
-      { name: 'OSSRDBMS_RESOURCE', value: ossrdbmsResource }
+      #disable-next-line no-hardcoded-env-urls
+      { name: 'OSSRDBMS_RESOURCE', value: 'https://ossrdbms-aad.database.windows.net' }
     ]
     scriptContent: '''
 set -e
