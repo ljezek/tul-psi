@@ -170,24 +170,6 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
-resource backend_app_diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: 'ds-${backend_app.name}'
-  scope: backend_app
-  properties: {
-    workspaceId: law.id
-    logs: [
-      {
-        category: 'ContainerAppConsoleLogs'
-        enabled: true
-      }
-      {
-        category: 'ContainerAppSystemLogs'
-        enabled: true
-      }
-    ]
-  }
-}
-
 // --- Migration Job ---
 resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
   name: 'job-${prefix}-${env}-migrate'
@@ -229,24 +211,6 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
         }
       ]
     }
-  }
-}
-
-resource migration_job_diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: 'ds-${migration_job.name}'
-  scope: migration_job
-  properties: {
-    workspaceId: law.id
-    logs: [
-      {
-        category: 'ContainerAppConsoleLogs'
-        enabled: true
-      }
-      {
-        category: 'ContainerAppSystemLogs'
-        enabled: true
-      }
-    ]
   }
 }
 
@@ -292,24 +256,6 @@ resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools
         maxReplicas: 1
       }
     }
-  }
-}
-
-resource pgadmin_diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (deployDebugTools) {
-  name: 'ds-pgadmin'
-  scope: pgadmin
-  properties: {
-    workspaceId: law.id
-    logs: [
-      {
-        category: 'ContainerAppConsoleLogs'
-        enabled: true
-      }
-      {
-        category: 'ContainerAppSystemLogs'
-        enabled: true
-      }
-    ]
   }
 }
 
