@@ -57,18 +57,21 @@ export PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --quer
 
 echo "Bootstrapping $DB_NAME for $ENV..."
 psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${DB_NAME} sslmode=require" <<EOF
-  -- 1. Create Roles for Managed Identities
+  -- 1. Ensure the Entra ID extension is created in this database
+  CREATE EXTENSION IF NOT EXISTS pgaadauth;
+
+  -- 2. Create Roles for Managed Identities
   DO \$$
   BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${ENV}-migrator') THEN
-      PERFORM pgaadauth_create_principal('id-spc-${ENV}-migrator', false, false);
+      PERFORM pg_catalog.pgaadauth_create_principal('id-spc-${ENV}-migrator', false, false);
     END IF;
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${ENV}-app') THEN
-      PERFORM pgaadauth_create_principal('id-spc-${ENV}-app', false, false);
+      PERFORM pg_catalog.pgaadauth_create_principal('id-spc-${ENV}-app', false, false);
     END IF;
   END \$$;
 
-  -- 2. Grant Permissions
+  -- 3. Grant Permissions
   ALTER SCHEMA public OWNER TO "id-spc-${ENV}-migrator";
   GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO "id-spc-${ENV}-migrator";
   GRANT CONNECT ON DATABASE ${DB_NAME} TO "id-spc-${ENV}-app";
