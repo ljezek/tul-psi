@@ -13,6 +13,7 @@ param tags object
 // A timestamp to ensure the script runs on every deployment
 param forceUpdateTag string = utcNow()
 // Parameterize the Postgres authority URI to work around Bicep validation.
+#disable-next-line no-hardcoded-env-urls
 param ossrdbmsResource string = 'https://ossrdbms-aad.database.windows.net/'
 
 // --- Deployment Script (The "Ad-hoc Setup Job") ---
