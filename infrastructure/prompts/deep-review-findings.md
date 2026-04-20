@@ -30,7 +30,7 @@ Severity labels: **HIGH** = fix before widening access · **MEDIUM** = fix soon 
 
 ---
 
-## PR 2 — CSRF Protection (Backend + Frontend, coordinated)
+## DONE PR 2 — CSRF Protection (Backend + Frontend, coordinated)
 
 **Scope:** `backend/api/deps.py`, `backend/api/auth.py`, `frontend/src/api.ts`
 
@@ -242,7 +242,7 @@ form components
 
 ---
 
-## PR 10 — Infrastructure: Health Probes, Diagnostics & CI/CD Hardening
+## DONE: PR 10 — Infrastructure: Health Probes, Diagnostics & CI/CD Hardening
 
 **Scope:** `infrastructure/modules/compute.bicep`, `backend/Dockerfile`,
 `.github/workflows/infrastructure.yml`, `.github/workflows/backend-dev.yml`,

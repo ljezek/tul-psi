@@ -32,6 +32,13 @@ export class ApiError extends Error {
   }
 }
 
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
 async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof fetch>[1]> = {}): Promise<T> {
   const url = `${config.apiUrl}${path}`;
   const headers = new Headers(options.headers);
@@ -40,8 +47,13 @@ async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof 
     headers.set('Content-Type', 'application/json');
   }
 
-  // TODO: Add XSRF token header for state-changing requests
-  
+  if (MUTATING_METHODS.has((options.method ?? 'GET').toUpperCase())) {
+    const xsrfToken = getCookie('XSRF-TOKEN');
+    if (xsrfToken) {
+      headers.set('X-XSRF-Token', xsrfToken);
+    }
+  }
+
   const response = await fetch(url, {
     ...options,
     headers,

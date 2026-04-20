@@ -48,6 +48,16 @@ async def test_logout_cookie_attributes(client: AsyncClient) -> None:
     assert "samesite=strict" in set_cookie_header.lower()
 
 
+async def test_logout_clears_xsrf_token_cookie(client: AsyncClient) -> None:
+    """Logout must expire the XSRF-TOKEN cookie by setting Max-Age=0."""
+    response = await client.post("/api/v1/auth/logout")
+    set_cookie_headers = response.headers.get_list("set-cookie")
+    xsrf_header = next((h for h in set_cookie_headers if "XSRF-TOKEN=" in h), "")
+    assert xsrf_header, "XSRF-TOKEN Set-Cookie header not found on logout"
+    assert "Max-Age=0" in xsrf_header
+    assert "samesite=strict" in xsrf_header.lower()
+
+
 async def test_logout_is_idempotent_without_session(client: AsyncClient) -> None:
     """Calling logout without an active session must still return HTTP 200."""
     # No cookie set on the client — simulates a logged-out or anonymous caller.
