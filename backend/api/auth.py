@@ -117,12 +117,16 @@ async def verify_otp(
     settings = get_settings()
     # Secure cookies require HTTPS; disable only for the local development environment.
     secure_cookie = settings.app_env != "local"
+    # SameSite=None is required for cross-site AJAX (e.g., Azure Container Apps default URLs),
+    # but it MUST be paired with Secure=True.  For local development (HTTP), we use Lax.
+    samesite_policy = "none" if secure_cookie else "lax"
+
     response.set_cookie(
         key="session",
         value=jwt_token,
         httponly=True,
         secure=secure_cookie,
-        samesite="strict",
+        samesite=samesite_policy,
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
     # Non-HttpOnly XSRF-TOKEN cookie for Double Submit Cookie CSRF protection.
@@ -132,7 +136,7 @@ async def verify_otp(
         value=secrets.token_hex(32),
         httponly=False,
         secure=secure_cookie,
-        samesite="strict",
+        samesite=samesite_policy,
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
     return {}
@@ -156,14 +160,16 @@ async def logout(response: Response) -> dict[str, str]:
     still hit it safely without receiving a 401.
     """
     settings = get_settings()
-    # Mirror the Secure flag used during login so browsers honour the override.
+    # Mirror the Secure and SameSite flags used during login.
     secure_cookie = settings.app_env != "local"
+    samesite_policy = "none" if secure_cookie else "lax"
+
     response.set_cookie(
         key="session",
         value="",
         httponly=True,
         secure=secure_cookie,
-        samesite="strict",
+        samesite=samesite_policy,
         max_age=0,
     )
     response.set_cookie(
@@ -171,7 +177,7 @@ async def logout(response: Response) -> dict[str, str]:
         value="",
         httponly=False,
         secure=secure_cookie,
-        samesite="strict",
+        samesite=samesite_policy,
         max_age=0,
     )
     return {}
