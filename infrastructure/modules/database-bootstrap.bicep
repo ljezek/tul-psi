@@ -7,6 +7,7 @@ param dbHost string
 param dbAdminName string
 param dbName string
 param idDbSetupId string
+param developerIdentityEmail string
 
 // A timestamp to ensure the script runs on every deployment
 param forceUpdateTag string = utcNow()
@@ -42,6 +43,7 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'DB_ADMIN', value: dbAdminName }
       { name: 'DB_NAME', value: dbName }
       { name: 'ENV', value: env }
+      { name: 'DEV_EMAIL', value: developerIdentityEmail }
     ]
     scriptContent: '''
 set -e
@@ -69,11 +71,16 @@ psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${DB_NAME} sslmode=require" <<EOF
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${ENV}-app') THEN
       PERFORM pg_catalog.pgaadauth_create_principal('id-spc-${ENV}-app', false, false);
     END IF;
+    -- Create role for the developer identity
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DEV_EMAIL}') THEN
+      PERFORM pg_catalog.pgaadauth_create_principal('${DEV_EMAIL}', false, false);
+    END IF;
   END \$$;
 
   -- 3. Grant Permissions
   ALTER SCHEMA public OWNER TO "id-spc-${ENV}-migrator";
   GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO "id-spc-${ENV}-migrator";
+  GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO "${DEV_EMAIL}";
   GRANT CONNECT ON DATABASE ${DB_NAME} TO "id-spc-${ENV}-app";
   GRANT USAGE ON SCHEMA public TO "id-spc-${ENV}-app";
   
@@ -86,7 +93,7 @@ EOF
 
 echo "Verifying that Managed Identity roles exist..."
 MISSING_ROLES=$(psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${DB_NAME} sslmode=require" -t -A <<EOF
-  SELECT rolname FROM (VALUES ('id-spc-${ENV}-migrator'), ('id-spc-${ENV}-app')) AS t(rolname)
+  SELECT rolname FROM (VALUES ('id-spc-${ENV}-migrator'), ('id-spc-${ENV}-app'), ('${DEV_EMAIL}')) AS t(rolname)
   EXCEPT
   SELECT rolname FROM pg_roles;
 EOF

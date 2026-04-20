@@ -198,3 +198,38 @@ The first deployment follows an automated sequence.
 - **Automated Bootstrap:** A Bicep `deploymentScript` handles initial PostgreSQL role creation (`id-spc-dev-migrator` and `id-spc-dev-app`) within the private VNet.
 - **Scale-to-Zero:** The backend is configured with `minReplicas: 0` to minimize costs.
 - **Permission Split:** The Migrator identity has DDL rights (Alembic), while the App identity is restricted to DML operations.
+
+---
+
+## 5. Troubleshooting & DB Debugging (VNet Access)
+
+Since the PostgreSQL server is restricted to the private VNet, you cannot connect to it directly from your local machine. We use **Azure Bastion (Developer SKU)** to create a secure tunnel.
+
+### Step 1: Grant your Identity Access
+By default, the `environment.bicep` grants `ALL PRIVILEGES` to `lukas.jezek@gmail.com` in the `dev` database. If you need to add another user, update the `developerIdentityEmail` parameter in `environment.bicep`.
+
+### Step 2: Start the Bastion Tunnel
+Run this in a terminal window. Keep it open while you are debugging.
+
+```bash
+# 1. Get the PostgreSQL Resource ID
+DB_RESOURCE_ID=$(az postgres flexible-server show -g rg-spc-shared-pl -n psql-spc-shared --query id -o tsv)
+
+# 2. Start the tunnel (defaults to localhost:5432)
+az network bastion tunnel \
+  --name bastion-spc-shared \
+  --resource-group rg-spc-shared-pl \
+  --target-resource-id $DB_RESOURCE_ID \
+  --resource-port 5432 \
+  --port 5432
+```
+
+### Step 3: Connect using pgAdmin / DBeaver
+1.  **Host:** `localhost`
+2.  **Port:** `5432`
+3.  **Username:** `lukas.jezek@gmail.com` (your identity)
+4.  **Password:** An Entra ID Access Token. Generate it using:
+    ```bash
+    az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv
+    ```
+5.  **SSL Mode:** `Require`

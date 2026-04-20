@@ -43,6 +43,20 @@ module monitoring './modules/monitoring.bicep' = {
   }
 }
 
+// --- Debugging (Bastion Developer) ---
+resource bastion 'Microsoft.Network/bastionHosts@2023-11-01' = {
+  name: 'bastion-${prefix}-shared'
+  location: location
+  sku: {
+    name: 'Developer'
+  }
+  properties: {
+    virtualNetwork: {
+      id: network.outputs.vnetId
+    }
+  }
+}
+
 output acrName string = acr.outputs.acrName
 output vnetId string = network.outputs.vnetId
 output snetDevId string = network.outputs.snetDevId
