@@ -48,3 +48,7 @@ output vnetId string = network.outputs.vnetId
 output snetDevId string = network.outputs.snetDevId
 output snetProdId string = network.outputs.snetProdId
 output dbHost string = database.outputs.postgresFullyQualifiedDomainName
+output idDbSetupId string = database.outputs.idDbSetupId
+output idDbSetupName string = database.outputs.idDbSetupName
+output storageAccountName string = database.outputs.storageAccountName
+output snetScriptsId string = network.outputs.snetScriptsId

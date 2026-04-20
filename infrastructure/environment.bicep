@@ -8,6 +8,10 @@ param acrName string
 param acrResourceGroup string
 param dbHost string
 param dbName string
+param idDbSetupId string
+param idDbSetupName string
+param storageAccountName string
+param scriptsSubnetId string
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 @secure()
 param jwtSecret string
@@ -39,6 +43,25 @@ module compute './modules/compute.bicep' = {
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
   }
+}
+
+// --- Database Role Bootstrap ---
+module dbBootstrap './modules/database-bootstrap.bicep' = {
+  name: 'db-bootstrap-${env}-deployment'
+  params: {
+    location: location
+    prefix: prefix
+    env: env
+    dbHost: dbHost
+    dbName: dbName
+    idDbSetupId: idDbSetupId
+    dbAdminName: idDbSetupName
+    storageAccountName: storageAccountName
+    scriptsSubnetId: scriptsSubnetId
+  }
+  dependsOn: [
+    compute
+  ]
 }
 
 output backendUrl string = compute.outputs.backendUrl

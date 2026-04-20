@@ -64,34 +64,35 @@ for rg in "rg-spc-shared-pl" "rg-spc-dev-pl" "rg-spc-prod-pl"; do
 done
 ```
 
-### Step 2: Create DB Bootstrap Identity (Required for VNet DB Access)
-Because the DB is in a VNet, Bicep uses a temporary script to create roles. This identity needs "Directory Readers" to look up other Managed Identities.
+### Step 2: Create DB Bootstrap Identity & Grant Permissions (Required for VNet DB Access)
+Because the DB is in a VNet, Bicep uses a temporary script to create roles. This identity and the DB server itself need permissions to look up other Managed Identities in Entra ID.
 
 ```bash
 # 1. Create the identity in the 'shared' resource group
 az identity create -g rg-spc-shared-pl -n id-spc-shared-db-setup
 
-# 2. Get its ID
+# 2. Get the Principal IDs for both the Setup Identity and the DB Server
 SETUP_PRINCIPAL_ID=$(az identity show -g rg-spc-shared-pl -n id-spc-shared-db-setup --query principalId -o tsv)
+DB_SERVER_PRINCIPAL_ID=$(az postgres flexible-server show -g rg-spc-shared-pl -n psql-spc-shared --query identity.principalId -o tsv)
 
-# 3. Assign Granular Graph Permissions (Least Privilege)
-# These allow the identity to read Entra ID metadata during DB setup.
+# 3. Define the Granular Graph Permissions (Least Privilege)
 GRAPH_ID=$(az ad sp list --filter "displayName eq 'Microsoft Graph'" --query '[0].id' -o tsv)
-
-# 4. Query and assign User.Read.All, GroupMember.Read.All & Application.Read.All to my identity in MS Graph.
 APPROLE_IDS=$(az ad sp show --id "$GRAPH_ID" \
   --query "appRoles[?value=='User.Read.All' || value=='GroupMember.Read.All' || value=='Application.Read.All'].id" \
   -o tsv)
 
-# Loop through each AppRole ID and assign it
-for ROLE_ID in $APPROLE_IDS; do
-  az rest --method POST \
-    --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SETUP_PRINCIPAL_ID/appRoleAssignments" \
-    --body "{
-      \"principalId\": \"$SETUP_PRINCIPAL_ID\",
-      \"resourceId\": \"$GRAPH_ID\",
-      \"appRoleId\": \"$ROLE_ID\"
-    }"
+# 4. Assign permissions to both identities
+for PRINCIPAL_ID in $SETUP_PRINCIPAL_ID $DB_SERVER_PRINCIPAL_ID; do
+  echo "Assigning permissions to Principal: $PRINCIPAL_ID"
+  for ROLE_ID in $APPROLE_IDS; do
+    az rest --method POST \
+      --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$PRINCIPAL_ID/appRoleAssignments" \
+      --body "{
+        \"principalId\": \"$PRINCIPAL_ID\",
+        \"resourceId\": \"$GRAPH_ID\",
+        \"appRoleId\": \"$ROLE_ID\"
+      }"
+  done
 done
 ```
 
@@ -170,6 +171,10 @@ az deployment group validate \
                acrResourceGroup="rg-spc-shared-pl" \
                dbHost="psql-spc-shared.postgres.database.azure.com" \
                dbName="spc_dev" \
+               idDbSetupId="/subscriptions/ca830bff-0330-40f0-8d49-a18d5db67e9c/resourceGroups/rg-spc-shared-pl/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-spc-shared-db-setup" \
+               idDbSetupName="id-spc-shared-db-setup" \
+               storageAccountName="stspcsharedscripts" \
+               scriptsSubnetId="/subscriptions/ca830bff-0330-40f0-8d49-a18d5db67e9c/resourceGroups/rg-spc-shared-pl/providers/Microsoft.Network/virtualNetworks/vnet-spc-shared/subnets/snet-scripts" \
                jwtSecret="not-a-secret-just-for-validation-purposes"
 ```
 

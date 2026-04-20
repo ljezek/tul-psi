@@ -75,9 +75,21 @@ jobs:
           SNET_NAME="snet-${{ env.ENV_NAME }}"
           SNET_ID=$(az network vnet subnet show -g rg-spc-shared-pl --vnet-name vnet-spc-shared -n $SNET_NAME --query id -o tsv)
 
+          echo "Fetching Shared DB Bootstrap outputs..."
+          # We use az deployment group show to get outputs from the shared deployment
+          SHARED_OUTPUTS=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs)
+          ID_DB_SETUP_ID=$(echo $SHARED_OUTPUTS | jq -r .idDbSetupId.value)
+          ID_DB_SETUP_NAME=$(echo $SHARED_OUTPUTS | jq -r .idDbSetupName.value)
+          STORAGE_ACCOUNT_NAME=$(echo $SHARED_OUTPUTS | jq -r .storageAccountName.value)
+          SCRIPTS_SNET_ID=$(echo $SHARED_OUTPUTS | jq -r .snetScriptsId.value)
+
           echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
           echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
           echo "SNET_ID=$SNET_ID" >> $GITHUB_ENV
+          echo "ID_DB_SETUP_ID=$ID_DB_SETUP_ID" >> $GITHUB_ENV
+          echo "ID_DB_SETUP_NAME=$ID_DB_SETUP_NAME" >> $GITHUB_ENV
+          echo "STORAGE_ACCOUNT_NAME=$STORAGE_ACCOUNT_NAME" >> $GITHUB_ENV
+          echo "SCRIPTS_SNET_ID=$SCRIPTS_SNET_ID" >> $GITHUB_ENV
           
           # Try to get the current image to avoid reverting to hello-world
           # If the app doesn't exist yet, it will use the Bicep default
@@ -98,5 +110,9 @@ jobs:
             acrResourceGroup=rg-spc-shared-pl
             dbHost=${{ env.DB_HOST }}
             dbName=spc_${{ env.ENV_NAME }}
+            idDbSetupId=${{ env.ID_DB_SETUP_ID }}
+            idDbSetupName=${{ env.ID_DB_SETUP_NAME }}
+            storageAccountName=${{ env.STORAGE_ACCOUNT_NAME }}
+            scriptsSubnetId=${{ env.SCRIPTS_SNET_ID }}
             jwtSecret=${{ secrets.JWT_SECRET }}
             ${{ env.CURRENT_IMAGE != '' && format('containerImage={0}', env.CURRENT_IMAGE) || '' }}
