@@ -30,3 +30,16 @@ extend-immutable-calls = ["Depends", "fastapi.Depends", "Query", "fastapi.Query"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+addopts = "--cov=. --cov-report=term-missing --cov-report=xml"
+
+[tool.coverage.run]
+omit = [
+    "migrations/*",
+    "tests/*",
+    "seed.py",
+    "seed_dev.sql",
+    "seed_production.sql",
+    "alembic.ini",
+    "migration_settings.py",
+    "*/__init__.py",
+]
