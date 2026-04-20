@@ -114,5 +114,8 @@ jobs:
             idDbSetupName=${{ env.ID_DB_SETUP_NAME }}
             storageAccountName=${{ env.STORAGE_ACCOUNT_NAME }}
             scriptsSubnetId=${{ env.SCRIPTS_SNET_ID }}
+            deployDebugTools=${{ env.ENV_NAME == 'dev' }}
             jwtSecret=${{ secrets.JWT_SECRET }}
+            pgadminAadClientId=${{ secrets.PGADMIN_AAD_CLIENT_ID }}
+            pgadminAadClientSecret=${{ secrets.PGADMIN_AAD_CLIENT_SECRET }}
             ${{ env.CURRENT_IMAGE != '' && format('containerImage={0}', env.CURRENT_IMAGE) || '' }}

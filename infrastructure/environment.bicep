@@ -13,9 +13,14 @@ param idDbSetupName string
 param storageAccountName string
 param scriptsSubnetId string
 param developerIdentityEmail string = 'lukas.jezek@gmail.com'
+param deployDebugTools bool = false
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 @secure()
 param jwtSecret string
+
+param pgadminAadClientId string = ''
+@secure()
+param pgadminAadClientSecret string = ''
 
 // --- Monitoring (Per Environment) ---
 module monitoring './modules/monitoring.bicep' = {
@@ -41,6 +46,9 @@ module compute './modules/compute.bicep' = {
     dbName: dbName
     containerImage: containerImage
     jwtSecret: jwtSecret
+    deployDebugTools: deployDebugTools
+    pgadminAadClientId: pgadminAadClientId
+    pgadminAadClientSecret: pgadminAadClientSecret
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
   }

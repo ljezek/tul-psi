@@ -9,10 +9,17 @@ param dbName string
 param lawId string
 param aiConnectionString string
 param containerImage string
+param deployDebugTools bool = false
+param developerIdentityEmail string = 'lukas.jezek@gmail.com'
 @secure()
 param jwtSecret string
 
+param pgadminAadClientId string = ''
+@secure()
+param pgadminAadClientSecret string = ''
+
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+var deployPgadminAuth = deployDebugTools && !empty(pgadminAadClientId) && !empty(pgadminAadClientSecret)
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: last(split(lawId, '/'))
@@ -174,9 +181,10 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
         {
           name: 'migrator'
           image: containerImage
-          command: ['alembic', 'upgrade', 'head']
+          command: ['/bin/sh', '-c', 'alembic upgrade head && python seed.py']
           env: [
             { name: 'DATABASE_MIGRATION_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
+            { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
             { name: 'AZURE_CLIENT_ID', value: migrator_identity.properties.clientId }
             { name: 'APP_ENV', value: env }
@@ -184,6 +192,80 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           ]
         }
       ]
+    }
+  }
+}
+
+// --- Debugging Tools (Conditional) ---
+resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools) {
+  name: 'ca-${prefix}-${env}-pgadmin'
+  location: location
+  properties: {
+    managedEnvironmentId: env_aca.id
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: 80
+        transport: 'auto'
+      }
+      secrets: deployPgadminAuth ? [
+        {
+          name: 'aad-client-secret'
+          value: pgadminAadClientSecret
+        }
+      ] : []
+    }
+    template: {
+      containers: [
+        {
+          name: 'pgadmin'
+          image: 'dpage/pgadmin4'
+          env: [
+            { name: 'PGADMIN_DEFAULT_EMAIL', value: developerIdentityEmail }
+            { name: 'PGADMIN_DEFAULT_PASSWORD', value: 'this-is-not-used-with-easyauth-123' }
+            { name: 'PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION', value: 'True' }
+            { name: 'PGADMIN_CONFIG_CONSOLE_LOG_LEVEL', value: '10' }
+          ]
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+resource pgadmin_auth 'Microsoft.App/containerApps/authConfigs@2023-05-01' = if (deployPgadminAuth) {
+  parent: pgadmin
+  name: 'current'
+  properties: {
+    platform: {
+      enabled: true
+    }
+    globalValidation: {
+      unauthenticatedClientAction: 'RedirectToLoginPage'
+      redirectToProvider: 'azureactivedirectory'
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        registration: {
+          clientId: pgadminAadClientId
+          clientSecretSettingName: 'aad-client-secret'
+          openIdIssuer: '${environment().authentication.loginEndpoint}${subscription().tenantId}/v2.0'
+        }
+        validation: {
+          allowedAudiences: [
+            'api://${pgadminAadClientId}'
+            pgadminAadClientId
+          ]
+        }
+      }
     }
   }
 }
