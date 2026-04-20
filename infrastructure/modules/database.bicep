@@ -74,6 +74,9 @@ resource filePrivilegedContributor 'Microsoft.Authorization/roleAssignments@2022
 resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' = {
   name: 'psql-${prefix}-${env}'
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   sku: {
     name: 'Standard_B1ms'
     tier: 'Burstable'
@@ -135,95 +138,8 @@ module postgresAdmin './database-admin.bicep' = {
   }
 }
 
-// --- Deployment Script (The "Ad-hoc Setup Job") ---
-// This resource executes SQL commands inside the VNet using the Setup Identity.
-resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: 'ds-${prefix}-${env}-bootstrap'
-  location: location
-  kind: 'AzureCLI'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${idDbSetup.id}': {}
-    }
-  }
-  dependsOn: [
-    postgresAdmin
-    db_dev
-    storageContributor
-    blobContributor
-    filePrivilegedContributor
-  ]
-  properties: {
-    azCliVersion: '2.50.0'
-    containerSettings: {
-      containerGroupName: 'cg-${prefix}-${env}-db-bootstrap'
-      subnetIds: [
-        {
-          id: scriptsSubnetId
-        }
-      ]
-    }
-    storageAccountSettings: {
-      storageAccountName: storageAccount.name
-    }
-    environmentVariables: [
-      { name: 'DB_HOST', value: postgres.properties.fullyQualifiedDomainName }
-      { name: 'DB_ADMIN', value: idDbSetup.name }
-    ]
-    scriptContent: '''
-      echo "Waiting for DNS to propagate..."
-      sleep 30
-      
-      # Install psql (alpine-based azure-cli container needs it)
-      apk update && apk add postgresql-client
-      
-      # Get token for PostgreSQL Entra ID authentication
-      export PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv)
-      
-      bootstrap_db() {
-        local dbname=$1
-        local environment=$2
-        echo "Bootstrapping $dbname for $environment..."
-        psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${dbname} sslmode=require" <<EOF
-          -- 1. Create Roles for Managed Identities
-          -- Note: pgaadauth_create_principal is a custom Azure PG extension function
-          DO \$$
-          BEGIN
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${environment}-migrator') THEN
-              PERFORM pgaadauth_create_principal('id-spc-${environment}-migrator', false, false);
-            END IF;
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${environment}-app') THEN
-              PERFORM pgaadauth_create_principal('id-spc-${environment}-app', false, false);
-            END IF;
-          END \$$;
-
-
-          -- 2. Grant Permissions
-          -- The migrator needs to manage schema (DDL)
-          ALTER SCHEMA public OWNER TO "id-spc-${environment}-migrator";
-          GRANT ALL PRIVILEGES ON DATABASE ${dbname} TO "id-spc-${environment}-migrator";
-          
-          -- The app needs to manage data (DML)
-          GRANT CONNECT ON DATABASE ${dbname} TO "id-spc-${environment}-app";
-          GRANT USAGE ON SCHEMA public TO "id-spc-${environment}-app";
-          
-          -- Automatically grant permissions on tables created by the migrator in the future
-          ALTER DEFAULT PRIVILEGES FOR ROLE "id-spc-${environment}-migrator" IN SCHEMA public 
-          GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "id-spc-${environment}-app";
-          
-          ALTER DEFAULT PRIVILEGES FOR ROLE "id-spc-${environment}-migrator" IN SCHEMA public 
-          GRANT USAGE, SELECT ON SEQUENCES TO "id-spc-${environment}-app";
-EOF
-      }
-
-      # Currently only bootstrapping the 'dev' environment roles
-      bootstrap_db "spc_dev" "dev"
-    '''
-    retentionInterval: 'P1D'
-    cleanupPreference: 'OnSuccess'
-  }
-}
-
 output postgresId string = postgres.id
 output postgresFullyQualifiedDomainName string = postgres.properties.fullyQualifiedDomainName
+output idDbSetupId string = idDbSetup.id
+output idDbSetupName string = idDbSetup.name
+output storageAccountName string = storageAccount.name
