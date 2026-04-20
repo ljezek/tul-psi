@@ -36,5 +36,6 @@ resource commService 'Microsoft.Communication/communicationServices@2023-04-01' 
 }
 
 // Connection string is treated as sensitive by ARM and redacted from deployment history.
+#disable-next-line outputs-should-not-contain-secrets
 output connectionString string = commService.listKeys().primaryConnectionString
 output fromAddress string = 'DoNotReply@${managedDomain.properties.mailFromSenderDomain}'
