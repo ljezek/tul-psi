@@ -12,6 +12,7 @@ param idDbSetupId string
 param idDbSetupName string
 param storageAccountName string
 param scriptsSubnetId string
+param developerIdentityEmail string = 'lukas.jezek@gmail.com'
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 @secure()
 param jwtSecret string
@@ -58,6 +59,7 @@ module dbBootstrap './modules/database-bootstrap.bicep' = {
     dbAdminName: idDbSetupName
     storageAccountName: storageAccountName
     scriptsSubnetId: scriptsSubnetId
+    developerIdentityEmail: developerIdentityEmail
   }
   dependsOn: [
     compute

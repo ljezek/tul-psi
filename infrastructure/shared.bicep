@@ -2,6 +2,7 @@ targetScope = 'resourceGroup'
 
 param location string = resourceGroup().location
 param prefix string = 'spc'
+param deployBastion bool = true
 
 // --- Network ---
 module network './modules/network.bicep' = {
@@ -40,6 +41,20 @@ module monitoring './modules/monitoring.bicep' = {
     location: location
     prefix: prefix
     env: 'shared'
+  }
+}
+
+// --- Debugging (Bastion Developer) ---
+resource bastion 'Microsoft.Network/bastionHosts@2023-11-01' = if (deployBastion) {
+  name: 'bastion-${prefix}-shared'
+  location: location
+  sku: {
+    name: 'Developer'
+  }
+  properties: {
+    virtualNetwork: {
+      id: network.outputs.vnetId
+    }
   }
 }
 
