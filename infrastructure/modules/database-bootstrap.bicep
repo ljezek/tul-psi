@@ -55,7 +55,7 @@ sleep 30
 apk update && apk add postgresql-client
 
 # Get token for PostgreSQL Entra ID authentication
-export PGPASSWORD=$(az account get-access-token --resource https://ossrdbms-aad.database.windows.net -o tsv --query accessToken)
+export PGPASSWORD=$(az account get-access-token --resource https://ossrdbms-aad.${environment().suffixes.sqlServerHostname} -o tsv --query accessToken)
 
 echo "--- Debugging: Available Functions ---"
 psql "host=${DB_HOST} user=${DB_ADMIN} dbname=postgres sslmode=require" -c "\df *pgaad*" || echo "Failed to list functions"
