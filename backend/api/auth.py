@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, field_validator
@@ -124,6 +125,16 @@ async def verify_otp(
         samesite="strict",
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
+    # Non-HttpOnly XSRF-TOKEN cookie for Double Submit Cookie CSRF protection.
+    # JavaScript reads this value and echoes it as X-XSRF-Token on mutating requests.
+    response.set_cookie(
+        key="XSRF-TOKEN",
+        value=secrets.token_hex(32),
+        httponly=False,
+        secure=secure_cookie,
+        samesite="strict",
+        max_age=_COOKIE_MAX_AGE_SECONDS,
+    )
     return {}
 
 
@@ -151,6 +162,14 @@ async def logout(response: Response) -> dict[str, str]:
         key="session",
         value="",
         httponly=True,
+        secure=secure_cookie,
+        samesite="strict",
+        max_age=0,
+    )
+    response.set_cookie(
+        key="XSRF-TOKEN",
+        value="",
+        httponly=False,
         secure=secure_cookie,
         samesite="strict",
         max_age=0,
