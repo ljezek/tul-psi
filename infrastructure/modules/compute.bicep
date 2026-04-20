@@ -236,7 +236,7 @@ resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools
     configuration: {
       ingress: {
         external: true
-        targetPort: 80
+        targetPort: 8080
         transport: 'auto'
       }
       secrets: deployPgadminAuth ? [
@@ -256,6 +256,8 @@ resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools
             { name: 'PGADMIN_DEFAULT_PASSWORD', value: 'this-is-not-used-with-easyauth-123' }
             { name: 'PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION', value: 'True' }
             { name: 'PGADMIN_CONFIG_CONSOLE_LOG_LEVEL', value: '10' }
+            { name: 'PGADMIN_LISTEN_PORT', value: '8080' }
+            { name: 'PGADMIN_LISTEN_ADDRESS', value: '0.0.0.0' }
           ]
           resources: {
             cpu: json('0.25')
