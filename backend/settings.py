@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     azure_managed_identity_enabled: bool = False
     azure_client_id: str | None = None
 
+    # Azure Communication Services — used for email delivery in non-local environments.
+    # ACS_CONNECTION_STRING is injected from an ACA secret (set via Bicep / Key Vault).
+    # ACS_FROM_ADDRESS is the verified sender address provisioned by the ACS managed domain.
+    acs_connection_string: str | None = None
+    acs_from_address: str | None = None
+
     # Health check URL for the OTel collector sidecar/service.
     # In Azure, it's typically http://localhost:13133.
     # In local Docker Compose, it's http://otel-collector:13133.

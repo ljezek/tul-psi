@@ -18,6 +18,10 @@ param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
 
+@secure()
+param acsConnectionString string
+param acsFromAddress string
+
 param tags object
 
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
@@ -107,6 +111,12 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
           identity: app_identity.id
         }
       ]
+      secrets: [
+        {
+          name: 'acs-connection-string'
+          value: acsConnectionString
+        }
+      ]
     }
     template: {
       containers: [
@@ -123,6 +133,8 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
             { name: 'AZURE_CLIENT_ID', value: app_identity.properties.clientId }
             { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://localhost:4318' }
+            { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
+            { name: 'ACS_FROM_ADDRESS', value: acsFromAddress }
           ]
           probes: [
             {

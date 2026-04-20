@@ -309,12 +309,12 @@ async def _check_and_auto_unlock_project(
     # Send a notification email to every participant now that results are visible.
     peer_feedback_enabled = course.peer_bonus_budget is not None
     _settings = get_settings()
-    sender = EmailSender(app_env=_settings.app_env)
+    sender = EmailSender.from_settings(_settings)
     participants: list[User] = [u for u, _ in lecturer_statuses] + [u for u, _ in member_statuses]
     for participant in participants:
         if participant.email is None:
             continue
-        sender.send(
+        await sender.send(
             EmailTemplate.results_unlocked(
                 to=participant.email,
                 project_name=p.title,
@@ -727,7 +727,7 @@ class ProjectsService:
         await self._session.commit()
 
         _settings = get_settings()
-        EmailSender(app_env=_settings.app_env).send(
+        await EmailSender.from_settings(_settings).send(
             EmailTemplate.project_invite(
                 to=body.email,
                 project_name=project.title,
@@ -808,7 +808,7 @@ class ProjectsService:
 
         if data.owner_email is not None:
             _settings = get_settings()
-            EmailSender(app_env=_settings.app_env).send(
+            await EmailSender.from_settings(_settings).send(
                 EmailTemplate.project_invite(
                     to=data.owner_email,
                     project_name=project.title,

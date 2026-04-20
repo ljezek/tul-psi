@@ -3,6 +3,12 @@ from __future__ import annotations
 import logging
 import sys
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from azure.communication.email.aio import EmailClient
+
+if TYPE_CHECKING:
+    from settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -192,70 +198,106 @@ class EmailTemplate:
 
 
 # ---------------------------------------------------------------------------
-# Delivery error
+# Delivery errors
 # ---------------------------------------------------------------------------
 
 
-class EmailDeliveryNotImplementedError(Exception):
-    """Raised when email delivery is not implemented in the current environment."""
+class EmailDeliveryError(Exception):
+    """Raised when email delivery fails or is not configured."""
+
+
+# Backwards-compatible alias used by existing tests and service code.
+EmailDeliveryNotImplementedError = EmailDeliveryError
 
 
 # ---------------------------------------------------------------------------
-# Sender (fake / dev implementation)
+# Sender
 # ---------------------------------------------------------------------------
 
 
 class EmailSender:
-    """Fake email sender for local development that writes messages to *stderr*.
+    """Delivers email messages.
 
-    In a ``local`` environment the full email is printed to stderr so that
-    developers can inspect it without a running SMTP server.
-
-    In any other environment (``dev``, ``production``, …) this class raises
-    :exc:`NotImplementedError` on :meth:`send` because a real SMTP integration
-    has not yet been implemented.  This prevents the fake sender from being
-    accidentally used in non-local deployments.
+    In ``local`` environments the full email is printed to stderr (no SMTP or
+    cloud service required).  In all other environments Azure Communication
+    Services is used; the caller must supply ``acs_connection_string`` and
+    ``acs_from_address`` (injected from ACA secrets via Bicep).
 
     Args:
-        app_env: The application environment string (e.g. ``"local"``, ``"dev"``,
-            ``"production"``).  The caller is responsible for reading this from
-            settings and passing it here so that this class has no dependency on
-            the global settings object.
+        app_env: The application environment string (``"local"``, ``"dev"``,
+            ``"production"``).
+        acs_connection_string: ACS connection string.  Required in non-local
+            environments.
+        acs_from_address: Verified sender address from the ACS managed domain.
+            Required in non-local environments.
     """
 
-    def __init__(self, *, app_env: str) -> None:
+    def __init__(
+        self,
+        *,
+        app_env: str,
+        acs_connection_string: str | None = None,
+        acs_from_address: str | None = None,
+    ) -> None:
         self._app_env = app_env
+        self._acs_connection_string = acs_connection_string
+        self._acs_from_address = acs_from_address
 
-    def send(self, message: EmailMessage) -> None:
-        """Deliver *message* according to the current environment.
+    @classmethod
+    def from_settings(cls, settings: Settings) -> EmailSender:
+        """Construct an :class:`EmailSender` from application settings."""
+        return cls(
+            app_env=settings.app_env,
+            acs_connection_string=settings.acs_connection_string,
+            acs_from_address=settings.acs_from_address,
+        )
 
-        In a ``local`` environment the message is printed to *stderr* in a
-        human-readable format.  In any other environment a
-        :exc:`NotImplementedError` is raised because real SMTP delivery is
-        not yet implemented.
+    async def send(self, message: EmailMessage) -> None:
+        """Deliver *message*.
+
+        In ``local`` environments the message is printed to *stderr*.
+        In all other environments the message is sent via Azure Communication
+        Services Email.
 
         Args:
             message: The email to deliver.
 
         Raises:
-            NotImplementedError: When the environment is not ``local``.
+            EmailDeliveryError: When ACS credentials are missing or delivery fails.
         """
-        if self._app_env != "local":
+        if self._app_env == "local":
+            print(  # noqa: T201
+                f"\n{'=' * 60}\n"
+                f"[FAKE EMAIL]\n"
+                f"To:      {message.to}\n"
+                f"Subject: {message.subject}\n"
+                f"{'-' * 60}\n"
+                f"{message.body}\n"
+                f"{'=' * 60}\n",
+                file=sys.stderr,
+            )
+            return
+
+        if not self._acs_connection_string or not self._acs_from_address:
             logger.error(
-                "Email delivery is not configured for this environment; message not sent.",
-                extra={"to": message.to, "subject": message.subject, "app_env": self._app_env},
+                "ACS email not configured; message not sent.",
+                extra={"to": message.to, "subject": message.subject},
             )
-            raise EmailDeliveryNotImplementedError(
-                f"Real SMTP delivery is not yet implemented. "
-                f"EmailSender cannot be used in the '{self._app_env}' environment."
+            raise EmailDeliveryError(
+                "ACS_CONNECTION_STRING and ACS_FROM_ADDRESS must be set for email delivery."
             )
-        print(  # noqa: T201
-            f"\n{'=' * 60}\n"
-            f"[FAKE EMAIL]\n"
-            f"To:      {message.to}\n"
-            f"Subject: {message.subject}\n"
-            f"{'-' * 60}\n"
-            f"{message.body}\n"
-            f"{'=' * 60}\n",
-            file=sys.stderr,
-        )
+
+        client = EmailClient.from_connection_string(self._acs_connection_string)
+        async with client:
+            poller = await client.begin_send(
+                {
+                    "senderAddress": self._acs_from_address,
+                    "recipients": {"to": [{"address": message.to}]},
+                    "content": {"subject": message.subject, "plainText": message.body},
+                }
+            )
+            await poller.result()
+            logger.info(
+                "Email sent via ACS.",
+                extra={"to": message.to, "subject": message.subject},
+            )

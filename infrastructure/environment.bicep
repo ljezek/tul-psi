@@ -39,6 +39,16 @@ module monitoring './modules/monitoring.bicep' = {
   }
 }
 
+// --- Email (Azure Communication Services) ---
+module acs './modules/acs.bicep' = {
+  name: 'acs-${env}-deployment'
+  params: {
+    prefix: prefix
+    env: env
+    tags: tags
+  }
+}
+
 // --- Compute (ACA + SWA) ---
 module compute './modules/compute.bicep' = {
   name: 'compute-${env}-deployment'
@@ -58,6 +68,8 @@ module compute './modules/compute.bicep' = {
     pgadminAadClientSecret: pgadminAadClientSecret
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
+    acsConnectionString: acs.outputs.connectionString
+    acsFromAddress: acs.outputs.fromAddress
     tags: tags
   }
 }
