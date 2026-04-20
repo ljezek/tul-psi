@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from services.email import (
+    EmailDeliveryError,
     EmailDeliveryNotImplementedError,
     EmailMessage,
     EmailSender,
@@ -137,19 +140,92 @@ def test_email_sender_local_outputs_to_stderr_and_not_stdout(
 
 
 # ---------------------------------------------------------------------------
-# EmailSender — non-local environment
+# EmailSender — non-local, ACS not configured
 # ---------------------------------------------------------------------------
 
 
-def test_email_sender_raises_in_non_local_env() -> None:
-    """Non-local EmailSender must raise EmailDeliveryNotImplementedError and not touch stdout."""
+def test_email_sender_raises_when_acs_not_configured_in_non_local_env() -> None:
+    """Non-local EmailSender with no ACS config must raise EmailDeliveryError."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
-    with pytest.raises(EmailDeliveryNotImplementedError):
+    with pytest.raises(EmailDeliveryError):
         EmailSender(app_env="production").send(msg)
 
 
-def test_email_sender_raises_in_dev_env() -> None:
-    """EmailSender must also raise EmailDeliveryNotImplementedError in the 'dev' environment."""
+def test_email_sender_raises_when_acs_not_configured_in_dev_env() -> None:
+    """EmailSender must raise EmailDeliveryError in the 'dev' environment without ACS config."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
-    with pytest.raises(EmailDeliveryNotImplementedError):
+    with pytest.raises(EmailDeliveryError):
         EmailSender(app_env="dev").send(msg)
+
+
+def test_email_delivery_not_implemented_error_is_alias() -> None:
+    """EmailDeliveryNotImplementedError must be the same class as EmailDeliveryError."""
+    assert EmailDeliveryNotImplementedError is EmailDeliveryError
+
+
+# ---------------------------------------------------------------------------
+# EmailSender — non-local, ACS configured (happy path)
+# ---------------------------------------------------------------------------
+
+
+def test_email_sender_calls_acs_with_correct_payload() -> None:
+    """EmailSender must call ACS begin_send with the correct message payload."""
+    msg = EmailMessage(to="student@tul.cz", subject="Hello", body="Body text")
+
+    mock_poller = MagicMock()
+    mock_client = MagicMock()
+    mock_client.begin_send.return_value = mock_poller
+
+    with patch("services.email.EmailClient") as mock_email_client_cls:
+        mock_email_client_cls.from_connection_string.return_value = mock_client
+        EmailSender(
+            app_env="dev",
+            acs_connection_string="endpoint=https://example.communication.azure.com/;accesskey=abc123==",
+            acs_from_address="DoNotReply@example.azurecomm.net",
+        ).send(msg)
+
+    mock_email_client_cls.from_connection_string.assert_called_once_with(
+        "endpoint=https://example.communication.azure.com/;accesskey=abc123=="
+    )
+    call_payload = mock_client.begin_send.call_args[0][0]
+    assert call_payload["senderAddress"] == "DoNotReply@example.azurecomm.net"
+    assert call_payload["recipients"]["to"][0]["address"] == "student@tul.cz"
+    assert call_payload["content"]["subject"] == "Hello"
+    assert call_payload["content"]["plainText"] == "Body text"
+    mock_poller.result.assert_called_once()
+
+
+def test_email_sender_acs_exception_propagates() -> None:
+    """Exceptions from the ACS SDK must propagate out of EmailSender.send."""
+    msg = EmailMessage(to="student@tul.cz", subject="Hello", body="Body text")
+
+    mock_client = MagicMock()
+    mock_client.begin_send.side_effect = RuntimeError("ACS unavailable")
+
+    with patch("services.email.EmailClient") as mock_email_client_cls:
+        mock_email_client_cls.from_connection_string.return_value = mock_client
+        with pytest.raises(RuntimeError, match="ACS unavailable"):
+            EmailSender(
+                app_env="dev",
+                acs_connection_string="endpoint=https://example.communication.azure.com/;accesskey=abc123==",
+                acs_from_address="DoNotReply@example.azurecomm.net",
+            ).send(msg)
+
+
+# ---------------------------------------------------------------------------
+# EmailSender.from_settings factory
+# ---------------------------------------------------------------------------
+
+
+def test_from_settings_constructs_sender_from_settings_object() -> None:
+    """from_settings must read app_env, acs_connection_string, and acs_from_address."""
+    mock_settings = MagicMock()
+    mock_settings.app_env = "dev"
+    mock_settings.acs_connection_string = "endpoint=https://x.communication.azure.com/;accesskey=k"
+    mock_settings.acs_from_address = "DoNotReply@x.azurecomm.net"
+
+    sender = EmailSender.from_settings(mock_settings)
+
+    assert sender._app_env == "dev"
+    assert sender._acs_connection_string == mock_settings.acs_connection_string
+    assert sender._acs_from_address == mock_settings.acs_from_address

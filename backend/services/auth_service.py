@@ -92,7 +92,7 @@ async def request_otp(email: str, session: AsyncSession) -> None:
 
     logger.info("OTP token generated.", extra={"email": email})
     _settings = get_settings()
-    EmailSender(app_env=_settings.app_env).send(
+    EmailSender.from_settings(_settings).send(
         EmailTemplate.otp(to=email, otp_code=otp, portal_url=_settings.frontend_url)
     )
 

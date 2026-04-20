@@ -22,6 +22,7 @@ opentelemetry-instrumentation-sqlalchemy==0.57b0
 opentelemetry-instrumentation-asyncpg==0.57b0
 opentelemetry-instrumentation-logging==0.57b0
 azure-identity==1.19.0
+azure-communication-email==1.0.0
 httpx==0.28.1
 
 # Testing
