@@ -55,29 +55,50 @@ sleep 30
 apk update && apk add postgresql-client
 
 # Get token for PostgreSQL Entra ID authentication
-export PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv)
+export PGPASSWORD=$(az account get-access-token --resource https://ossrdbms-aad.database.windows.net -o tsv --query accessToken)
 
-echo "Bootstrapping $DB_NAME for $ENV..."
-psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${DB_NAME} sslmode=require" <<EOF
-  -- 1. Ensure the Entra ID extension is created in this database
-  CREATE EXTENSION IF NOT EXISTS pgaadauth;
+echo "--- Debugging: Available Functions ---"
+psql "host=${DB_HOST} user=${DB_ADMIN} dbname=postgres sslmode=require" -c "\df *pgaad*" || echo "Failed to list functions"
 
-  -- 2. Create Roles for Managed Identities
+echo "--- Step 1: Create Global Roles (Connecting to 'postgres' database) ---"
+psql "host=${DB_HOST} user=${DB_ADMIN} dbname=postgres sslmode=require" <<EOF
   DO \$$
   BEGIN
+    -- Create roles for Managed Identities
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${ENV}-migrator') THEN
-      PERFORM pg_catalog.pgaadauth_create_principal('id-spc-${ENV}-migrator', false, false);
+      PERFORM pgaadauth_create_principal('id-spc-${ENV}-migrator', false, false);
     END IF;
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${ENV}-app') THEN
-      PERFORM pg_catalog.pgaadauth_create_principal('id-spc-${ENV}-app', false, false);
+      PERFORM pgaadauth_create_principal('id-spc-${ENV}-app', false, false);
     END IF;
     -- Create role for the developer identity
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DEV_EMAIL}') THEN
-      PERFORM pg_catalog.pgaadauth_create_principal('${DEV_EMAIL}', false, false);
+      PERFORM pgaadauth_create_principal('${DEV_EMAIL}', false, false);
     END IF;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Notice: Principal creation failed or not supported: %', SQLERRM;
+  END \$$;
+EOF
+
+echo "--- Step 2: Grant Permissions (Connecting to '$DB_NAME' database) ---"
+psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${DB_NAME} sslmode=require" <<EOF
+  -- Ensure roles exist locally (fallback for environments where pgaadauth isn't active yet)
+  DO \$$
+  BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${ENV}-migrator') THEN
+       CREATE ROLE "id-spc-${ENV}-migrator" WITH LOGIN;
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'id-spc-${ENV}-app') THEN
+       CREATE ROLE "id-spc-${ENV}-app" WITH LOGIN;
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DEV_EMAIL}') THEN
+       CREATE ROLE "${DEV_EMAIL}" WITH LOGIN;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Notice: Manual role creation fallback failed: %', SQLERRM;
   END \$$;
 
-  -- 3. Grant Permissions
+  -- Grant Permissions
   ALTER SCHEMA public OWNER TO "id-spc-${ENV}-migrator";
   GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO "id-spc-${ENV}-migrator";
   GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO "${DEV_EMAIL}";
