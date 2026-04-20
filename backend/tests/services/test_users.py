@@ -125,11 +125,12 @@ async def test_create_user_as_admin_sends_invite() -> None:
             new_callable=AsyncMock,
             return_value=(new_user, True),
         ),
-        patch("services.users.EmailSender") as mock_email_sender_class,
+        patch("services.users.EmailSender.from_settings") as mock_from_settings,
         patch("services.users.get_settings") as mock_get_settings,
     ):
         mock_get_settings.return_value = MagicMock(frontend_url="http://portal.test")
-        mock_sender_instance = mock_email_sender_class.return_value
+        mock_sender_instance = mock_from_settings.return_value
+        mock_sender_instance.send = AsyncMock()
 
         result = await UsersService(session).create_user(body, admin)
 
@@ -137,7 +138,7 @@ async def test_create_user_as_admin_sends_invite() -> None:
     session.commit.assert_called_once()
 
     # Verify email was "sent"
-    mock_email_sender_class.assert_called_once()
+    mock_from_settings.assert_called_once()
     mock_sender_instance.send.assert_called_once()
 
 

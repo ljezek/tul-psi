@@ -314,7 +314,7 @@ async def _check_and_auto_unlock_project(
     for participant in participants:
         if participant.email is None:
             continue
-        sender.send(
+        await sender.send(
             EmailTemplate.results_unlocked(
                 to=participant.email,
                 project_name=p.title,
@@ -727,7 +727,7 @@ class ProjectsService:
         await self._session.commit()
 
         _settings = get_settings()
-        EmailSender.from_settings(_settings).send(
+        await EmailSender.from_settings(_settings).send(
             EmailTemplate.project_invite(
                 to=body.email,
                 project_name=project.title,
@@ -808,7 +808,7 @@ class ProjectsService:
 
         if data.owner_email is not None:
             _settings = get_settings()
-            EmailSender.from_settings(_settings).send(
+            await EmailSender.from_settings(_settings).send(
                 EmailTemplate.project_invite(
                     to=data.owner_email,
                     project_name=project.title,

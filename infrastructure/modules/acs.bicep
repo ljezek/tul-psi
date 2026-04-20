@@ -2,8 +2,10 @@ param prefix string
 param env string
 param tags object = {}
 
+var suffix = uniqueString(resourceGroup().id)
+
 resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = {
-  name: 'acs-email-${prefix}-${env}'
+  name: 'acs-email-${prefix}-${env}-${suffix}'
   location: 'global'
   tags: tags
   properties: {
@@ -22,7 +24,7 @@ resource managedDomain 'Microsoft.Communication/emailServices/domains@2023-04-01
 }
 
 resource commService 'Microsoft.Communication/communicationServices@2023-04-01' = {
-  name: 'acs-${prefix}-${env}'
+  name: 'acs-${prefix}-${env}-${suffix}'
   location: 'global'
   tags: tags
   properties: {

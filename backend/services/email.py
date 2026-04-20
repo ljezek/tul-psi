@@ -5,7 +5,7 @@ import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from azure.communication.email import EmailClient
+from azure.communication.email.aio import EmailClient
 
 if TYPE_CHECKING:
     from settings import Settings
@@ -252,7 +252,7 @@ class EmailSender:
             acs_from_address=settings.acs_from_address,
         )
 
-    def send(self, message: EmailMessage) -> None:
+    async def send(self, message: EmailMessage) -> None:
         """Deliver *message*.
 
         In ``local`` environments the message is printed to *stderr*.
@@ -288,15 +288,16 @@ class EmailSender:
             )
 
         client = EmailClient.from_connection_string(self._acs_connection_string)
-        poller = client.begin_send(
-            {
-                "senderAddress": self._acs_from_address,
-                "recipients": {"to": [{"address": message.to}]},
-                "content": {"subject": message.subject, "plainText": message.body},
-            }
-        )
-        poller.result()
-        logger.info(
-            "Email sent via ACS.",
-            extra={"to": message.to, "subject": message.subject},
-        )
+        async with client:
+            poller = await client.begin_send(
+                {
+                    "senderAddress": self._acs_from_address,
+                    "recipients": {"to": [{"address": message.to}]},
+                    "content": {"subject": message.subject, "plainText": message.body},
+                }
+            )
+            await poller.result()
+            logger.info(
+                "Email sent via ACS.",
+                extra={"to": message.to, "subject": message.subject},
+            )

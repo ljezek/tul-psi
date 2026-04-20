@@ -244,7 +244,23 @@ The first full deployment requires two infrastructure runs to bootstrap pgAdmin 
 
 ---
 
-## 4. Architecture Notes
+## 7. Email Delivery (Azure Communication Services)
+
+This project uses **Azure Communication Services (ACS) Email** for all outgoing notifications (OTPs, invitations, and status updates). 
+
+### How it works:
+1. **Automated Provisioning:** The `infrastructure/modules/acs.bicep` module creates a dedicated ACS resource and an **Azure-managed domain** automatically during the first infrastructure deployment.
+2. **Zero-Secret Wiring:** The ACS **connection string** is securely passed as an output to the backend Container App, where it is stored as an encrypted ACA secret. The application container never sees the raw secret in plain text environment variables.
+3. **Sender Address:** Emails are sent from a provisioned address in the format `DoNotReply@<hash>.azurecomm.net`. This avoids the need for a custom domain or SPF/DKIM DNS configuration.
+
+### Setup Steps:
+No manual setup is required if you follow the standard deployment sequence. The first run of the Infrastructure Deployment for an environment (`dev` or `prod`) will provision all necessary email resources.
+
+> **Note on Sandbox Mode:** Newly created ACS resources might be in "sandbox" mode. If you find that emails are not being delivered to all addresses, check the **Sender Authentication** settings for your ACS resource in the Azure Portal to ensure it has been moved to production or that your recipients are in the allowed list.
+
+---
+
+## 8. Architecture Notes
 
 - **Zero-Trust:** All services use **Managed Identities**.
 - **Automated Bootstrap:** A Bicep `deploymentScript` handles initial PostgreSQL role creation (`id-spc-dev-migrator` and `id-spc-dev-app`) within the private VNet.

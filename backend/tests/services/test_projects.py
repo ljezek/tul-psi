@@ -1566,8 +1566,10 @@ async def test_add_member_creates_user_and_returns_member_public() -> None:
             "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
         ),
-        patch("services.projects.EmailSender"),  # Prevent real email side-effects.
+        patch("services.projects.EmailSender.from_settings") as mock_from_settings,
     ):
+        mock_sender_instance = mock_from_settings.return_value
+        mock_sender_instance.send = AsyncMock()
         from schemas.projects import AddMemberBody
 
         result = await ProjectsService(session).add_member(
@@ -1601,6 +1603,7 @@ async def test_service_create_project_with_owner_sends_invite_email() -> None:
     new_member = MagicMock(spec=ProjectMember)
 
     mock_sender_instance = MagicMock()
+    mock_sender_instance.send = AsyncMock()
 
     with (
         patch("services.projects.db_get_course", new_callable=AsyncMock, return_value=course),
@@ -1645,7 +1648,7 @@ async def test_service_create_project_with_owner_sends_invite_email() -> None:
             "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
         ),
-        patch("services.projects.EmailSender", return_value=mock_sender_instance),
+        patch("services.projects.EmailSender.from_settings", return_value=mock_sender_instance),
     ):
         result = await ProjectsService(session).create_project(1, data, user)
 
@@ -1681,6 +1684,7 @@ async def test_service_create_project_with_owner_raises_email_delivery_error() -
     new_member = MagicMock(spec=ProjectMember)
 
     mock_sender_instance = MagicMock()
+    mock_sender_instance.send = AsyncMock()
     mock_sender_instance.send.side_effect = EmailDeliveryNotImplementedError("No SMTP configured")
 
     with (
@@ -1704,7 +1708,7 @@ async def test_service_create_project_with_owner_raises_email_delivery_error() -
             "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="production"),
         ),
-        patch("services.projects.EmailSender", return_value=mock_sender_instance),
+        patch("services.projects.EmailSender.from_settings", return_value=mock_sender_instance),
         pytest.raises(EmailDeliveryNotImplementedError),
     ):
         await ProjectsService(session).create_project(1, data, user)
@@ -1749,6 +1753,7 @@ async def test_add_member_raises_email_delivery_error_on_send_failure() -> None:
     user.role = UserRole.STUDENT
 
     mock_sender_instance = MagicMock()
+    mock_sender_instance.send = AsyncMock()
     mock_sender_instance.send.side_effect = EmailDeliveryNotImplementedError("No SMTP configured")
 
     with (
@@ -1781,7 +1786,7 @@ async def test_add_member_raises_email_delivery_error_on_send_failure() -> None:
             "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="production"),
         ),
-        patch("services.projects.EmailSender", return_value=mock_sender_instance),
+        patch("services.projects.EmailSender.from_settings", return_value=mock_sender_instance),
         pytest.raises(EmailDeliveryNotImplementedError),
     ):
         from schemas.projects import AddMemberBody
@@ -2281,12 +2286,14 @@ async def test_auto_unlock_fires_when_all_submitted() -> None:
             "services.projects.db_unlock_project_results",
             new_callable=AsyncMock,
         ) as mock_unlock,
-        patch("services.projects.EmailSender"),  # Prevent real email side-effects.
+        patch("services.projects.EmailSender.from_settings") as mock_from_settings,
         patch(
             "services.projects.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
         ),
     ):
+        mock_sender_instance = mock_from_settings.return_value
+        mock_sender_instance.send = AsyncMock()
         from services.projects import _check_and_auto_unlock_project
 
         await _check_and_auto_unlock_project(session, 1)

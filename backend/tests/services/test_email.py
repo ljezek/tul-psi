@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -126,12 +126,13 @@ def test_results_unlocked_template_peer_feedback_mentioned_when_enabled() -> Non
 # ---------------------------------------------------------------------------
 
 
-def test_email_sender_local_outputs_to_stderr_and_not_stdout(
+@pytest.mark.asyncio
+async def test_email_sender_local_outputs_to_stderr_and_not_stdout(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Local EmailSender must write to stderr, include all fields, and not touch stdout."""
     msg = EmailMessage(to="dev@tul.cz", subject="Test Subject", body="Test Body Content")
-    EmailSender(app_env="local").send(msg)
+    await EmailSender(app_env="local").send(msg)
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "dev@tul.cz" in captured.err
@@ -144,18 +145,20 @@ def test_email_sender_local_outputs_to_stderr_and_not_stdout(
 # ---------------------------------------------------------------------------
 
 
-def test_email_sender_raises_when_acs_not_configured_in_non_local_env() -> None:
+@pytest.mark.asyncio
+async def test_email_sender_raises_when_acs_not_configured_in_non_local_env() -> None:
     """Non-local EmailSender with no ACS config must raise EmailDeliveryError."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
     with pytest.raises(EmailDeliveryError):
-        EmailSender(app_env="production").send(msg)
+        await EmailSender(app_env="production").send(msg)
 
 
-def test_email_sender_raises_when_acs_not_configured_in_dev_env() -> None:
+@pytest.mark.asyncio
+async def test_email_sender_raises_when_acs_not_configured_in_dev_env() -> None:
     """EmailSender must raise EmailDeliveryError in the 'dev' environment without ACS config."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
     with pytest.raises(EmailDeliveryError):
-        EmailSender(app_env="dev").send(msg)
+        await EmailSender(app_env="dev").send(msg)
 
 
 def test_email_delivery_not_implemented_error_is_alias() -> None:
@@ -168,17 +171,22 @@ def test_email_delivery_not_implemented_error_is_alias() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_email_sender_calls_acs_with_correct_payload() -> None:
+@pytest.mark.asyncio
+async def test_email_sender_calls_acs_with_correct_payload() -> None:
     """EmailSender must call ACS begin_send with the correct message payload."""
     msg = EmailMessage(to="student@tul.cz", subject="Hello", body="Body text")
 
-    mock_poller = MagicMock()
-    mock_client = MagicMock()
+    mock_poller = AsyncMock()
+    mock_client = AsyncMock()
     mock_client.begin_send.return_value = mock_poller
+
+    # mock_client needs to be an async context manager
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
 
     with patch("services.email.EmailClient") as mock_email_client_cls:
         mock_email_client_cls.from_connection_string.return_value = mock_client
-        EmailSender(
+        await EmailSender(
             app_env="dev",
             acs_connection_string="endpoint=https://example.communication.azure.com/;accesskey=abc123==",
             acs_from_address="DoNotReply@example.azurecomm.net",
@@ -195,17 +203,22 @@ def test_email_sender_calls_acs_with_correct_payload() -> None:
     mock_poller.result.assert_called_once()
 
 
-def test_email_sender_acs_exception_propagates() -> None:
+@pytest.mark.asyncio
+async def test_email_sender_acs_exception_propagates() -> None:
     """Exceptions from the ACS SDK must propagate out of EmailSender.send."""
     msg = EmailMessage(to="student@tul.cz", subject="Hello", body="Body text")
 
-    mock_client = MagicMock()
+    mock_client = AsyncMock()
     mock_client.begin_send.side_effect = RuntimeError("ACS unavailable")
+
+    # mock_client needs to be an async context manager
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
 
     with patch("services.email.EmailClient") as mock_email_client_cls:
         mock_email_client_cls.from_connection_string.return_value = mock_client
         with pytest.raises(RuntimeError, match="ACS unavailable"):
-            EmailSender(
+            await EmailSender(
                 app_env="dev",
                 acs_connection_string="endpoint=https://example.communication.azure.com/;accesskey=abc123==",
                 acs_from_address="DoNotReply@example.azurecomm.net",

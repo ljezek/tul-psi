@@ -145,7 +145,7 @@ class UsersService:
 
         # Send invitation email.
         _settings = get_settings()
-        EmailSender.from_settings(_settings).send(
+        await EmailSender.from_settings(_settings).send(
             EmailTemplate.user_invite(
                 to=body.email,
                 role=body.role.value.lower(),

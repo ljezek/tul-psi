@@ -709,13 +709,16 @@ async def test_add_lecturer_succeeds_for_admin_and_creates_new_user() -> None:
             "services.courses.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="local"),
         ),
-        patch("services.courses.EmailSender"),  # Prevent real email side-effects.
+        patch("services.courses.EmailSender.from_settings") as mock_from_settings,
     ):
+        mock_sender_instance = mock_from_settings.return_value
+        mock_sender_instance.send = AsyncMock()
         result = await CoursesService(session).add_lecturer(
             1, AddUserBody(email="new.lecturer@tul.cz"), current_user
         )
 
     session.commit.assert_called_once()
+    mock_sender_instance.send.assert_called_once()
     assert result is not None
     assert result.id == 99
     assert result.email == "new.lecturer@tul.cz"
@@ -740,7 +743,9 @@ async def test_add_lecturer_raises_email_delivery_error_on_send_failure() -> Non
     current_user.role = UserRole.ADMIN
 
     mock_sender_instance = MagicMock()
-    mock_sender_instance.send.side_effect = EmailDeliveryNotImplementedError("No SMTP configured")
+    mock_sender_instance.send = AsyncMock(
+        side_effect=EmailDeliveryNotImplementedError("No SMTP configured")
+    )
 
     with (
         patch("services.courses.db_get_course", new_callable=AsyncMock, return_value=course),
@@ -763,7 +768,7 @@ async def test_add_lecturer_raises_email_delivery_error_on_send_failure() -> Non
             "services.courses.get_settings",
             return_value=MagicMock(frontend_url="http://localhost:5173", app_env="production"),
         ),
-        patch("services.courses.EmailSender", return_value=mock_sender_instance),
+        patch("services.courses.EmailSender.from_settings", return_value=mock_sender_instance),
         pytest.raises(EmailDeliveryNotImplementedError),
     ):
         await CoursesService(session).add_lecturer(
