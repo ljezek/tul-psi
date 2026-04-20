@@ -203,7 +203,7 @@ async def test_otp_verify_success_sets_cookie_and_marks_token_used(
 
 
 async def test_otp_verify_success_sets_xsrf_cookie(client: AsyncClient) -> None:
-    """A successful OTP verification must set a non-HttpOnly XSRF-TOKEN cookie for CSRF protection."""
+    """Successful OTP verification must set non-HttpOnly XSRF-TOKEN cookie for CSRF protection."""
     mock_user = _make_user()
     mock_token = _make_token(otp="483921")
     with (

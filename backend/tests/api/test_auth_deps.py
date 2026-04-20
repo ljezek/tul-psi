@@ -247,7 +247,7 @@ async def test_verify_csrf_token_allows_post_without_cookie() -> None:
 
 async def test_verify_csrf_token_passes_when_header_matches_cookie() -> None:
     """POST with a matching XSRF-TOKEN cookie and X-XSRF-Token header must pass."""
-    token = "a1b2c3d4e5f6"
+    token = "a1b2c3d4e5f6"  # noqa: S105
     request = MagicMock(spec=Request)
     request.method = "POST"
     request.cookies = {"XSRF-TOKEN": token}

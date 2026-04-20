@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger.json import JsonFormatter
 
 from api.auth import router as auth_router
-from api.deps import verify_csrf_token
 from api.courses import router as courses_router
+from api.deps import verify_csrf_token
 from api.health import router as health_router
 from api.projects import router as projects_router
 from api.users import router as users_router
