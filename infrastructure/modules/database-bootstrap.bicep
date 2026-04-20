@@ -8,6 +8,7 @@ param dbAdminName string
 param dbName string
 param idDbSetupId string
 param developerIdentityEmail string
+param tags object
 
 // A timestamp to ensure the script runs on every deployment
 param forceUpdateTag string = utcNow()
@@ -131,6 +132,4 @@ echo "SUCCESS: Database bootstrap complete for $ENV."
     retentionInterval: 'P1D'
     cleanupPreference: 'OnSuccess'
   }
-}
-
 }

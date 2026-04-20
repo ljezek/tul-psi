@@ -1,4 +1,5 @@
 param location string
+param tags object
 param vnetName string = 'vnet-spc-shared'
 param vnetAddressPrefix string = '10.0.0.0/16'
 
@@ -83,4 +84,3 @@ output snetDbId string = vnet.properties.subnets[0].id
 output snetDevId string = vnet.properties.subnets[1].id
 output snetProdId string = vnet.properties.subnets[2].id
 output snetScriptsId string = vnet.properties.subnets[3].id
-.id
