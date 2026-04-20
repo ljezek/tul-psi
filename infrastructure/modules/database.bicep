@@ -40,7 +40,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-// RBAC: The setup identity needs to manage the storage account and files
 resource storageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, idDbSetup.id, 'StorageAccountContributor')
   scope: storageAccount
