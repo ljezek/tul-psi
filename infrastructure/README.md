@@ -201,35 +201,32 @@ The first deployment follows an automated sequence.
 
 ---
 
-## 5. Troubleshooting & DB Debugging (VNet Access)
+## 5. Troubleshooting & DB Debugging (GUI Access)
 
-Since the PostgreSQL server is restricted to the private VNet, you cannot connect to it directly from your local machine. We use **Azure Bastion (Developer SKU)** to create a secure tunnel.
+Since the PostgreSQL server is restricted to the private VNet, you cannot connect to it directly from your local machine. We deploy a **pgAdmin Azure Container App** in the `dev` environment for secure GUI access.
 
-### Step 1: Grant your Identity Access
-By default, the `environment.bicep` grants `ALL PRIVILEGES` to `lukas.jezek@gmail.com` in the `dev` database. If you need to add another user, update the `developerIdentityEmail` parameter in `environment.bicep`.
+### Step 1: Access the pgAdmin UI
+1.  Go to the Azure Portal and find the `ca-spc-dev-pgadmin` Container App.
+2.  Open the Application URL.
+3.  **EasyAuth:** You will be prompted to log in with your Microsoft account (`lukas.jezek@gmail.com`). This ensures only authorized developers can reach the pgAdmin login screen.
 
-### Step 2: Start the Bastion Tunnel
-Run this in a terminal window. Keep it open while you are debugging.
+### Step 2: Connect to the Database
+Once inside the pgAdmin web interface, add a new server:
 
-```bash
-# 1. Get the PostgreSQL Resource ID
-DB_RESOURCE_ID=$(az postgres flexible-server show -g rg-spc-shared-pl -n psql-spc-shared --query id -o tsv)
+1.  **General Tab:**
+    *   **Name:** `spc-dev`
+2.  **Connection Tab:**
+    *   **Host:** `psql-spc-shared.postgres.database.azure.com`
+    *   **Port:** `5432`
+    *   **Maintenance Database:** `spc_dev`
+    *   **Username:** `lukas.jezek@gmail.com` (or your registered identity)
+    *   **Password:** An Entra ID Access Token. Generate it on your local machine:
+        ```bash
+        az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv
+        ```
+        *Note: The token is valid for 1 hour.*
+3.  **SSL Tab:**
+    *   **SSL Mode:** `Require`
 
-# 2. Start the tunnel (defaults to localhost:5432)
-az network bastion tunnel \
-  --name bastion-spc-shared \
-  --resource-group rg-spc-shared-pl \
-  --target-resource-id $DB_RESOURCE_ID \
-  --resource-port 5432 \
-  --port 5432
-```
-
-### Step 3: Connect using pgAdmin / DBeaver
-1.  **Host:** `localhost`
-2.  **Port:** `5432`
-3.  **Username:** `lukas.jezek@gmail.com` (your identity)
-4.  **Password:** An Entra ID Access Token. Generate it using:
-    ```bash
-    az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv
-    ```
-5.  **SSL Mode:** `Require`
+### Step 3: Cost Management
+The `pgadmin` Container App is configured to **scale to zero**. It will automatically shut down when you are not using it and start back up when you browse to its URL.

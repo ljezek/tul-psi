@@ -9,6 +9,8 @@ param dbName string
 param lawId string
 param aiConnectionString string
 param containerImage string
+param deployDebugTools bool = false
+param developerIdentityEmail string = 'lukas.jezek@gmail.com'
 @secure()
 param jwtSecret string
 
@@ -184,6 +186,68 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
           ]
         }
       ]
+    }
+  }
+}
+
+// --- Debugging Tools (Conditional) ---
+resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools) {
+  name: 'ca-${prefix}-${env}-pgadmin'
+  location: location
+  properties: {
+    managedEnvironmentId: env_aca.id
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: 80
+        transport: 'auto'
+      }
+    }
+    template: {
+      containers: [
+        {
+          name: 'pgadmin'
+          image: 'dpage/pgadmin4'
+          env: [
+            { name: 'PGADMIN_DEFAULT_EMAIL', value: developerIdentityEmail }
+            { name: 'PGADMIN_DEFAULT_PASSWORD', value: 'this-is-not-used-with-easyauth-123' }
+            { name: 'PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION', value: 'True' }
+            { name: 'PGADMIN_CONFIG_CONSOLE_LOG_LEVEL', value: '10' }
+          ]
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+resource pgadmin_auth 'Microsoft.App/containerApps/authConfigs@2023-05-01' = if (deployDebugTools) {
+  parent: pgadmin
+  name: 'current'
+  properties: {
+    platform: {
+      enabled: true
+    }
+    globalValidation: {
+      unauthenticatedClientAction: 'RedirectToLoginPage'
+      redirectToProvider: 'azureactivedirectory'
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        registration: {
+          openIdConnectConfiguration: {
+            wellKnownOpenIdConfiguration: 'https://login.microsoftonline.com/${subscription().tenantId}/v2.0/.well-known/openid-configuration'
+          }
+        }
+      }
     }
   }
 }

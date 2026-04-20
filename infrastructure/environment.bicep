@@ -13,6 +13,7 @@ param idDbSetupName string
 param storageAccountName string
 param scriptsSubnetId string
 param developerIdentityEmail string = 'lukas.jezek@gmail.com'
+param deployDebugTools bool = false
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 @secure()
 param jwtSecret string
@@ -41,6 +42,7 @@ module compute './modules/compute.bicep' = {
     dbName: dbName
     containerImage: containerImage
     jwtSecret: jwtSecret
+    deployDebugTools: deployDebugTools
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
   }
