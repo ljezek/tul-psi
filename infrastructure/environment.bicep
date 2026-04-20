@@ -18,6 +18,10 @@ param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-hellowo
 @secure()
 param jwtSecret string
 
+param pgadminAadClientId string = ''
+@secure()
+param pgadminAadClientSecret string = ''
+
 // --- Monitoring (Per Environment) ---
 module monitoring './modules/monitoring.bicep' = {
   name: 'monitoring-${env}-deployment'
@@ -43,6 +47,8 @@ module compute './modules/compute.bicep' = {
     containerImage: containerImage
     jwtSecret: jwtSecret
     deployDebugTools: deployDebugTools
+    pgadminAadClientId: pgadminAadClientId
+    pgadminAadClientSecret: pgadminAadClientSecret
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
   }

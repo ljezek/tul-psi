@@ -14,7 +14,12 @@ param developerIdentityEmail string = 'lukas.jezek@gmail.com'
 @secure()
 param jwtSecret string
 
+param pgadminAadClientId string = ''
+@secure()
+param pgadminAadClientSecret string = ''
+
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+var deployPgadminAuth = deployDebugTools && !empty(pgadminAadClientId) && !empty(pgadminAadClientSecret)
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: last(split(lawId, '/'))
@@ -176,9 +181,10 @@ resource migration_job 'Microsoft.App/jobs@2023-05-01' = {
         {
           name: 'migrator'
           image: containerImage
-          command: ['alembic', 'upgrade', 'head']
+          command: ['/bin/sh', '-c', 'alembic upgrade head && python seed.py']
           env: [
             { name: 'DATABASE_MIGRATION_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
+            { name: 'DATABASE_URL', value: 'postgresql+asyncpg://${migrator_identity.name}@${dbHost}:5432/${dbName}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
             { name: 'AZURE_CLIENT_ID', value: migrator_identity.properties.clientId }
             { name: 'APP_ENV', value: env }
@@ -202,6 +208,12 @@ resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools
         targetPort: 80
         transport: 'auto'
       }
+      secrets: deployPgadminAuth ? [
+        {
+          name: 'aad-client-secret'
+          value: pgadminAadClientSecret
+        }
+      ] : []
     }
     template: {
       containers: [
@@ -228,7 +240,7 @@ resource pgadmin 'Microsoft.App/containerApps@2023-05-01' = if (deployDebugTools
   }
 }
 
-resource pgadmin_auth 'Microsoft.App/containerApps/authConfigs@2023-05-01' = if (deployDebugTools) {
+resource pgadmin_auth 'Microsoft.App/containerApps/authConfigs@2023-05-01' = if (deployPgadminAuth) {
   parent: pgadmin
   name: 'current'
   properties: {
@@ -243,9 +255,15 @@ resource pgadmin_auth 'Microsoft.App/containerApps/authConfigs@2023-05-01' = if 
       azureActiveDirectory: {
         enabled: true
         registration: {
-          openIdConnectConfiguration: {
-            wellKnownOpenIdConfiguration: 'https://login.microsoftonline.com/${subscription().tenantId}/v2.0/.well-known/openid-configuration'
-          }
+          clientId: pgadminAadClientId
+          clientSecretSettingName: 'aad-client-secret'
+          openIdIssuer: '${environment().authentication.loginEndpoint}${subscription().tenantId}/v2.0'
+        }
+        validation: {
+          allowedAudiences: [
+            'api://${pgadminAadClientId}'
+            pgadminAadClientId
+          ]
         }
       }
     }

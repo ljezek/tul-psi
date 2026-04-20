@@ -67,11 +67,27 @@ jobs:
             --resource-group rg-spc-dev-pl \
             --image ${{ needs.build-and-push.outputs.acr_name }}.azurecr.io/backend:${{ github.sha }}
 
-      - name: Run Migrations Job
+      - name: Run Migrations and Seed
         run: |
-          az containerapp job start \
+          EXECUTION_NAME=$(az containerapp job start \
             --name job-spc-dev-migrate \
-            --resource-group rg-spc-dev-pl
+            --resource-group rg-spc-dev-pl \
+            --query name -o tsv)
+          echo "Started execution: $EXECUTION_NAME"
+          for i in $(seq 1 36); do
+            STATUS=$(az containerapp job execution show \
+              --name job-spc-dev-migrate \
+              --resource-group rg-spc-dev-pl \
+              --job-execution-name "$EXECUTION_NAME" \
+              --query "properties.status" -o tsv)
+            echo "Status [$i/36]: $STATUS"
+            case "$STATUS" in
+              Succeeded) echo "Job completed successfully."; break ;;
+              Failed|Stopped) echo "Job failed: $STATUS"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          [[ "$STATUS" == "Succeeded" ]] || { echo "Timed out waiting for job."; exit 1; }
 
       - name: Update Backend App
         run: |

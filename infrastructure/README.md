@@ -136,12 +136,62 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 | `GEMINI_API_KEY` | API key for Gemini AI integration. | Google AI Studio |
 | `JWT_SECRET` | Secret key for signing session cookies. | [backend/.env](../backend/.env.example) |
 | `VITE_LOGIC_APP_FEEDBACK_URL` | The URL for your Logic App feedback. | Azure Portal |
+| `PGADMIN_AAD_CLIENT_ID` | App Registration client ID for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
+| `PGADMIN_AAD_CLIENT_SECRET` | Client secret for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
 
 ### Step 5: Configure GitHub Environments
 To manage differences between `dev` and `prod`:
 1.  Go to **Settings > Environments**.
 2.  Create two environments: `dev` and `prod`.
-3.  Add environment-specific secrets (like `JWT_SECRET` and `VITE_LOGIC_APP_FEEDBACK_URL`) directly to these environments.
+3.  Add `JWT_SECRET` and `VITE_LOGIC_APP_FEEDBACK_URL` to the `dev` environment now. `PGADMIN_AAD_CLIENT_ID` and `PGADMIN_AAD_CLIENT_SECRET` are added after Step 6.
+
+---
+
+### Step 6: pgAdmin App Registration (Dev Only)
+
+pgAdmin EasyAuth requires an Entra ID App Registration. Because the redirect URI must point at the deployed Container App URL, this step runs **after the first infrastructure deployment**. You need permission to create App Registrations in your Entra ID tenant (any member of the tenant can do this by default).
+
+```bash
+az login
+
+# 1. Retrieve the pgAdmin URL from the already-deployed Container App
+PGADMIN_FQDN=$(az containerapp show \
+  -n ca-spc-dev-pgadmin -g rg-spc-dev-pl \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+echo "pgAdmin FQDN: $PGADMIN_FQDN"
+
+# 2. Create the App Registration (idempotent — safe to re-run)
+APP_NAME="pgadmin-spc-dev"
+CLIENT_ID=$(az ad app list --display-name "$APP_NAME" --query "[0].appId" -o tsv)
+if [ -z "$CLIENT_ID" ]; then
+  az ad app create \
+    --display-name "$APP_NAME" \
+    --sign-in-audience AzureADMyOrg \
+    --web-redirect-uris "https://${PGADMIN_FQDN}/.auth/login/aad/callback"
+  CLIENT_ID=$(az ad app list --display-name "$APP_NAME" --query "[0].appId" -o tsv)
+else
+  # Ensure the redirect URI is up to date if re-running after a redeployment
+  az ad app update --id "$CLIENT_ID" \
+    --web-redirect-uris "https://${PGADMIN_FQDN}/.auth/login/aad/callback"
+fi
+echo "App Registration client ID: $CLIENT_ID"
+
+# 3. Create a client secret (1-year TTL; re-run with a new display-name to rotate)
+CLIENT_SECRET=$(az ad app credential reset \
+  --id "$CLIENT_ID" \
+  --display-name "easyauth-$(date +%Y)" \
+  --years 1 \
+  --query password -o tsv)
+
+echo ""
+echo "Add these as 'dev' environment secrets in GitHub (Settings → Environments → dev):"
+echo "  PGADMIN_AAD_CLIENT_ID=$CLIENT_ID"
+echo "  PGADMIN_AAD_CLIENT_SECRET=$CLIENT_SECRET"
+```
+
+After adding both secrets to GitHub, **re-run the Infrastructure Deployment** for `dev`. The `deployPgadminAuth` condition becomes true on the second run and the EasyAuth resource is created.
+
+> **Secret rotation:** Run step 3 again with a new `--display-name` (e.g. `easyauth-2027`) once per year, update the GitHub secret, and redeploy infrastructure.
 
 ---
 
@@ -182,13 +232,15 @@ az deployment group validate \
 
 ## 3. Deployment Sequence
 
-The first deployment follows an automated sequence.
+The first full deployment requires two infrastructure runs to bootstrap pgAdmin EasyAuth.
 
-1.  **Trigger Infrastructure:** Go to **Actions > Infrastructure Deployment** and run it for `dev`. 
-    *   Bicep will adopt the `id-spc-shared-db-setup` identity created in Section 2.
-    *   The `deploymentScript` will automatically create the DB roles for `dev` inside the VNet.
-2.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**.
-3.  **Trigger Frontend:** Go to **Actions > Frontend Deployment (Dev)**.
+1.  **Trigger Infrastructure (run 1):** Go to **Actions > Infrastructure Deployment** and run it for `dev`.
+    *   Bicep creates the DB roles and all Azure resources.
+    *   pgAdmin is deployed **without** EasyAuth on this run (`PGADMIN_AAD_CLIENT_ID` is not set yet).
+2.  **pgAdmin App Registration:** Run the script from Step 6. Add `PGADMIN_AAD_CLIENT_ID` and `PGADMIN_AAD_CLIENT_SECRET` to the `dev` GitHub environment.
+3.  **Trigger Infrastructure (run 2):** Re-run the Infrastructure Deployment for `dev`. EasyAuth is activated.
+4.  **Trigger Backend:** Go to **Actions > Backend Deployment (Dev)**.
+5.  **Trigger Frontend:** Go to **Actions > Frontend Deployment (Dev)**.
 
 ---
 
@@ -208,7 +260,7 @@ Since the PostgreSQL server is restricted to the private VNet, you cannot connec
 ### Step 1: Access the pgAdmin UI
 1.  Go to the Azure Portal and find the `ca-spc-dev-pgadmin` Container App.
 2.  Open the Application URL.
-3.  **EasyAuth:** You will be prompted to log in with your Microsoft account (`lukas.jezek@gmail.com`). This ensures only authorized developers can reach the pgAdmin login screen.
+3.  **EasyAuth:** You will be prompted to log in with your Microsoft account (`lukas.jezek@gmail.com`). If the prompt does not appear, EasyAuth is not yet configured — complete Step 6 and redeploy infrastructure first.
 
 ### Step 2: Connect to the Database
 Once inside the pgAdmin web interface, add a new server:
