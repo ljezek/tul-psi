@@ -265,7 +265,7 @@ class EmailSender:
         Raises:
             EmailDeliveryError: When ACS credentials are missing or delivery fails.
         """
-        if self._app_env == "local":
+        if self._app_env in ("local", "e2e"):
             print(  # noqa: T201
                 f"\n{'=' * 60}\n"
                 f"[FAKE EMAIL]\n"

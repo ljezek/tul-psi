@@ -116,7 +116,7 @@ async def verify_otp(
 
     settings = get_settings()
     # Secure cookies require HTTPS; disable only for the local development environment.
-    secure_cookie = settings.app_env != "local"
+    secure_cookie = settings.app_env not in ("local", "e2e")
     response.set_cookie(
         key="session",
         value=jwt_token,
@@ -157,7 +157,7 @@ async def logout(response: Response) -> dict[str, str]:
     """
     settings = get_settings()
     # Mirror the Secure flag used during login so browsers honour the override.
-    secure_cookie = settings.app_env != "local"
+    secure_cookie = settings.app_env not in ("local", "e2e")
     response.set_cookie(
         key="session",
         value="",

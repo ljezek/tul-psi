@@ -70,8 +70,8 @@ async def _run(*, reset: bool) -> None:
             "password": token_provider.get_token,
             "ssl": True,
         }
-    elif settings.app_env != "local":
-        # Force SSL by default in non-local environments if not explicitly disabled.
+    elif settings.app_env not in ("local", "e2e"):
+        # Force SSL by default in non-local/non-e2e environments if not explicitly disabled.
         # This prevents "no pg_hba.conf entry ... no encryption" errors when
         # connecting to cloud databases that require secure transport.
         if "ssl=disable" not in settings.database_url:
@@ -89,7 +89,7 @@ async def _run(*, reset: bool) -> None:
     env_name = settings.app_env
     sql_file = Path(__file__).parent / f"seed_{env_name}.sql"
 
-    if env_name in ("local", "dev") and not sql_file.exists():
+    if env_name in ("local", "dev", "e2e") and not sql_file.exists():
         sql_file = Path(__file__).parent / "seed_dev.sql"
 
     if not sql_file.exists():
