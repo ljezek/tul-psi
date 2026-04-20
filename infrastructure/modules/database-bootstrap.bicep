@@ -46,7 +46,7 @@ resource dbBootstrap 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'DB_NAME', value: dbName }
       { name: 'ENV', value: env }
       { name: 'DEV_EMAIL', value: developerIdentityEmail }
-      { name: 'AAD_ENDPOINT', value: environment().suffixes.sqlServerHostname }
+      { name: 'OSSRDBMS_RESOURCE', value: 'https://ossrdbms-aad${environment().suffixes.sqlServerHostname}/' }
     ]
     scriptContent: '''
 set -e
@@ -58,7 +58,7 @@ sleep 30
 apk update && apk add postgresql-client
 
 # Get token for PostgreSQL Entra ID authentication
-export PGPASSWORD=$(az account get-access-token --resource "https://ossrdbms-aad.${AAD_ENDPOINT}" -o tsv --query accessToken)
+export PGPASSWORD=$(az account get-access-token --resource "$OSSRDBMS_RESOURCE" -o tsv --query accessToken)
 
 echo "--- Debugging: Available Functions ---"
 psql "host=${DB_HOST} user=${DB_ADMIN} dbname=postgres sslmode=require" -c "\df *pgaad*" || echo "Failed to list functions"
