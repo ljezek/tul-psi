@@ -127,6 +127,10 @@ Severity labels: **HIGH** = fix before widening access · **MEDIUM** = fix soon 
 - **Fix:** Add 3–5 integration tests that run against a real test database transaction and exercise
   full request/response chains through the FastAPI `TestClient`.
 
+### [MEDIUM] Coverage computation for all tests
+- Frontend and backend unit tests should have coverage reports (available in GitHub)
+
+
 ---
 
 ## PR 6 — Frontend: Request Timeouts, ProtectedRoute Tests & Error UI
@@ -161,12 +165,23 @@ Severity labels: **HIGH** = fix before widening access · **MEDIUM** = fix soon 
 
 ---
 
-## PR 7 — Frontend: Accessibility Fixes
+## PR 7 — End 2 End full stack tests with PlayWright
 
-**Scope:** `frontend/src/components/Modal.tsx`, `frontend/src/components/LoadingSpinner.tsx`,
-form components
+### [MEDIUM] Full-stack End2End Integration tests
+- We need full-stack end2end integration tests for gating the production deployment.
+- Propose test scenarios (public, student, lecturer, admin) to validate before a release can be automatically promoted to prod.
+- Propose a technology to use for the tests (probably Playwright) and method for supporting login (currently we have OTP with email).
+- After the plan is approved, implement the tests.
+
+---
+
+## PR 8 — Frontend: Bundle Analysis, A11y & Minor Cleanup
+
+**Scope:** `frontend/`
 
 ### [MEDIUM] A11y Gaps
+**Scope:** `frontend/src/components/Modal.tsx`, `frontend/src/components/LoadingSpinner.tsx`,
+form components
 - Form error messages are not linked to their inputs via `aria-describedby`; screen readers
   cannot associate the error with the field.
 - `<LoadingSpinner>` lacks `aria-live="polite"` — screen readers don't announce when loading begins.
@@ -180,11 +195,6 @@ form components
 - **Fix (Modal backdrop):** Add `aria-hidden="true"` to the overlay `<div>`.
 - **Fix (form errors):** Link each error message element via `aria-describedby` on the input.
 
----
-
-## PR 8 — Frontend: Bundle Analysis & Minor Cleanup
-
-**Scope:** `frontend/`
 
 ### [LOW] No Bundle Size Tracking
 - No `vite-plugin-visualizer`; bundle regressions go undetected.
@@ -232,31 +242,6 @@ form components
 
 ---
 
-## PR 10 — Infrastructure: Resource Tags & Log Analytics Retention
-
-**Scope:** `infrastructure/environment.bicep`, `infrastructure/shared.bicep`,
-`infrastructure/modules/*.bicep`, `infrastructure/modules/monitoring.bicep`
-
-### [HIGH] No Resource Tags on Any Azure Resource
-- Zero `tags` properties across all Bicep files; cost allocation and resource grouping in Azure
-  Cost Management are impossible.
-- **Fix:** Add a `tags` parameter to `environment.bicep` and `shared.bicep`; thread it through all
-  module calls; apply `tags: tags` to every resource. Minimum useful tag set:
-  ```bicep
-  param tags object = {
-    project: 'spc'
-    env: env
-    managedBy: 'bicep'
-  }
-  ```
-
-### [LOW] Log Analytics Retention Too Short
-- `infrastructure/modules/monitoring.bicep` — Default 30-day retention may be too short for
-  post-incident investigations.
-- **Fix:** Increase to 90 days for the production workspace (gate on `env == 'prod'`).
-
----
-
 ## PR 11 — Infrastructure: Health Probes, Diagnostics & CI/CD Hardening
 
 **Scope:** `infrastructure/modules/compute.bicep`, `backend/Dockerfile`,
@@ -281,6 +266,22 @@ form components
 - **Fix:** Add `timeout-minutes: 30` to every `jobs.<id>` block in:
   `.github/workflows/infrastructure.yml`, `backend-dev.yml`, `frontend-dev.yml`.
 
+### [HIGH] No Resource Tags on Any Azure Resource
+**Scope:** `infrastructure/environment.bicep`, `infrastructure/shared.bicep`,
+`infrastructure/modules/*.bicep`, `infrastructure/modules/monitoring.bicep`
+
+- Zero `tags` properties across all Bicep files; cost allocation and resource grouping in Azure
+  Cost Management are impossible.
+- **Fix:** Add a `tags` parameter to `environment.bicep` and `shared.bicep`; thread it through all
+  module calls; apply `tags: tags` to every resource. Minimum useful tag set:
+  ```bicep
+  param tags object = {
+    project: 'spc'
+    env: env
+    managedBy: 'bicep'
+  }
+  ```
+
 ### [MEDIUM] Missing Platform-Level Diagnostics for Container Apps
 - The OTel sidecar captures application traces/metrics. It does **not** capture platform events:
   container crashes, OOM kills, cold-start timing, or scale-in/out events.
@@ -303,6 +304,12 @@ form components
 ### [MEDIUM] OTEL Collector CORS Allows All Origins
 - `infrastructure/monitoring/otel-collector-config.azure.yaml:9` — `allowed_origins: ["*"]`.
 - **Fix:** Replace `*` with the backend container's internal address (e.g. `http://localhost:8000`).
+
+### [LOW] Log Analytics Retention Too Short
+- `infrastructure/modules/monitoring.bicep` — Default 30-day retention may be too short for
+  post-incident investigations.
+- **Fix:** Increase to 90 days for the production workspace (gate on `env == 'prod'`).
+
 
 ---
 
