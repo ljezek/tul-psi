@@ -25,8 +25,13 @@ jobs:
         run: npm ci
       - name: Run Lint
         run: npm run lint
-      - name: Run Unit Tests
-        run: npm test
+      - name: Run Unit Tests with Coverage
+        run: |
+          npm test -- --coverage.enabled true --coverage.reporter text | tee coverage.txt
+          echo "## Frontend Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          cat coverage.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   build-and-deploy-preview:
     needs: test-and-lint-frontend
