@@ -172,7 +172,7 @@ async def test_endpoint_returns_401_for_tampered_cookie(client: AsyncClient) -> 
 
     # We must provide a matching CSRF token and cookie because a session exists.
     # Otherwise verify_csrf_token would raise 403 before reaching the auth check.
-    token = "a1b2c3d4"
+    token = "a1b2c3d4"  # noqa: S105
     client.cookies.set("session", "eyJ.tampered.jwt")
     client.cookies.set("XSRF-TOKEN", token)
 
@@ -257,7 +257,9 @@ async def test_verify_csrf_token_allows_post_without_session_cookie() -> None:
 
 
 async def test_verify_csrf_token_passes_when_header_matches_cookie_with_session() -> None:
-    """POST with a matching XSRF-TOKEN cookie and X-XSRF-Token header must pass when session exists."""
+    """POST with a matching XSRF-TOKEN cookie and X-XSRF-Token header must pass
+    when session exists.
+    """
     token = "a1b2c3d4e5f6"  # noqa: S105
     request = MagicMock(spec=Request)
     request.method = "POST"
@@ -278,7 +280,9 @@ async def test_verify_csrf_token_raises_403_on_header_mismatch_with_session() ->
 
 
 async def test_verify_csrf_token_raises_403_on_missing_header_with_session() -> None:
-    """POST with XSRF-TOKEN cookie but no X-XSRF-Token header must raise HTTP 403 when session exists."""
+    """POST with XSRF-TOKEN cookie but no X-XSRF-Token header must raise HTTP 403
+    when session exists.
+    """
     request = MagicMock(spec=Request)
     request.method = "POST"
     request.cookies = {"XSRF-TOKEN": "secret", "session": "valid-session"}
@@ -289,7 +293,9 @@ async def test_verify_csrf_token_raises_403_on_missing_header_with_session() -> 
 
 
 async def test_verify_csrf_token_enforces_delete_and_patch_with_session() -> None:
-    """DELETE and PATCH requests with a mismatched token must also raise HTTP 403 when session exists."""
+    """DELETE and PATCH requests with a mismatched token must also raise HTTP 403
+    when session exists.
+    """
     for method in ("DELETE", "PATCH"):
         request = MagicMock(spec=Request)
         request.method = method
