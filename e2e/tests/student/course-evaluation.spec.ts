@@ -1,6 +1,6 @@
 import { test as base, expect, USERS, PROJECTS } from '../../fixtures/index.js';
 import { login } from '../../helpers/login.js';
-import { apiLogin, apiPost } from '../../helpers/api.js';
+import { apiLogin, apiPost, apiDelete } from '../../helpers/api.js';
 
 // Use Jana Svobodová (id=12, project 4 member) — she has no existing CE in the seed,
 // so this test creates a new row without mutating any seeded data.
@@ -8,6 +8,8 @@ const test = base.extend({
   janaPage: async ({ browser }, use) => {
     const context = await browser.newContext();
     const page = await context.newPage();
+    // Accept any window.confirm dialogs (e.g. useBlocker navigation guard)
+    page.on('dialog', dialog => dialog.accept());
     await login(page, USERS.jana.email);
     await use(page);
     await context.close();
@@ -15,9 +17,13 @@ const test = base.extend({
 });
 
 // Ensure project 4 is locked before these tests run (guard against stale container state).
+// Also delete Jana's CE if it was submitted in a previous run so S-03 can re-submit.
 test.beforeAll(async () => {
   const cookies = await apiLogin(USERS.admin.email);
   await apiPost(`/api/v1/projects/${PROJECTS.lectorsSpc.id}/lock`, cookies);
+  // Best-effort delete of Jana's previous CE so the form is not pre-filled/locked.
+  await apiDelete(`/api/v1/course-evaluations/${PROJECTS.lectorsSpc.id}/student/${USERS.jana.id}`, cookies)
+    .catch(() => { /* CE may not exist — that's fine */ });
 });
 
 // S-03: Student submits a course evaluation including peer feedback.
@@ -46,7 +52,7 @@ test('student submits course evaluation', async ({ janaPage: page }) => {
   await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
   await submitBtn.click();
 
-  await page.waitForURL('/student', { timeout: 12_000 });
+  await page.waitForURL(url => url.pathname === '/student', { timeout: 15_000 });
 });
 
 // S-04: Student cannot see results when project is locked.

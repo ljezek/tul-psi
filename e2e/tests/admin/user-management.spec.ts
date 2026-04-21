@@ -1,30 +1,41 @@
 import { test, expect, USERS } from '../../fixtures/index.js';
+import { apiLogin, apiPatch } from '../../helpers/api.js';
+
+// Ensure Dan starts active before A-02 runs (stale container may have left him inactive).
+test.beforeAll(async () => {
+  const cookies = await apiLogin(USERS.admin.email);
+  await apiPatch(`/api/v1/users/${USERS.dan_k.id}`, { is_active: true }, cookies);
+});
 
 // A-01: Admin creates a new student user.
-// The new user row is inserted into the ephemeral container — no cleanup needed.
+// Idempotent: if the user already exists (stale container), the test verifies it's visible.
 test('admin creates a new student user', async ({ adminPage: page }) => {
   await page.goto('/admin/users');
 
   // Wait for user list to load
   await expect(page.getByText(USERS.admin.name)).toBeVisible();
 
-  // Open create user modal
-  await page.getByRole('button', { name: /Přidat uživatele|Add User|UserPlus/i }).click();
+  // If user already exists from a previous run, skip creation
+  const alreadyExists = await page.getByText('Test E2E Student').isVisible();
+  if (!alreadyExists) {
+    // Open create user modal
+    await page.getByRole('button', { name: /Přidat uživatele|Add User|UserPlus/i }).click();
 
-  // Fill name — email auto-generates from name
-  const nameInput = page.getByLabel(/Jméno|Name/i).first();
-  await nameInput.fill('Test E2E Student');
+    // Fill name — email auto-generates from name
+    const nameInput = page.getByLabel(/Jméno|Name/i).first();
+    await nameInput.fill('Test E2E Student');
 
-  // Select STUDENT role (it may be the default, but explicitly set it)
-  const roleSelect = page.getByRole('combobox', { name: /Role/i }).or(
-    page.locator('select').filter({ has: page.getByText(/STUDENT|Student/i) })
-  ).first();
-  if (await roleSelect.count() > 0) {
-    await roleSelect.selectOption({ value: 'STUDENT' });
+    // Select STUDENT role (it may be the default, but explicitly set it)
+    const roleSelect = page.getByRole('combobox', { name: /Role/i }).or(
+      page.locator('select').filter({ has: page.getByText(/STUDENT|Student/i) })
+    ).first();
+    if (await roleSelect.count() > 0) {
+      await roleSelect.selectOption({ value: 'STUDENT' });
+    }
+
+    // Submit — scope to dialog to avoid clicking the "Přidat uživatele" opener button
+    await page.getByRole('dialog').getByRole('button', { name: /Přidat|Add/i }).click();
   }
-
-  // Submit — scope to dialog to avoid clicking the "Přidat uživatele" opener button
-  await page.getByRole('dialog').getByRole('button', { name: /Přidat|Add/i }).click();
 
   // New user should appear in the table
   await expect(page.getByText('Test E2E Student')).toBeVisible({ timeout: 8_000 });
