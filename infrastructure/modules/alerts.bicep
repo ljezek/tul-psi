@@ -46,7 +46,7 @@ resource errorAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
       allOf: [
         {
           query: 'requests\n| where success == false and resultCode startswith "5"\n| summarize ErrorCount = count() by operation_Name'
-          timeAggregation: 'Count'
+          timeAggregation: 'Average'
           metricMeasureColumn: 'ErrorCount'
           resourceIdColumn: ''
           dimensions: [
