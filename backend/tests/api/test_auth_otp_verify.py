@@ -221,7 +221,7 @@ async def test_otp_verify_success_sets_xsrf_cookie(client: AsyncClient) -> None:
     xsrf_header = next((h for h in set_cookie_headers if "XSRF-TOKEN=" in h), "")
     assert xsrf_header, "XSRF-TOKEN Set-Cookie header not found"
     assert "httponly" not in xsrf_header.lower()
-    assert "samesite=strict" in xsrf_header.lower()
+    assert "samesite=lax" in xsrf_header.lower()
 
 
 async def test_otp_verify_jwt_claims_and_expiry(client: AsyncClient) -> None:

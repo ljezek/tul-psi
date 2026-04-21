@@ -58,13 +58,16 @@ app = FastAPI(
 setup_otel(app)
 
 # Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_kwargs = {
+    "allow_origins": settings.allowed_origins,
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+if settings.allowed_origin_regex:
+    cors_kwargs["allow_origin_regex"] = settings.allowed_origin_regex
+
+app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1")
