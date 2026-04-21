@@ -5,6 +5,7 @@ import { getCurrentUser, verifyOtp, logout as apiLogout, ApiError } from '@/api'
 interface AuthContextType {
   user: UserPublic | null;
   loading: boolean;
+  isResurrecting: boolean;
   login: (email: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -15,8 +16,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserPublic | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isResurrecting, setIsResurrecting] = useState(false);
 
   const fetchUser = async () => {
+    // Start a timer to show resurrection message if backend takes > 1s
+    const timer = setTimeout(() => {
+      setIsResurrecting(true);
+    }, 1000);
+
     try {
       const userData = await getCurrentUser();
       setUser(userData);
@@ -27,6 +34,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
       }
     } finally {
+      clearTimeout(timer);
+      setIsResurrecting(false);
       setLoading(false);
     }
   };
@@ -55,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, isResurrecting, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

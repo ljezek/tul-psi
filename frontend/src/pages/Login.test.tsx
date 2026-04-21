@@ -151,6 +151,29 @@ describe('Login', () => {
     });
   });
 
+  it('shows loading message and disables input when requesting OTP', async () => {
+    const user = userEvent.setup();
+    // Delay the response to check loading state
+    (api.requestOtp as Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ message: 'Success' }), 100)));
+    
+    await renderLogin();
+    
+    const emailInput = screen.getByPlaceholderText('jan.novak');
+    await user.type(emailInput, 'test.user');
+    
+    const submitButton = screen.getByRole('button', { name: /Odeslat kód/i });
+    await user.click(submitButton);
+    
+    // Check loading state immediately after click
+    expect(emailInput).toBeDisabled();
+    expect(screen.getByText(/Generování OTP a odesílání e-mailu/i)).toBeInTheDocument();
+    
+    // Wait for completion
+    await waitFor(() => {
+      expect(screen.getByText(/Jednorázový kód/i)).toBeInTheDocument();
+    });
+  });
+
   it('displays error for too many attempts (429)', async () => {
     const user = userEvent.setup();
     (api.requestOtp as Mock).mockResolvedValue({ message: 'Success' });

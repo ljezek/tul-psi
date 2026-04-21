@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Globe, LogIn, LogOut, Shield, BookOpen } from 'lucide-react';
+import { Menu, X, Globe, LogIn, LogOut, Shield, BookOpen, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
@@ -10,7 +10,7 @@ import { FeedbackButton } from '@/components/FeedbackButton';
 
 export const MainLayout = () => {
   const { t, language, setLanguage } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout, isResurrecting } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -83,7 +83,7 @@ export const MainLayout = () => {
               <div className="flex items-center gap-4">
                 <button 
                   onClick={toggleLanguage}
-                  className="flex items-center gap-2 text-xs font-black tracking-widest text-slate-400 hover:text-tul-blue transition-colors px-3 py-1.5 rounded-lg border border-slate-100 bg-slate-50 uppercase"
+                  className="flex items-center gap-2 text-xs font-black tracking-widest text-slate-400 hover:text-tul-blue transition-colors px-3 py-1.5 rounded-lg border border-slate-100 bg-slate-50 uppercase cursor-pointer"
                 >
                   <Globe size={14} />
                   <span>{language}</span>
@@ -120,7 +120,7 @@ export const MainLayout = () => {
             <div className="md:hidden flex items-center gap-4">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                className="p-2 text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label={mobileMenuOpen ? t('nav.close_menu') : t('nav.open_menu')}
                 aria-expanded={mobileMenuOpen}
                 aria-controls="mobile-nav-menu"
@@ -145,7 +145,7 @@ export const MainLayout = () => {
               <div className="flex items-center justify-between mb-6">
                 <button 
                   onClick={toggleLanguage}
-                  className="flex items-center gap-2 text-xs font-black tracking-widest text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 uppercase"
+                  className="flex items-center gap-2 text-xs font-black tracking-widest text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 uppercase cursor-pointer"
                 >
                   <Globe size={16} />
                   {language === 'cs' ? 'Čeština' : 'English'}
@@ -186,6 +186,14 @@ export const MainLayout = () => {
           </div>
         )}
       </nav>
+
+      {/* Backend Resurrection Banner */}
+      {isResurrecting && (
+        <div className="bg-tul-blue text-white py-2 px-4 flex items-center justify-center gap-3 animate-pulse sticky top-20 z-30 shadow-md">
+          <RefreshCw size={16} className="animate-spin" />
+          <span className="text-sm font-bold tracking-wide">{t('common.resurrecting')}</span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-grow w-full">

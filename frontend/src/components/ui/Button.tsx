@@ -17,7 +17,7 @@ export const Button = ({
   disabled,
   ...props 
 }: ButtonProps) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none";
+  const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
   
   const variants = {
     primary: "bg-tul-blue hover:bg-blue-700 text-white shadow-md shadow-blue-500/20",

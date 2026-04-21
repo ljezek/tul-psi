@@ -12,9 +12,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@microsoft/applicationinsights-clickanalytics-js": "^3.4.1",
-    "@microsoft/applicationinsights-react-js": "^19.4.0",
-    "@microsoft/applicationinsights-web": "^3.4.1",
     "lucide-react": "^1.7.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -22,6 +19,9 @@
     "react-router-dom": "^7.14.0"
   },
   "devDependencies": {
+    "@microsoft/applicationinsights-clickanalytics-js": "^3.4.1",
+    "@microsoft/applicationinsights-react-js": "^19.4.0",
+    "@microsoft/applicationinsights-web": "^3.4.1",
     "@emnapi/core": "^1.9.2",
     "@emnapi/runtime": "^1.9.2",
     "@eslint/js": "^10.0.0",
