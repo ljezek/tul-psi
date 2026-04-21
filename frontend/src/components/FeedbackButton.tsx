@@ -80,7 +80,7 @@ export const FeedbackButton = () => {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50"
+        className="flex items-center text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 cursor-pointer"
         title={t('feedback.button')}
       >
         <MessageSquare size={18} />

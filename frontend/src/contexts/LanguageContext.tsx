@@ -177,6 +177,7 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Error / loading states
   'error.retry': { cs: 'Zkusit znovu', en: 'Retry' },
+  'common.resurrecting': { cs: 'Probouzím backend (může to trvat 10-15s)...', en: 'Resurrecting the backend (may take 10-15s)...' },
   'common.back': { cs: 'Zpět', en: 'Back' },
   'common.confirm_action': { cs: 'Jste si jisti? Tuto akci nelze vrátit zpět.', en: 'Are you sure? This cannot be undone.' },
   'common.rate_star': { cs: 'Hodnotit {star} hvězdičkami', en: 'Rate {star} stars' },
@@ -200,6 +201,7 @@ const translations: Record<string, Record<Language, string>> = {
   'login.error_too_many': { cs: 'Příliš mnoho pokusů — vyžádejte nový kód.', en: 'Too many attempts — request a new code.' },
   'login.error_unexpected': { cs: 'Došlo k nečekané chybě. Zkuste to prosím znovu.', en: 'An unexpected error occurred. Please try again.' },
   'login.otp_digit': { cs: 'Číslice {index} z 6', en: 'Digit {index} of 6' },
+  'login.otp_generating': { cs: 'Generování OTP a odesílání e-mailu...', en: 'Generating OTP and sending email...' },
 
   // Profile
   'profile.title': { cs: 'Můj profil', en: 'My Profile' },

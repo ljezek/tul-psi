@@ -176,7 +176,8 @@ export const Login = () => {
                       required
                       autoFocus
                       autoComplete="username"
-                      className="block w-full pl-11 pr-3 py-3.5 border border-slate-200 rounded-l-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue focus:bg-white transition-all text-slate-900 text-right"
+                      disabled={loading}
+                      className="block w-full pl-11 pr-3 py-3.5 border border-slate-200 rounded-l-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue focus:bg-white transition-all text-slate-900 text-right disabled:opacity-50"
                       placeholder="jan.novak"
                       value={emailPrefix}
                       onChange={(e) => setEmailPrefix(e.target.value.split('@')[0])}
@@ -186,6 +187,14 @@ export const Login = () => {
                     @tul.cz
                   </div>
                 </div>
+                
+                {loading && (
+                  <div className="mt-4 flex items-center justify-center gap-3 text-tul-blue font-bold animate-pulse">
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                    <span className="text-sm">{t('login.otp_generating')}</span>
+                  </div>
+                )}
+
                 <p className="mt-2.5 text-sm text-slate-500 flex items-start gap-2 ml-1">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-tul-blue/40 mt-1.5 flex-shrink-0"></span>
                   {t('login.email_info')}

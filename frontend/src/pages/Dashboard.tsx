@@ -185,7 +185,7 @@ export const Dashboard = () => {
                 <BookOpen size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all cursor-pointer"
                 value={selectedCourse}
                 onChange={(e) => updateFilter('course', e.target.value)}
                 aria-label={t('dashboard.filter_subject')}
@@ -205,7 +205,7 @@ export const Dashboard = () => {
                 <User size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all cursor-pointer"
                 value={selectedLecturer}
                 onChange={(e) => updateFilter('lecturer', e.target.value)}
                 aria-label={t('dashboard.filter_lecturer')}
@@ -225,7 +225,7 @@ export const Dashboard = () => {
                 <Calendar size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all cursor-pointer"
                 value={selectedYear}
                 onChange={(e) => updateFilter('year', e.target.value)}
                 aria-label={t('dashboard.filter_year')}
@@ -245,7 +245,7 @@ export const Dashboard = () => {
                 <Tag size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue appearance-none transition-all cursor-pointer"
                 value={selectedTech}
                 onChange={(e) => updateFilter('tech', e.target.value)}
                 aria-label={t('dashboard.filter_technology')}
@@ -282,7 +282,7 @@ export const Dashboard = () => {
           </p>
           <button 
             onClick={clearFilters}
-            className="mt-6 text-tul-blue font-bold hover:underline"
+            className="mt-6 text-tul-blue font-bold hover:underline cursor-pointer"
           >
             {t('dashboard.clear_filters')}
           </button>
