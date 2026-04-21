@@ -126,3 +126,31 @@ Alerts are provisioned automatically via Bicep (`infrastructure/modules/alerts.b
 
 ### Modifying Alert Thresholds permanently
 To change the thresholds permanently across deployments, edit the KQL queries and `threshold` properties directly in `infrastructure/modules/alerts.bicep` and redeploy the infrastructure pipeline.
+
+---
+
+## 6. System & Infrastructure Metrics
+
+While Application Insights covers the application layer, the underlying infrastructure metrics (CPU, memory, scale events, database load) are monitored natively by Azure Monitor on the specific resources.
+
+### Container Apps (Backend API)
+Because the backend scales dynamically based on traffic (including scaling to zero), it is important to monitor its active replicas and resource consumption.
+1. Navigate to the Container App resource (`ca-spc-<env>-backend`) in the Azure Portal.
+2. Click on **Metrics** under the Monitoring section.
+3. Useful metrics to graph here include:
+    * **CPU Usage:** How much CPU the containers are actively using.
+    * **Memory Working Set:** Memory consumption by the containers.
+    * **Replica Count:** See how the application is scaling up (or down to zero) over time.
+    * **Requests:** The raw HTTP request volume hitting the Container App ingress.
+
+### PostgreSQL Flexible Server (Database)
+To understand database health, connections, and performance:
+1. Navigate to the PostgreSQL Flexible Server resource (`psql-spc-shared`) in the Azure Portal.
+2. Click on **Metrics**.
+3. Useful metrics to monitor:
+    * **CPU Percent & Memory Percent:** Infrastructure load on the database VM.
+    * **Active Connections:** The number of concurrent connections established by the backend.
+    * **Storage Used:** To ensure you aren't nearing the storage limit.
+    * **IOPS:** Read/write operations per second.
+
+*Note: Since we use a single shared PostgreSQL instance for multiple environments, these metrics represent the combined load of both `dev` and `prod` databases.*
