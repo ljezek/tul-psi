@@ -47,7 +47,10 @@ Frontend telemetry is sent directly from the user's browser.
 
 ### Security Trade-off: Frontend Connection String
 The frontend requires the `VITE_APPINSIGHTS_CONNECTION_STRING` to send telemetry. Because this string is public in the browser, a malicious user could theoretically spoof telemetry to inflate Azure ingestion costs.
-* **Current Mitigation:** A single shared Application Insights instance with a **Daily Volume Cap** (e.g. 0.5 GB/day) can be configured on the Log Analytics Workspace. This limits the total cost exposure but drops all telemetry (including backend) if the cap is reached. This is an accepted risk for a low-traffic academic project.
+* **Current Mitigation:** None. This is an accepted risk for a low-traffic academic project.
+* **Future Mitigations (if abused):** 
+    1. **Daily Volume Cap:** A hard limit (e.g. 0.5 GB/day) can be configured on the Log Analytics Workspace. This limits financial exposure but drops all telemetry (including backend) if the cap is reached.
+    2. **Backend Proxy:** Remove the connection string from the frontend and proxy all RUM telemetry through an authenticated FastAPI backend endpoint.
 
 ---
 
@@ -151,6 +154,10 @@ To understand database health, connections, and performance:
     * **CPU Percent & Memory Percent:** Infrastructure load on the database VM.
     * **Active Connections:** The number of concurrent connections established by the backend.
     * **Storage Used:** To ensure you aren't nearing the storage limit.
+    * **IOPS:** Read/write operations per second.
+
+*Note: Since we use a single shared PostgreSQL instance for multiple environments, these metrics represent the combined load of both `dev` and `prod` databases.*
+ge Used:** To ensure you aren't nearing the storage limit.
     * **IOPS:** Read/write operations per second.
 
 *Note: Since we use a single shared PostgreSQL instance for multiple environments, these metrics represent the combined load of both `dev` and `prod` databases.*

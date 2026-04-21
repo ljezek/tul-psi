@@ -39,6 +39,7 @@ jobs:
           echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
 
           # 3. Fetch Application Insights Connection String
+          az extension add --name application-insights
           AI_CONN_STR=$(az monitor app-insights component show --app ai-spc-dev -g rg-spc-dev-pl --query connectionString -o tsv)
           echo "ai_conn_str=$AI_CONN_STR" >> $GITHUB_OUTPUT
 

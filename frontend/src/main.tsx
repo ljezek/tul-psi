@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './telemetry';
+import { AppInsightsContext } from '@microsoft/applicationinsights-react-js';
+import { reactPlugin } from './telemetry';
 import App from './App';
 import './index.css';
 
@@ -11,6 +12,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <AppInsightsContext.Provider value={reactPlugin}>
+      <App />
+    </AppInsightsContext.Provider>
   </React.StrictMode>,
 );

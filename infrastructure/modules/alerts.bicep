@@ -3,6 +3,9 @@ param prefix string
 param env string
 param appInsightsId string
 param alertsEmail string
+param alertWindowDuration string = 'PT5M'
+param p95LatencyThreshold int = 1000
+param endpointErrorsThreshold int = 3
 param tags object
 
 resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
@@ -28,11 +31,11 @@ resource errorAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   tags: tags
   properties: {
     displayName: 'High Error Rate (5xx)'
-    description: 'Alerts when a specific endpoint has 3 or more 5xx errors within a 5-minute window.'
+    description: 'Alerts when a specific endpoint has ${endpointErrorsThreshold} or more 5xx errors within a ${alertWindowDuration} window.'
     enabled: true
     severity: 1
-    evaluationFrequency: 'PT5M'
-    windowSize: 'PT5M'
+    evaluationFrequency: alertWindowDuration
+    windowSize: alertWindowDuration
     scopes: [
       appInsightsId
     ]
@@ -56,7 +59,7 @@ resource errorAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
             }
           ]
           operator: 'GreaterThanOrEqual'
-          threshold: 3
+          threshold: endpointErrorsThreshold
           failingPeriods: {
             numberOfEvaluationPeriods: 1
             minFailingPeriodsToAlert: 1
@@ -78,11 +81,11 @@ resource latencyAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   tags: tags
   properties: {
     displayName: 'High Sustained Latency (P95)'
-    description: 'Alerts when an endpoint has a P95 latency > 1000ms over a 5-minute window with at least 5 requests.'
+    description: 'Alerts when an endpoint has a P95 latency > ${p95LatencyThreshold}ms over a ${alertWindowDuration} window with at least 5 requests.'
     enabled: true
     severity: 2
-    evaluationFrequency: 'PT5M'
-    windowSize: 'PT5M'
+    evaluationFrequency: alertWindowDuration
+    windowSize: alertWindowDuration
     scopes: [
       appInsightsId
     ]
@@ -106,7 +109,7 @@ resource latencyAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
             }
           ]
           operator: 'GreaterThan'
-          threshold: 1000
+          threshold: p95LatencyThreshold
           failingPeriods: {
             numberOfEvaluationPeriods: 1
             minFailingPeriodsToAlert: 1
