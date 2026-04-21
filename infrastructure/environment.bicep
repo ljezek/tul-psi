@@ -22,6 +22,11 @@ param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
 
+param alertsEmail string = developerIdentityEmail
+param alertWindowDuration string = 'PT5M'
+param p95LatencyThreshold int = 1000
+param endpointErrorsThreshold int = 3
+
 param tags object = {
   project: 'spc'
   env: env
@@ -35,6 +40,22 @@ module monitoring './modules/monitoring.bicep' = {
     location: location
     prefix: prefix
     env: env
+    tags: tags
+  }
+}
+
+// --- Alerts ---
+module alerts './modules/alerts.bicep' = {
+  name: 'alerts-${env}-deployment'
+  params: {
+    location: location
+    prefix: prefix
+    env: env
+    appInsightsId: monitoring.outputs.appInsightsId
+    alertsEmail: alertsEmail
+    alertWindowDuration: alertWindowDuration
+    p95LatencyThreshold: p95LatencyThreshold
+    endpointErrorsThreshold: endpointErrorsThreshold
     tags: tags
   }
 }
