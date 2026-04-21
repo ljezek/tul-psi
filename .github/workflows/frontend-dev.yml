@@ -38,6 +38,10 @@ jobs:
           SWA_TOKEN=$(az staticwebapp secrets list -n swa-spc-dev -g rg-spc-dev-pl --query "properties.apiKey" -o tsv)
           echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
 
+          # 3. Fetch Application Insights Connection String
+          AI_CONN_STR=$(az monitor app-insights component show --app ai-spc-dev -g rg-spc-dev-pl --query connectionString -o tsv)
+          echo "ai_conn_str=$AI_CONN_STR" >> $GITHUB_OUTPUT
+
       - name: Build And Deploy
         id: build_deploy
         uses: Azure/static-web-apps-deploy@v1
@@ -53,3 +57,4 @@ jobs:
           # Uses the dynamic URL fetched in the previous step
           VITE_API_URL: ${{ steps.fetch_secrets.outputs.backend_url }}
           VITE_LOGIC_APP_FEEDBACK_URL: ${{ secrets.VITE_LOGIC_APP_FEEDBACK_URL }}
+          VITE_APPINSIGHTS_CONNECTION_STRING: ${{ steps.fetch_secrets.outputs.ai_conn_str }}

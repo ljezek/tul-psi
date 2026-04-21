@@ -136,6 +136,7 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 | `GEMINI_API_KEY` | API key for Gemini AI integration. | Google AI Studio |
 | `JWT_SECRET` | Secret key for signing session cookies. | [backend/.env](../backend/.env.example) |
 | `VITE_LOGIC_APP_FEEDBACK_URL` | The URL for your Logic App feedback. | Azure Portal |
+| `ALERTS_EMAIL` | Optional. Email address for monitoring alerts (defaults to developerIdentityEmail). | Environment Variable |
 | `PGADMIN_AAD_CLIENT_ID` | App Registration client ID for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
 | `PGADMIN_AAD_CLIENT_SECRET` | Client secret for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
 

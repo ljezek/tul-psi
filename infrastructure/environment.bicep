@@ -22,6 +22,8 @@ param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
 
+param alertsEmail string = developerIdentityEmail
+
 param tags object = {
   project: 'spc'
   env: env
@@ -35,6 +37,19 @@ module monitoring './modules/monitoring.bicep' = {
     location: location
     prefix: prefix
     env: env
+    tags: tags
+  }
+}
+
+// --- Alerts ---
+module alerts './modules/alerts.bicep' = {
+  name: 'alerts-${env}-deployment'
+  params: {
+    location: location
+    prefix: prefix
+    env: env
+    appInsightsId: monitoring.outputs.appInsightsId
+    alertsEmail: alertsEmail
     tags: tags
   }
 }
