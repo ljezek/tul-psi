@@ -7,7 +7,9 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 8_000 },
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // Single worker prevents parallel logins for the same email from racing on the
+  // OTP token table (request_otp invalidates previous tokens before inserting a new one).
+  workers: 1,
   reporter: [
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
     process.env.CI ? ['github'] : ['list'],

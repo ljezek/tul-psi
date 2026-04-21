@@ -7,11 +7,11 @@ test('project detail is publicly accessible', async ({ page }) => {
   await expect(page.getByText(PROJECTS.lectorsSpc.title)).toBeVisible();
 
   // GitHub link renders
-  await expect(page.getByRole('link', { name: /GitHub|Repo|repo/i }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /GitHub|Repo|repo|Zdrojový kód|Source Code/i }).first()).toBeVisible();
 
   // Technology chips include known entries for project 4
-  await expect(page.getByText('React')).toBeVisible();
-  await expect(page.getByText('FastAPI')).toBeVisible();
+  await expect(page.getByText('React', { exact: true })).toBeVisible();
+  await expect(page.getByText('FastAPI', { exact: true })).toBeVisible();
 });
 
 // P-03: Member email addresses are NOT shown to unauthenticated visitors.
@@ -33,5 +33,5 @@ test('public cannot see evaluation scores on unlocked project', async ({ page })
   await expect(page.getByText(PROJECTS.eventPlanner.title)).toBeVisible();
 
   // Scores section is auth-gated — not visible without login
-  await expect(page.getByText(/18|19|17/)).not.toBeVisible();
+  await expect(page.getByText(/Hodnocení lektorů|Lecturer Evaluations/i)).not.toBeVisible();
 });

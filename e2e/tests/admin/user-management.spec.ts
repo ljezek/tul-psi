@@ -23,8 +23,8 @@ test('admin creates a new student user', async ({ adminPage: page }) => {
     await roleSelect.selectOption({ value: 'STUDENT' });
   }
 
-  // Submit
-  await page.getByRole('button', { name: /Uložit|Save/i }).last().click();
+  // Submit — scope to dialog to avoid clicking the "Přidat uživatele" opener button
+  await page.getByRole('dialog').getByRole('button', { name: /Přidat|Add/i }).click();
 
   // New user should appear in the table
   await expect(page.getByText('Test E2E Student')).toBeVisible({ timeout: 8_000 });
@@ -42,31 +42,34 @@ test('admin deactivates and reactivates a user', async ({ adminPage: page }) => 
   const danRow = page.locator('tr, [data-testid]').filter({ hasText: USERS.dan_k.name });
   await danRow.getByRole('button', { name: /Upravit|Edit/i }).click();
 
-  // Find the active/inactive toggle
-  const activeToggle = page.getByRole('checkbox', { name: /Aktivní|Active/i })
-    .or(page.locator('input[type="checkbox"]').filter({ hasText: /Aktivní|Active/i }))
-    .first();
+  // Find the active/inactive toggle — it's a custom sr-only checkbox with id="user-status"
+  const activeToggle = page.locator('#user-status');
 
   // The toggle should currently be checked (user is active)
   await expect(activeToggle).toBeChecked();
 
-  // Deactivate
-  await activeToggle.click();
+  // Deactivate — click the label because the sr-only div intercepts pointer events
+  await page.locator('label:has(#user-status)').click();
   await expect(activeToggle).not.toBeChecked();
 
-  // Save
-  await page.getByRole('button', { name: /Uložit|Save/i }).last().click();
+  // Save and wait for modal to close before interacting with the toolbar
+  await page.getByRole('dialog').getByRole('button', { name: /Uložit|Save/i }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 });
 
-  // Re-open the user and reactivate
-  await page.getByText(USERS.dan_k.name).waitFor({ timeout: 5_000 });
+  // After deactivation Dan is filtered out (showInactive=false by default).
+  // Enable the "show inactive" toolbar toggle so his row reappears.
+  await page.locator('label').filter({ hasText: /Neaktivní|Inactive/i }).click();
+  await page.getByText(USERS.dan_k.name).waitFor({ state: 'visible', timeout: 5_000 });
+
+  // Re-open the user edit modal and reactivate
   await danRow.getByRole('button', { name: /Upravit|Edit/i }).click();
 
-  const toggle2 = page.getByRole('checkbox', { name: /Aktivní|Active/i }).first();
-  await toggle2.click();
+  const toggle2 = page.locator('#user-status');
+  await page.locator('label:has(#user-status)').click();
   await expect(toggle2).toBeChecked();
 
   // Save restored state
-  await page.getByRole('button', { name: /Uložit|Save/i }).last().click();
+  await page.getByRole('dialog').getByRole('button', { name: /Uložit|Save/i }).click();
 
   // User should still appear (active) in the default view (showInactive=false by default)
   await expect(page.getByText(USERS.dan_k.name)).toBeVisible({ timeout: 8_000 });

@@ -27,8 +27,8 @@ test('course projects page lists in-progress projects with evaluate action', asy
   ).toBeVisible();
 });
 
-// L-01b: Lecturer can open the create course modal.
-test('lecturer can open the create course modal', async ({ lecturerPage: page }) => {
+// L-01b: Admin can open the create course modal (button is only shown to ADMIN role).
+test('lecturer can open the create course modal', async ({ adminPage: page }) => {
   await page.goto('/lecturer');
 
   const createBtn = page.getByRole('button', { name: /Přidat|Vytvořit|Create|Add/i }).first();

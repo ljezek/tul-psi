@@ -10,13 +10,19 @@ test('lecturer saves draft and submits project evaluation', async ({ lecturerPag
   await expect(page.getByText(PROJECTS.kanban.title)).toBeVisible();
 
   // PSI has 3 criteria (funkcionalita, code_quality, nfr) — each with a range slider.
-  // Set all sliders to max (20) by filling the range inputs.
+  // Use evaluate() to set values and fire React's synthetic events (fill() alone
+  // updates the DOM but does not trigger React's onChange on range inputs).
   const sliders = page.locator('input[type="range"]');
   const sliderCount = await sliders.count();
   for (let i = 0; i < sliderCount; i++) {
     const slider = sliders.nth(i);
     const max = await slider.getAttribute('max') ?? '20';
-    await slider.fill(max);
+    await slider.evaluate((el: HTMLInputElement, val: string) => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')
+        ?.set?.call(el, val);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, max);
   }
 
   // Fill all strengths textareas (aria-label contains criterion description)

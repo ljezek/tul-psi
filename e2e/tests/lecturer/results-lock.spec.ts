@@ -13,24 +13,26 @@ test('admin can unlock and re-lock project results', async ({ adminPage: page })
   // Verify project 7 is listed and currently locked (no "Výsledky odemčeny" badge)
   await expect(page.getByText(PROJECTS.kanban.title)).toBeVisible();
 
-  // Find the unlock button for project 7
-  // The button triggers window.confirm then calls POST /projects/{id}/unlock
-  const unlockBtn = page.getByRole('button', { name: /Odemknout výsledky|Unlock Results/i }).first();
+  // Scope all actions to the Kanban project card
+  const kanbanCard = page.locator('div').filter({ has: page.locator('h3, h2').filter({ hasText: PROJECTS.kanban.title }) }).last();
+
+  // Find the unlock button scoped to the Kanban card
+  const unlockBtn = kanbanCard.getByRole('button', { name: /Odemknout výsledky|Unlock Results/i });
   await expect(unlockBtn).toBeVisible();
   await unlockBtn.click();
 
-  // After unlock, "Výsledky odemčeny" badge should appear on that project
-  await expect(page.getByText(/Výsledky odemčeny|Results Unlocked/i)).toBeVisible({ timeout: 8_000 });
+  // After unlock, "Výsledky odemčeny" badge should appear on the Kanban card
+  await expect(kanbanCard.getByText(/Výsledky odemčeny|Results Unlocked/i)).toBeVisible({ timeout: 8_000 });
 
   // Re-lock: the relock button is admin-only and appears after unlock
-  const relockBtn = page.getByRole('button', { name: /Uzamknout|Relock|lock/i }).first();
+  const relockBtn = kanbanCard.getByRole('button', { name: /Uzamknout|Relock|lock/i });
   await expect(relockBtn).toBeVisible({ timeout: 5_000 });
   await relockBtn.click();
 
-  // After relock, the "Výsledky odemčeny" badge should disappear
-  await expect(page.getByText(/Výsledky odemčeny|Results Unlocked/i)).not.toBeVisible({ timeout: 8_000 });
+  // After relock, the "Výsledky odemčeny" badge should disappear from the Kanban card
+  await expect(kanbanCard.getByText(/Výsledky odemčeny|Results Unlocked/i)).not.toBeVisible({ timeout: 8_000 });
   // Unlock button should reappear
-  await expect(page.getByRole('button', { name: /Odemknout výsledky|Unlock Results/i }).first()).toBeVisible();
+  await expect(kanbanCard.getByRole('button', { name: /Odemknout výsledky|Unlock Results/i })).toBeVisible();
 });
 
 // L-03b: Lecturer can view the results page for a completed project.
@@ -38,6 +40,6 @@ test('lecturer can view unlocked project results', async ({ lecturerPage: page }
   await page.goto(`/lecturer/project/${PROJECTS.eventPlanner.id}/results`);
 
   // Scores and peer feedback should be visible
-  await expect(page.getByText(/Hodnocení lektorů|Lecturer Evaluations/i)).toBeVisible();
+  await expect(page.getByText(/Hodnocení lektora|Hodnocení lektorů|Lecturer Evaluation/i).first()).toBeVisible();
   await expect(page.getByText(/Studentská zpětná vazba|Peer Feedback/i)).toBeVisible();
 });

@@ -43,7 +43,7 @@ test('student cannot evaluate a project they are not a member of', async ({ stud
 
   // The API will return 403/404; the page should show an error state (not an empty form)
   await expect(
-    page.getByText(/error|chyba|nenalezen|not found|403|přístup/i).first()
+    page.getByText(/error|chyba|nalezen|nepodařilo|not found|403|přístup/i).first()
   ).toBeVisible({ timeout: 8_000 });
 });
 

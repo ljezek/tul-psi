@@ -70,6 +70,17 @@ export async function apiDelete(path: string, cookies: SessionCookies): Promise<
   });
 }
 
+/** POST to a resource on behalf of an authenticated user (no body). */
+export async function apiPost(path: string, cookies: SessionCookies): Promise<Response> {
+  return fetch(`${BACKEND_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Cookie': `session=${cookies.session}; XSRF-TOKEN=${cookies.xsrf}`,
+      'X-XSRF-Token': cookies.xsrf,
+    },
+  });
+}
+
 /** PUT a resource on behalf of an authenticated user. */
 export async function apiPut(
   path: string,

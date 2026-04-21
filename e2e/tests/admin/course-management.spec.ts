@@ -5,7 +5,7 @@ test('admin can access admin, lecturer, and public routes', async ({ adminPage: 
   // Admin-only
   await page.goto('/admin/users');
   await expect(page).not.toHaveURL(/\/login/);
-  await expect(page.getByText(/Administr|User/i).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Správa uživatelů|User Management/i })).toBeVisible();
 
   // Lecturer routes
   await page.goto('/lecturer');

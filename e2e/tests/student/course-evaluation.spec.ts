@@ -1,5 +1,6 @@
 import { test as base, expect, USERS, PROJECTS } from '../../fixtures/index.js';
 import { login } from '../../helpers/login.js';
+import { apiLogin, apiPost } from '../../helpers/api.js';
 
 // Use Jana Svobodová (id=12, project 4 member) — she has no existing CE in the seed,
 // so this test creates a new row without mutating any seeded data.
@@ -11,6 +12,12 @@ const test = base.extend({
     await use(page);
     await context.close();
   },
+});
+
+// Ensure project 4 is locked before these tests run (guard against stale container state).
+test.beforeAll(async () => {
+  const cookies = await apiLogin(USERS.admin.email);
+  await apiPost(`/api/v1/projects/${PROJECTS.lectorsSpc.id}/lock`, cookies);
 });
 
 // S-03: Student submits a course evaluation including peer feedback.
@@ -33,14 +40,13 @@ test('student submits course evaluation', async ({ janaPage: page }) => {
   await peerStrengths.fill('Jan byl velmi aktivní a spolehlivý.');
   await peerImprovements.fill('Mohl by lépe komunikovat.');
 
-  // Submit the form
-  await page.getByRole('button', { name: /Uložit změny|Save Changes/i }).click();
+  // Submit the form — wait for the button to be enabled first (rating must be set,
+  // remainingPoints must be 0) then click. Redirect fires after a 1.5 s delay in the component.
+  const submitBtn = page.getByRole('button', { name: /Uložit|Save/i });
+  await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
+  await submitBtn.click();
 
-  // Expect success notification or redirect to /student
-  await Promise.race([
-    expect(page.getByText(/Odesláno|submitted|success/i).first()).toBeVisible({ timeout: 8_000 }),
-    page.waitForURL('/student', { timeout: 8_000 }),
-  ]);
+  await page.waitForURL('/student', { timeout: 12_000 });
 });
 
 // S-04: Student cannot see results when project is locked.
@@ -53,7 +59,7 @@ test('student sees locked results page when results_unlocked=false', async ({ br
 
   // The results page should indicate they are not yet available
   await expect(
-    page.getByText(/Výsledky tatím nejsou|not available yet|Uzamčeno|Locked/i).first()
+    page.getByText(/Výsledky zatím nejsou|not available yet|Uzamčeno|Locked/i).first()
   ).toBeVisible();
 
   // Lecturer scores must NOT be visible
