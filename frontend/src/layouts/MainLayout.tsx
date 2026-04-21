@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Globe, LogIn, LogOut, Shield, BookOpen } from 'lucide-react';
+import { Menu, X, Globe, LogIn, LogOut, Shield, BookOpen, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
