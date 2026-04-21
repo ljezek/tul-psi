@@ -85,15 +85,28 @@ async def verify_csrf_token(request: Request) -> None:
 
     Safe methods (GET, HEAD, OPTIONS) are skipped.  For all mutating methods the
     ``XSRF-TOKEN`` cookie must be present and its value must equal the
-    ``X-XSRF-Token`` request header.  Requests without the cookie (unauthenticated
-    sessions) are allowed through — downstream auth dependencies reject them.
+    ``X-XSRF-Token`` request header.
+
+    CSRF protection is only enforced for authenticated sessions (where the
+    ``session`` cookie is present).  Requests without the session cookie (e.g.,
+    initial login, public endpoints) are allowed through — downstream auth
+    dependencies handle authentication if required.
     """
     if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
         return
 
+    # If there is no session cookie, this is an unauthenticated request.
+    # We skip CSRF check for these as there is no session to hijack.
+    if not request.cookies.get("session"):
+        return
+
     cookie_token = request.cookies.get("XSRF-TOKEN")
     if not cookie_token:
-        return
+        # If session exists, XSRF-TOKEN should have been set during login.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF cookie missing.",
+        )
 
     header_token = request.headers.get("X-XSRF-Token", "")
     if not hmac.compare_digest(cookie_token, header_token):

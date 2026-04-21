@@ -166,11 +166,22 @@ async def test_endpoint_returns_401_for_tampered_cookie(client: AsyncClient) -> 
     """
     # Override get_session so the DB is not required for this test.
     app.dependency_overrides[get_session] = _mock_get_session
+
+    # Ensure a clean state by clearing any cookies from previous tests
+    client.cookies.clear()
+
+    # We must provide a matching CSRF token and cookie because a session exists.
+    # Otherwise verify_csrf_token would raise 403 before reaching the auth check.
+    token = "a1b2c3d4"
     client.cookies.set("session", "eyJ.tampered.jwt")
+    client.cookies.set("XSRF-TOKEN", token)
+
     with patch("api.deps.get_settings") as mock_settings:
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         # Use a protected endpoint (PATCH /projects/{id}) that requires authentication.
-        response = await client.patch("/api/v1/projects/1", json={"title": "x"})
+        response = await client.patch(
+            "/api/v1/projects/1", json={"title": "x"}, headers={"X-XSRF-Token": token}
+        )
     assert response.status_code == 401
 
 
@@ -237,52 +248,52 @@ async def test_verify_csrf_token_skips_safe_methods() -> None:
         await verify_csrf_token(request)
 
 
-async def test_verify_csrf_token_allows_post_without_cookie() -> None:
-    """POST with no XSRF-TOKEN cookie must pass — auth deps handle unauthenticated requests."""
+async def test_verify_csrf_token_allows_post_without_session_cookie() -> None:
+    """POST with no session cookie must pass — auth deps handle unauthenticated requests."""
     request = MagicMock(spec=Request)
     request.method = "POST"
     request.cookies = {}
     await verify_csrf_token(request)
 
 
-async def test_verify_csrf_token_passes_when_header_matches_cookie() -> None:
-    """POST with a matching XSRF-TOKEN cookie and X-XSRF-Token header must pass."""
+async def test_verify_csrf_token_passes_when_header_matches_cookie_with_session() -> None:
+    """POST with a matching XSRF-TOKEN cookie and X-XSRF-Token header must pass when session exists."""
     token = "a1b2c3d4e5f6"  # noqa: S105
     request = MagicMock(spec=Request)
     request.method = "POST"
-    request.cookies = {"XSRF-TOKEN": token}
+    request.cookies = {"XSRF-TOKEN": token, "session": "valid-session"}
     request.headers = {"X-XSRF-Token": token}
     await verify_csrf_token(request)
 
 
-async def test_verify_csrf_token_raises_403_on_header_mismatch() -> None:
-    """POST with a mismatched X-XSRF-Token header must raise HTTP 403."""
+async def test_verify_csrf_token_raises_403_on_header_mismatch_with_session() -> None:
+    """POST with a mismatched X-XSRF-Token header must raise HTTP 403 when session exists."""
     request = MagicMock(spec=Request)
     request.method = "POST"
-    request.cookies = {"XSRF-TOKEN": "correct"}
+    request.cookies = {"XSRF-TOKEN": "correct", "session": "valid-session"}
     request.headers = {"X-XSRF-Token": "wrong"}
     with pytest.raises(HTTPException) as exc_info:
         await verify_csrf_token(request)
     assert exc_info.value.status_code == 403
 
 
-async def test_verify_csrf_token_raises_403_on_missing_header() -> None:
-    """POST with XSRF-TOKEN cookie but no X-XSRF-Token header must raise HTTP 403."""
+async def test_verify_csrf_token_raises_403_on_missing_header_with_session() -> None:
+    """POST with XSRF-TOKEN cookie but no X-XSRF-Token header must raise HTTP 403 when session exists."""
     request = MagicMock(spec=Request)
     request.method = "POST"
-    request.cookies = {"XSRF-TOKEN": "secret"}
+    request.cookies = {"XSRF-TOKEN": "secret", "session": "valid-session"}
     request.headers = {}
     with pytest.raises(HTTPException) as exc_info:
         await verify_csrf_token(request)
     assert exc_info.value.status_code == 403
 
 
-async def test_verify_csrf_token_enforces_delete_and_patch() -> None:
-    """DELETE and PATCH requests with a mismatched token must also raise HTTP 403."""
+async def test_verify_csrf_token_enforces_delete_and_patch_with_session() -> None:
+    """DELETE and PATCH requests with a mismatched token must also raise HTTP 403 when session exists."""
     for method in ("DELETE", "PATCH"):
         request = MagicMock(spec=Request)
         request.method = method
-        request.cookies = {"XSRF-TOKEN": "secret"}
+        request.cookies = {"XSRF-TOKEN": "secret", "session": "valid-session"}
         request.headers = {"X-XSRF-Token": "wrong"}
         with pytest.raises(HTTPException) as exc_info:
             await verify_csrf_token(request)
