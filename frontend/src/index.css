@@ -10,4 +10,10 @@
   body {
     @apply font-sans bg-slate-50 text-slate-900;
   }
+  button, select {
+    @apply cursor-pointer;
+  }
+  button:disabled, select:disabled {
+    @apply cursor-default;
+  }
 }

@@ -1,12 +1,14 @@
 name: Frontend Gate
 on:
   pull_request:
+    types: [opened, synchronize, reopened, closed]
     paths:
       - 'frontend/**'
     branches: [ main ]
 
 jobs:
   test-and-lint-frontend:
+    if: github.event.action != 'closed'
     permissions:
       contents: read
       pull-requests: write # Required for posting the preview link comment
@@ -25,10 +27,16 @@ jobs:
         run: npm ci
       - name: Run Lint
         run: npm run lint
-      - name: Run Unit Tests
-        run: npm test
+      - name: Run Unit Tests with Coverage
+        run: |
+          npm test -- --coverage.enabled true --coverage.reporter text | tee coverage.txt
+          echo "## Frontend Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          cat coverage.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   build-and-deploy-preview:
+    if: github.event.action != 'closed'
     needs: test-and-lint-frontend
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -75,4 +83,33 @@ jobs:
         env:
           VITE_API_URL: ${{ steps.fetch_secrets.outputs.backend_url }}
           VITE_LOGIC_APP_FEEDBACK_URL: ${{ secrets.VITE_LOGIC_APP_FEEDBACK_URL }}
-{ secrets.VITE_LOGIC_APP_FEEDBACK_URL }}
+
+  close-pull-request:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request
+    environment: dev
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Fetch SWA Token
+        id: fetch_secrets
+        run: |
+          az extension add --name staticwebapp
+          SWA_TOKEN=$(az staticwebapp secrets list -n swa-spc-dev -g rg-spc-dev-pl --query "properties.apiKey" -o tsv)
+          echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Close Pull Request
+        id: close_pull_request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.fetch_secrets.outputs.swa_token }}
+          action: "close"

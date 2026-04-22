@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { TelemetryProvider } from './telemetry';
 import App from './App';
 import './index.css';
 
@@ -10,6 +11,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <TelemetryProvider>
+      <App />
+    </TelemetryProvider>
   </React.StrictMode>,
 );

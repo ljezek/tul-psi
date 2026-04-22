@@ -86,6 +86,12 @@ module migrator_acr_pull './acr-role.bicep' = {
 }
 
 // --- Backend App ---
+var hostParts = split(frontend_swa.properties.defaultHostname, '.')
+var hostPrefix = hostParts[0]
+var hostSuffix = replace(frontend_swa.properties.defaultHostname, '${hostPrefix}.', '')
+var escapedSuffix = replace(hostSuffix, '.', '\\.')
+var allowedOriginRegex = '^https://${hostPrefix}(-[a-zA-Z0-9.]+)?\\.${escapedSuffix}$'
+
 resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
   name: 'ca-${prefix}-${env}-backend'
   location: location
@@ -129,6 +135,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'JWT_SECRET', value: jwtSecret }
             { name: 'APP_ENV', value: env }
             { name: 'ALLOWED_ORIGINS', value: 'https://${frontend_swa.properties.defaultHostname}' }
+            { name: 'ALLOWED_ORIGIN_REGEX', value: (env == 'dev') ? allowedOriginRegex : '' }
             { name: 'FRONTEND_URL', value: 'https://${frontend_swa.properties.defaultHostname}' }
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
             { name: 'AZURE_CLIENT_ID', value: app_identity.properties.clientId }

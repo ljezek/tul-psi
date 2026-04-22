@@ -31,5 +31,21 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/**',
+        'dist/**',
+        'src/types.ts',
+        'src/vite-env.d.ts',
+        'src/main.tsx',
+        'vitest.setup.ts',
+        '**/*.test.tsx',
+        '**/*.test.ts',
+        '*.config.js',
+        '*.config.ts',
+      ],
+    },
   },
 });

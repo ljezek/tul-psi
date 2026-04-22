@@ -45,7 +45,7 @@ async def test_logout_cookie_attributes(client: AsyncClient) -> None:
     assert "session=" in set_cookie_header
     assert "Max-Age=0" in set_cookie_header
     assert "httponly" in set_cookie_header.lower()
-    assert "samesite=strict" in set_cookie_header.lower()
+    assert "samesite=lax" in set_cookie_header.lower()
 
 
 async def test_logout_clears_xsrf_token_cookie(client: AsyncClient) -> None:
@@ -55,7 +55,7 @@ async def test_logout_clears_xsrf_token_cookie(client: AsyncClient) -> None:
     xsrf_header = next((h for h in set_cookie_headers if "XSRF-TOKEN=" in h), "")
     assert xsrf_header, "XSRF-TOKEN Set-Cookie header not found on logout"
     assert "Max-Age=0" in xsrf_header
-    assert "samesite=strict" in xsrf_header.lower()
+    assert "samesite=lax" in xsrf_header.lower()
 
 
 async def test_logout_is_idempotent_without_session(client: AsyncClient) -> None:

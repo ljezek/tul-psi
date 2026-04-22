@@ -28,7 +28,7 @@ export const ProfileDropdown = () => {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-tul-blue transition-all px-2.5 py-1.5 rounded-xl hover:bg-slate-100 group"
+        className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-tul-blue transition-all px-2.5 py-1.5 rounded-xl hover:bg-slate-100 group cursor-pointer"
       >
         <div className="w-8 h-8 rounded-full bg-tul-blue/10 flex items-center justify-center text-tul-blue group-hover:bg-tul-blue group-hover:text-white transition-colors">
           <User size={18} />
@@ -42,7 +42,7 @@ export const ProfileDropdown = () => {
             <h3 className="font-bold text-slate-800">{t('profile.editing')}</h3>
             <button 
               onClick={() => setIsOpen(false)} 
-              className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+              className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>

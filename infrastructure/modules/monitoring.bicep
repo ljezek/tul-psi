@@ -31,3 +31,4 @@ output workspaceId string = workspace.id
 output workspaceCustomerId string = workspace.properties.customerId
 output instrumentationKey string = appInsights.properties.InstrumentationKey
 output connectionString string = appInsights.properties.ConnectionString
+output appInsightsId string = appInsights.id

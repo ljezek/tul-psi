@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # In production, this should be restricted to the actual frontend domain.
     allowed_origins: list[str] | str = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+    # Regex of origins allowed to make cross-origin requests (CORS).
+    # Useful for dynamic SWA preview URLs in dev.
+    allowed_origin_regex: str | None = None
+
     @field_validator("allowed_origins", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str]:
