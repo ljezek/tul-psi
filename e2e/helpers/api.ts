@@ -70,14 +70,16 @@ export async function apiDelete(path: string, cookies: SessionCookies): Promise<
   });
 }
 
-/** POST to a resource on behalf of an authenticated user (no body). */
-export async function apiPost(path: string, cookies: SessionCookies): Promise<Response> {
+/** POST to a resource on behalf of an authenticated user (with optional JSON body). */
+export async function apiPost(path: string, cookies: SessionCookies, data?: Record<string, unknown>): Promise<Response> {
   return fetch(`${BACKEND_URL}${path}`, {
     method: 'POST',
     headers: {
+      ...(data ? { 'Content-Type': 'application/json' } : {}),
       'Cookie': `session=${cookies.session}; XSRF-TOKEN=${cookies.xsrf}`,
       'X-XSRF-Token': cookies.xsrf,
     },
+    ...(data ? { body: JSON.stringify(data) } : {}),
   });
 }
 

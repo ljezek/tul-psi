@@ -20,7 +20,11 @@ const test = base.extend({
 // Also delete Jana's CE if it was submitted in a previous run so S-03 can re-submit.
 test.beforeAll(async () => {
   const cookies = await apiLogin(USERS.admin.email);
-  await apiPost(`/api/v1/projects/${PROJECTS.lectorsSpc.id}/lock`, cookies);
+  const lockRes = await apiPost(`/api/v1/projects/${PROJECTS.lectorsSpc.id}/lock`, cookies);
+  if (!lockRes.ok) {
+    const body = await lockRes.text().catch(() => '');
+    console.warn(`[S-03 beforeAll] Lock project failed: HTTP ${lockRes.status} — ${body}`);
+  }
   // Best-effort delete of Jana's previous CE so the form is not pre-filled/locked.
   await apiDelete(`/api/v1/course-evaluations/${PROJECTS.lectorsSpc.id}/student/${USERS.jana.id}`, cookies)
     .catch(() => { /* CE may not exist — that's fine */ });
@@ -28,6 +32,9 @@ test.beforeAll(async () => {
 
 // S-03: Student submits a course evaluation including peer feedback.
 test('student submits course evaluation', async ({ janaPage: page }) => {
+  let ceResponseStatus = 0;
+  let ceResponseBody = '';
+
   await page.goto(`/student/project/${PROJECTS.lectorsSpc.id}/evaluate`);
 
   // Wait for evaluation form to load
@@ -50,7 +57,30 @@ test('student submits course evaluation', async ({ janaPage: page }) => {
   // remainingPoints must be 0) then click. Redirect fires after a 1.5 s delay in the component.
   const submitBtn = page.getByRole('button', { name: /Uložit|Save/i });
   await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
+
+  // Verify XSRF-TOKEN is accessible (a missing/empty token causes HTTP 403).
+  const xsrfToken = await page.evaluate(() => {
+    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  });
+  if (!xsrfToken) {
+    throw new Error('XSRF-TOKEN cookie is missing or empty — login cookie setup failed');
+  }
+
+  // Start waiting for the CE API response before clicking (avoids race)
+  const ceResponsePromise = page.waitForResponse(
+    res => res.url().includes('course-evaluation') && res.request().method() === 'PUT',
+    { timeout: 10_000 }
+  );
   await submitBtn.click();
+
+  const ceResponse = await ceResponsePromise;
+  ceResponseStatus = ceResponse.status();
+  ceResponseBody = await ceResponse.text().catch(() => '');
+
+  if (ceResponseStatus >= 400) {
+    throw new Error(`CE submission API failed: HTTP ${ceResponseStatus} — ${ceResponseBody}`);
+  }
 
   await page.waitForURL(url => url.pathname === '/student', { timeout: 15_000 });
 });

@@ -30,6 +30,7 @@ if ($p) { Stop-Process -Id $p -Force }
 
 # 3. Build and serve the frontend (new PowerShell window or terminal tab)
 cd frontend
+npm install
 $env:VITE_API_URL="http://localhost:8001"; npm run build
 $env:VITE_API_URL="http://localhost:8001"; npx vite preview --port 3000 --strictPort
 # Leave this terminal open — Ctrl+C to stop when done.
