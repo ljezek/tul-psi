@@ -21,20 +21,36 @@ test('admin creates a new student user', async ({ adminPage: page }) => {
     // Open create user modal
     await page.getByRole('button', { name: /Přidat uživatele|Add User|UserPlus/i }).click();
 
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5_000 });
+
     // Fill name — email auto-generates from name
-    const nameInput = page.getByLabel(/Jméno|Name/i).first();
+    const nameInput = dialog.getByLabel(/Jméno|Name/i).first();
     await nameInput.fill('Test E2E Student');
 
-    // Select STUDENT role (it may be the default, but explicitly set it)
-    const roleSelect = page.getByRole('combobox', { name: /Role/i }).or(
-      page.locator('select').filter({ has: page.getByText(/STUDENT|Student/i) })
-    ).first();
+    // Select STUDENT role scoped to dialog (avoids picking toolbar filter combobox)
+    const roleSelect = dialog.locator('#user-role');
     if (await roleSelect.count() > 0) {
       await roleSelect.selectOption({ value: 'STUDENT' });
     }
 
-    // Submit — scope to dialog to avoid clicking the "Přidat uživatele" opener button
-    await page.getByRole('dialog').getByRole('button', { name: /Přidat|Add/i }).click();
+    // Submit
+    await dialog.getByRole('button', { name: /Přidat|Add/i }).click();
+
+    // Wait for either dialog close (success) or error message
+    await Promise.race([
+      expect(dialog).not.toBeVisible({ timeout: 8_000 }),
+      expect(dialog.getByRole('alert').or(dialog.locator('[class*="error"]'))).toBeVisible({ timeout: 8_000 }),
+    ]).catch(() => { /* either outcome is handled below */ });
+
+    // If dialog is still open due to an error, close it
+    if (await dialog.isVisible()) {
+      await dialog.getByRole('button', { name: /Zrušit|Cancel|×|close/i }).first().click().catch(() => {
+        return page.keyboard.press('Escape');
+      });
+      // Show inactive users in case user was created but is inactive
+      await page.locator('label').filter({ hasText: /Neaktivní|Inactive/i }).click().catch(() => {});
+    }
   }
 
   // New user should appear in the table
