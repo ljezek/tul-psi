@@ -7,6 +7,10 @@ on:
       - 'frontend/**'
   workflow_dispatch:
 
+concurrency:
+  group: frontend-dev-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   id-token: write
   contents: read

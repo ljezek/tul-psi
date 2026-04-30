@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     # In local Docker Compose, it's http://otel-collector:13133.
     otel_collector_health_url: str = "http://localhost:13133"
 
+    # When set, all OTP tokens use this fixed code instead of a random one.
+    # Must be unset (None) in dev & production — enforced by the validator below.
+    e2e_otp_override: str | None = None
+
     @model_validator(mode="after")
     def _validate_settings(self) -> Settings:
         """Validate critical configuration after loading from environment."""
@@ -88,11 +92,18 @@ class Settings(BaseSettings):
             )
 
         # 2. Raise at startup when the JWT secret placeholder is used in production.
-        if self.app_env != "local" and self.jwt_secret == _JWT_SECRET_PLACEHOLDER:
+        if self.app_env not in ("local", "e2e") and self.jwt_secret == _JWT_SECRET_PLACEHOLDER:
             raise ValueError(
                 f"JWT_SECRET must be overridden in the '{self.app_env}' environment. "
                 "Set the JWT_SECRET environment variable to a long, random string."
             )
+
+        # 3. Prevent the OTP override from being active outside of safe environments.
+        if self.e2e_otp_override and self.app_env not in ("local", "e2e"):
+            raise ValueError(
+                "e2e_otp_override must not be set outside of 'local' or 'e2e' environments."
+            )
+
         return self
 
 
