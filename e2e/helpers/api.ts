@@ -3,6 +3,8 @@
  * Used in afterAll hooks to restore seeded state after mutating tests.
  */
 
+import { OTP } from '../fixtures/seed.js';
+
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8001';
 
 interface SessionCookies {
@@ -23,7 +25,7 @@ export async function apiLogin(email: string): Promise<SessionCookies> {
   const verifyRes = await fetch(`${BACKEND_URL}/api/v1/auth/otp/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, otp: '000000' }),
+    body: JSON.stringify({ email, otp: OTP }),
   });
 
   if (!verifyRes.ok) {
