@@ -8,16 +8,17 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy'
+        description: 'Environment to deploy (manual override)'
         required: true
-        default: 'dev'
+        default: 'all'
         type: choice
         options:
+          - all
           - dev
           - prod
 
 concurrency:
-  group: infra-${{ github.event.inputs.environment || 'dev' }}-${{ github.ref }}
+  group: infra-${{ github.event.inputs.environment || 'all' }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -26,6 +27,7 @@ permissions:
 
 jobs:
   deploy-shared:
+    name: "Deploy Shared"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -47,80 +49,35 @@ jobs:
           resourceGroupName: rg-spc-shared-pl
           template: ./infrastructure/shared.bicep
 
-  deploy-env:
+  deploy-dev:
+    name: "Deploy Dev"
     needs: deploy-shared
-    runs-on: ubuntu-latest
-    env:
-      ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
-    environment: ${{ github.event.inputs.environment || 'dev' }}
-    steps:
-      - uses: actions/checkout@v6
+    if: github.event_name == 'push' || github.event.inputs.environment == 'all' || github.event.inputs.environment == 'dev'
+    uses: ./.github/workflows/reusable-infra-env.yml
+    with:
+      environment: dev
+      deploy_debug_tools: true
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      PGADMIN_AAD_CLIENT_ID: ${{ secrets.PGADMIN_AAD_CLIENT_ID }}
+      PGADMIN_AAD_CLIENT_SECRET: ${{ secrets.PGADMIN_AAD_CLIENT_SECRET }}
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Get Shared Outputs
-        id: shared_outputs
-        run: |
-          # Fetch resource identifiers directly from the resource group.
-          # We avoid 'az deployment group show' outputs as they rely on deployment history
-          # which is pruned by Azure and would break workflows when infra isn't redeployed frequently.
-          
-          echo "Fetching ACR name..."
-          ACR_NAME=$(az acr list -g rg-spc-shared-pl --query "[0].name" -o tsv)
-          
-          echo "Fetching Database Host..."
-          DB_HOST=$(az postgres flexible-server list -g rg-spc-shared-pl --query "[0].fullyQualifiedDomainName" -o tsv)
-
-          echo "Fetching Subnet ID for ${{ env.ENV_NAME }}..."
-          SNET_NAME="snet-${{ env.ENV_NAME }}"
-          SNET_ID=$(az network vnet subnet show -g rg-spc-shared-pl --vnet-name vnet-spc-shared -n $SNET_NAME --query id -o tsv)
-
-          echo "Fetching Shared DB Bootstrap outputs..."
-          # We use az deployment group show to get outputs from the shared deployment
-          SHARED_OUTPUTS=$(az deployment group show -g rg-spc-shared-pl -n shared-deployment --query properties.outputs)
-          ID_DB_SETUP_ID=$(echo $SHARED_OUTPUTS | jq -r .idDbSetupId.value)
-          ID_DB_SETUP_NAME=$(echo $SHARED_OUTPUTS | jq -r .idDbSetupName.value)
-          STORAGE_ACCOUNT_NAME=$(echo $SHARED_OUTPUTS | jq -r .storageAccountName.value)
-          SCRIPTS_SNET_ID=$(echo $SHARED_OUTPUTS | jq -r .snetScriptsId.value)
-
-          echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
-          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
-          echo "SNET_ID=$SNET_ID" >> $GITHUB_ENV
-          echo "ID_DB_SETUP_ID=$ID_DB_SETUP_ID" >> $GITHUB_ENV
-          echo "ID_DB_SETUP_NAME=$ID_DB_SETUP_NAME" >> $GITHUB_ENV
-          echo "STORAGE_ACCOUNT_NAME=$STORAGE_ACCOUNT_NAME" >> $GITHUB_ENV
-          echo "SCRIPTS_SNET_ID=$SCRIPTS_SNET_ID" >> $GITHUB_ENV
-          
-          # Try to get the current image to avoid reverting to hello-world
-          # If the app doesn't exist yet, it will use the Bicep default
-          CURRENT_IMAGE=$(az containerapp show -n ca-spc-${{ env.ENV_NAME }}-backend -g rg-spc-${{ env.ENV_NAME }}-pl --query "properties.template.containers[?name=='backend'].image" -o tsv 2>/dev/null || echo "")
-          echo "CURRENT_IMAGE=$CURRENT_IMAGE" >> $GITHUB_ENV
-
-      - name: Deploy Env Bicep
-        uses: azure/arm-deploy@v2
-        with:
-          scope: resourcegroup
-          deploymentName: env-deployment-${{ env.ENV_NAME }}
-          resourceGroupName: rg-spc-${{ env.ENV_NAME }}-pl
-          template: ./infrastructure/environment.bicep
-          parameters: >
-            env=${{ env.ENV_NAME }}
-            subnetId=${{ env.SNET_ID }}
-            acrName=${{ env.ACR_NAME }}
-            acrResourceGroup=rg-spc-shared-pl
-            dbHost=${{ env.DB_HOST }}
-            dbName=spc_${{ env.ENV_NAME }}
-            idDbSetupId=${{ env.ID_DB_SETUP_ID }}
-            idDbSetupName=${{ env.ID_DB_SETUP_NAME }}
-            storageAccountName=${{ env.STORAGE_ACCOUNT_NAME }}
-            scriptsSubnetId=${{ env.SCRIPTS_SNET_ID }}
-            deployDebugTools=${{ env.ENV_NAME == 'dev' }}
-            jwtSecret=${{ secrets.JWT_SECRET }}
-            pgadminAadClientId=${{ secrets.PGADMIN_AAD_CLIENT_ID }}
-            pgadminAadClientSecret=${{ secrets.PGADMIN_AAD_CLIENT_SECRET }}
-            ${{ env.CURRENT_IMAGE != '' && format('containerImage={0}', env.CURRENT_IMAGE) || '' }}
+  deploy-prod:
+    name: "Deploy Prod"
+    needs: deploy-dev
+    if: |
+      always() && 
+      (needs.deploy-dev.result == 'success' || needs.deploy-dev.result == 'skipped') &&
+      (github.event_name == 'push' || github.event.inputs.environment == 'all' || github.event.inputs.environment == 'prod')
+    uses: ./.github/workflows/reusable-infra-env.yml
+    with:
+      environment: prod
+      deploy_debug_tools: false
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}

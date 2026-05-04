@@ -118,9 +118,10 @@ jobs:
           fi
 
           # ── Infrastructure change warning ────────────────────────────────
-          # Prod infra must be deployed manually. Warn if infra files changed
-          # since the last promoted SHA so the operator knows to run the infra
-          # workflow before (or alongside) this app promotion.
+          # Prod infra is now part of the sequential Infrastructure Deployment
+          # workflow. Warn if infra files changed since the last promoted SHA
+          # so the operator knows to ensure the infra pipeline is running or
+          # has completed for prod.
           if [[ -n "$CURRENT_SHA" ]]; then
             INFRA_CHANGED=$(git diff --name-only "$CURRENT_SHA" "$SHA" -- infrastructure/ | head -1)
           else
@@ -128,8 +129,8 @@ jobs:
           fi
           if [[ -n "$INFRA_CHANGED" ]]; then
             echo "⚠️  Infrastructure files changed in this commit range."
-            echo "   Ensure prod infrastructure is up to date before or after this promotion:"
-            echo "   Actions → Infrastructure Deployment → Run workflow → env: prod"
+            echo "   Ensure the sequential 'Infrastructure Deployment' workflow is triggered"
+            echo "   and approved for 'prod' to apply these changes."
           fi
 
   # ── Dev Health Gate ───────────────────────────────────────────────────────
