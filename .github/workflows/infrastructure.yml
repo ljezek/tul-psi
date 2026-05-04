@@ -67,9 +67,10 @@ jobs:
 
   deploy-prod:
     name: "Deploy Prod"
-    needs: deploy-dev
+    needs: [deploy-shared, deploy-dev]
     if: |
-      always() && 
+      always() &&
+      needs.deploy-shared.result == 'success' &&
       (needs.deploy-dev.result == 'success' || needs.deploy-dev.result == 'skipped') &&
       (github.event_name == 'push' || github.event.inputs.environment == 'all' || github.event.inputs.environment == 'prod')
     uses: ./.github/workflows/reusable-infra-env.yml
