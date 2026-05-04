@@ -6,6 +6,7 @@ import { getProject, getProjectEvaluation, submitProjectEvaluation, ApiError } f
 import { ProjectPublic, ProjectEvaluationDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
+import { isSafeUrl } from '@/utils/url';
 
 export const ProjectEvaluation = () => {
   const { id } = useParams<{ id: string }>();
@@ -202,18 +203,18 @@ export const ProjectEvaluation = () => {
                 {project.course.code}
               </span>
               <div className="flex gap-4">
-                {project.github_url && (
+                {project.github_url && isSafeUrl(project.github_url) && (
                   <>
-                    <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                    <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
                       <GitHubLogo size={14} /> {t('common.repo')}
                     </a>
-                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
                       <Users size={14} /> {t('project.contributors')}
                     </a>
                   </>
                 )}
-                {project.live_url && (
-                  <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                {project.live_url && isSafeUrl(project.live_url) && (
+                  <a href={project.live_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
                     <Globe size={14} /> {t('common.app')}
                   </a>
                 )}
@@ -258,7 +259,7 @@ export const ProjectEvaluation = () => {
                       <Mail size={10} /> {member.email}
                     </a>
                     {member.github_alias && (
-                      <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
+                      <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
                         <GitHubLogo size={10} /> {member.github_alias}
                       </a>
                     )}

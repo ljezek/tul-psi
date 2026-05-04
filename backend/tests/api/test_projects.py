@@ -650,6 +650,28 @@ async def test_patch_project_returns_500_on_service_error(client: AsyncClient) -
     assert response.status_code == 500
 
 
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("github_url", "javascript:alert(1)"),
+        ("github_url", "ftp://example.com"),
+        ("live_url", "javascript:void(0)"),
+        ("live_url", "data:text/html,<script>alert(1)</script>"),
+    ],
+)
+async def test_patch_project_rejects_non_http_url(
+    client: AsyncClient, field: str, value: str
+) -> None:
+    """PATCH /api/v1/projects/{id} must return HTTP 422 when a URL field is not http(s)."""
+    user = _make_authenticated_user()
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: _make_service()
+
+    response = await client.patch("/api/v1/projects/1", json={field: value})
+
+    assert response.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # POST /projects/{project_id}/members — endpoint tests
 # ---------------------------------------------------------------------------
@@ -1322,3 +1344,50 @@ def _make_lecturer_user(user_id: int = 7) -> MagicMock:
 async def _mock_unauthenticated() -> None:
     """Mock for unauthenticated user dependency."""
     return None
+
+
+# ---------------------------------------------------------------------------
+# URL validation — schema level
+# ---------------------------------------------------------------------------
+
+
+def test_project_create_rejects_javascript_github_url() -> None:
+    """ProjectCreate must reject a javascript: scheme github_url with a validation error."""
+    from pydantic import ValidationError
+
+    from schemas.projects import ProjectCreate
+
+    with pytest.raises(ValidationError):
+        ProjectCreate(title="Test", academic_year=2025, github_url="javascript:alert(1)")
+
+
+def test_project_create_rejects_javascript_live_url() -> None:
+    """ProjectCreate must reject a javascript: scheme live_url with a validation error."""
+    from pydantic import ValidationError
+
+    from schemas.projects import ProjectCreate
+
+    with pytest.raises(ValidationError):
+        ProjectCreate(title="Test", academic_year=2025, live_url="javascript:void(0)")
+
+
+def test_project_create_strips_whitespace_from_urls() -> None:
+    """_validate_http_url must strip leading/trailing whitespace from URL values."""
+    from schemas.projects import ProjectCreate
+
+    project = ProjectCreate(
+        title="Test",
+        academic_year=2025,
+        github_url="  https://github.com/example/repo  ",
+    )
+    assert project.github_url == "https://github.com/example/repo"
+
+
+def test_project_update_rejects_javascript_url() -> None:
+    """ProjectUpdate must also reject javascript: scheme URLs."""
+    from pydantic import ValidationError
+
+    from schemas.projects import ProjectUpdate
+
+    with pytest.raises(ValidationError):
+        ProjectUpdate(github_url="javascript:alert(document.cookie)")

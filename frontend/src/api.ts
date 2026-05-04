@@ -23,12 +23,14 @@ import {
 export class ApiError extends Error {
   status: number;
   detail: unknown;
+  code?: string;
 
-  constructor(status: number, detail: unknown) {
+  constructor(status: number, detail: unknown, code?: string) {
     super(`API Error: ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.detail = detail;
+    this.code = code;
   }
 }
 
@@ -38,6 +40,8 @@ function getCookie(name: string): string | null {
 }
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+// Allow extra time for the backend to cold-start (minReplicas=0 in Azure Container Apps).
+const REQUEST_TIMEOUT_MS = 60_000;
 
 async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof fetch>[1]> = {}): Promise<T> {
   const url = `${config.apiUrl}${path}`;
@@ -54,11 +58,25 @@ async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof 
     }
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(408, null, 'request_timeout');
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errorText = await response.text();
