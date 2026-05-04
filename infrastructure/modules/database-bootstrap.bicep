@@ -84,6 +84,10 @@ psql "host=${DB_HOST} user=${DB_ADMIN} dbname=postgres sslmode=require" <<EOF
   END \$$;
 EOF
 
+echo "--- Step 1.5: Create Application Database If It Does Not Exist ---"
+psql "host=${DB_HOST} user=${DB_ADMIN} dbname=postgres sslmode=require" -c "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" | grep -q 1 \
+  || psql "host=${DB_HOST} user=${DB_ADMIN} dbname=postgres sslmode=require" -c "CREATE DATABASE \"${DB_NAME}\""
+
 echo "--- Step 2: Grant Permissions (Connecting to '$DB_NAME' database) ---"
 psql "host=${DB_HOST} user=${DB_ADMIN} dbname=${DB_NAME} sslmode=require" <<EOF
   -- Ensure roles exist locally (fallback for environments where pgaadauth isn't active yet)
