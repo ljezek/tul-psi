@@ -240,11 +240,17 @@ jobs:
               exit 0
             elif [[ "$STATUS" == "Failed" || "$STATUS" == "Stopped" ]]; then
               echo "Migration failed. Fetching logs..."
-              az containerapp logs show \
+              sleep 5
+              az containerapp job execution show \
                 --name job-spc-prod-migrate \
                 --resource-group rg-spc-prod-pl \
                 --job-execution-name "$EXECUTION_NAME" \
-                --follow false || true
+                --query "properties.template.containers[0].name" -o tsv | xargs -I {} \
+              az containerapp job log show \
+                --name job-spc-prod-migrate \
+                --resource-group rg-spc-prod-pl \
+                --job-execution-name "$EXECUTION_NAME" \
+                --container {} || true
               exit 1
             fi
             sleep 10
@@ -296,6 +302,23 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Re-check SHA regression after approval wait
+        # Mirrors the same guard in deploy-backend-prod. Prevents a stale approval
+        # on a frontend-only release from overwriting a newer frontend deployment.
+        run: |
+          LIVE_SHA=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "tags.promotedSha" -o tsv 2>/dev/null || echo "")
+          EXPECTED_SHA="${{ needs.gate.outputs.current_prod_sha }}"
+          if [[ "$LIVE_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "ERROR: Production SHA changed since the gate ran."
+            echo "  Expected: ${EXPECTED_SHA:-'(none - first deployment)'}"
+            echo "  Actual:   ${LIVE_SHA:-'(none)'}"
+            echo "Another deployment completed during the approval wait."
+            echo "Re-trigger promotion if this SHA should still be deployed."
+            exit 1
+          fi
+
       - name: Fetch prod config
         id: config
         run: |
@@ -304,11 +327,13 @@ jobs:
             --query "properties.configuration.ingress.fqdn" -o tsv)
           echo "backend_url=https://$BACKEND_FQDN" >> $GITHUB_OUTPUT
 
+          az extension add --name staticwebapp
           SWA_TOKEN=$(az staticwebapp secrets list \
             -n swa-spc-prod -g rg-spc-prod-pl \
             --query "properties.apiKey" -o tsv)
           echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
 
+          az extension add --name application-insights
           AI_CONN_STR=$(az monitor app-insights component show \
             --app ai-spc-prod -g rg-spc-prod-pl \
             --query connectionString -o tsv)
