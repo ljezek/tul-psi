@@ -52,31 +52,53 @@ class EmailTemplate:
     reads ``settings.frontend_url`` and passes it here.
     """
 
+    @staticmethod
+    def _greeting(recipient_name: str | None) -> str:
+        """Return a greeting line with an optional display name."""
+        greeting_name = recipient_name.strip() if recipient_name else ""
+        return f"Hello {greeting_name}," if greeting_name else "Hello,"
+
     @classmethod
-    def otp(cls, to: str, otp_code: str, *, portal_url: str) -> EmailMessage:
+    def otp(
+        cls,
+        to: str,
+        otp_code: str,
+        *,
+        portal_url: str,
+        recipient_name: str | None = None,
+    ) -> EmailMessage:
         """Return a one-time-password email addressed to *to*.
 
         Args:
             to: Recipient e-mail address.
             otp_code: The plaintext 6-digit OTP that the user must enter.
             portal_url: Absolute URL of the frontend portal to embed in the body.
+            recipient_name: Optional recipient display name used in the greeting.
         """
+        greeting = cls._greeting(recipient_name)
         return EmailMessage(
             to=to,
             subject=f"{_SUBJECT_PREFIX}Your one-time login code",
             body=(
-                f"Hello,\n\n"
-                f"Your one-time login code is: {otp_code}\n\n"
-                f"The code is valid for 15 minutes and can only be used once.\n"
-                f"If you did not request this code, you can safely ignore this email.\n\n"
-                f"Visit the portal: {portal_url}\n\n"
+                f"{greeting}\n\n"
+                f"Your one-time login code for the "
+                f"TUL Student Projects Catalogue is: {otp_code}\n\n"
+                f"This code is valid for 15 minutes and can only be used once.\n"
+                f"If you did not request a login, you can safely ignore this email.\n\n"
+                f"You can continue in the portal here: {portal_url}\n\n"
                 f"{_SIGN_OFF}"
             ),
         )
 
     @classmethod
     def project_invite(
-        cls, to: str, project_name: str, course_name: str, *, portal_url: str
+        cls,
+        to: str,
+        project_name: str,
+        course_name: str,
+        *,
+        portal_url: str,
+        recipient_name: str | None = None,
     ) -> EmailMessage:
         """Return a project-invitation email addressed to *to*.
 
@@ -85,15 +107,18 @@ class EmailTemplate:
             project_name: Human-readable name of the project the user is invited to.
             course_name: Human-readable name of the course the project belongs to.
             portal_url: Absolute URL of the frontend portal to embed in the body.
+            recipient_name: Optional recipient display name used in the greeting.
         """
         return EmailMessage(
             to=to,
             subject=f'{_SUBJECT_PREFIX}You have been invited to project "{project_name}"',
             body=(
-                f"Hello,\n\n"
+                f"{cls._greeting(recipient_name)}\n\n"
                 f'You have been invited to join the project "{project_name}" '
                 f'in the course "{course_name}".\n\n'
-                f"Please log in to the TUL Student Projects Catalogue at {portal_url}\n\n"
+                f"Please sign in to the TUL Student Projects Catalogue "
+                f"to see details and next steps:\n"
+                f"{portal_url}\n\n"
                 f"{_SIGN_OFF}"
             ),
         )
@@ -105,6 +130,7 @@ class EmailTemplate:
         course_name: str,
         *,
         portal_url: str,
+        recipient_name: str | None = None,
     ) -> EmailMessage:
         """Return a course-invitation email addressed to a lecturer.
 
@@ -112,6 +138,7 @@ class EmailTemplate:
             to: Recipient e-mail address.
             course_name: Human-readable name of the course the lecturer is invited to.
             portal_url: Absolute URL of the frontend portal to embed in the body.
+            recipient_name: Optional recipient display name used in the greeting.
         """
         return EmailMessage(
             to=to,
@@ -119,12 +146,13 @@ class EmailTemplate:
                 f'{_SUBJECT_PREFIX}You have been invited as a lecturer to course "{course_name}"'
             ),
             body=(
-                f"Hello,\n\n"
+                f"{cls._greeting(recipient_name)}\n\n"
                 f'You have been invited as a lecturer to the course "{course_name}" '
                 f"in the TUL Student Projects Catalogue.\n\n"
-                f"Please log in to manage the course details, add other lecturers, "
-                f"create student projects and evaluate existing ones.\n\n"
-                f"Visit the portal: {portal_url}\n\n"
+                f"After signing in, you can coordinate with fellow lecturers, "
+                f"manage project topics, "
+                f"and evaluate student project work.\n\n"
+                f"Portal: {portal_url}\n\n"
                 f"{_SIGN_OFF}"
             ),
         )
@@ -136,6 +164,7 @@ class EmailTemplate:
         role: str,
         *,
         portal_url: str,
+        recipient_name: str | None = None,
     ) -> EmailMessage:
         """Return a user-invitation email addressed to a new user.
 
@@ -143,15 +172,17 @@ class EmailTemplate:
             to: Recipient e-mail address.
             role: The role the user has been invited to assume.
             portal_url: Absolute URL of the frontend portal to embed in the body.
+            recipient_name: Optional recipient display name used in the greeting.
         """
         return EmailMessage(
             to=to,
             subject=(f"{_SUBJECT_PREFIX}You have been invited as a {role}"),
             body=(
-                f"Hello,\n\n"
-                f"You have been invited as a {role} to TUL Student Projects Catalogue.\n\n"
-                f"You can log in to manage your profile and access course and project details.\n\n"
-                f"Visit the portal: {portal_url}\n\n"
+                f"{cls._greeting(recipient_name)}\n\n"
+                f"You have been invited as a {role} to the TUL Student Projects Catalogue.\n\n"
+                f"After signing in, you can complete your profile and "
+                f"access course and project information.\n\n"
+                f"Portal: {portal_url}\n\n"
                 f"{_SIGN_OFF}"
             ),
         )
@@ -164,6 +195,7 @@ class EmailTemplate:
         *,
         portal_url: str,
         peer_feedback_enabled: bool = False,
+        recipient_name: str | None = None,
     ) -> EmailMessage:
         """Return a results-unlocked notification email addressed to *to*.
 
@@ -176,6 +208,7 @@ class EmailTemplate:
             portal_url: Absolute URL of the frontend portal to embed in the body.
             peer_feedback_enabled: When ``True``, the body mentions that peer feedback
                 results are also available.
+            recipient_name: Optional recipient display name used in the greeting.
         """
         peer_feedback_note = (
             " Peer feedback contributions for this project are also visible."
@@ -186,12 +219,13 @@ class EmailTemplate:
             to=to,
             subject=f'{_SUBJECT_PREFIX}Results are now available for "{project_name}"',
             body=(
-                f"Hello,\n\n"
+                f"{cls._greeting(recipient_name)}\n\n"
                 f'The evaluation results for your project "{project_name}" '
                 f"have been submitted and are now available in the "
                 f"TUL Student Projects Catalogue.\n\n"
-                f"Log in to view your results.{peer_feedback_note}\n\n"
-                f"Visit the portal: {portal_url}\n\n"
+                f"Please sign in to review the feedback and final evaluation."
+                f"{peer_feedback_note}\n\n"
+                f"Portal: {portal_url}\n\n"
                 f"{_SIGN_OFF}"
             ),
         )

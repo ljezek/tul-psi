@@ -42,6 +42,7 @@ def _mock_settings() -> Generator[None, None, None]:
     # Provide minimal attributes expected by EmailSender/EmailTemplate.
     mock_settings.app_env = "local"
     mock_settings.frontend_url = "http://frontend.test"
+    mock_settings.e2e_otp_override = None
     with patch("services.auth_service.get_settings", return_value=mock_settings):
         yield
 

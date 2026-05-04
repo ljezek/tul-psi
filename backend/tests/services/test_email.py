@@ -34,13 +34,26 @@ def test_email_message_fields_and_immutability() -> None:
 
 def test_otp_template() -> None:
     """OTP template must address the recipient, embed the code, and reference OTP in subject."""
-    msg = EmailTemplate.otp(to="user@tul.cz", otp_code="987654", portal_url="http://localhost:5173")
+    msg = EmailTemplate.otp(
+        to="user@tul.cz",
+        otp_code="987654",
+        portal_url="http://localhost:5173",
+        recipient_name="Jan Novak",
+    )
     assert msg.to == "user@tul.cz"
     assert "987654" in msg.body
+    assert "Hello Jan Novak," in msg.body
+    assert "catalogue" in msg.body.lower()
     assert "one-time" in msg.subject.lower()
     assert msg.subject.startswith("TUL Student Projects:")
     # Body should include a link to the portal.
     assert "http://localhost:5173" in msg.body
+
+
+def test_otp_template_uses_generic_greeting_when_name_missing() -> None:
+    """OTP template must keep the generic greeting when recipient name is not provided."""
+    msg = EmailTemplate.otp(to="user@tul.cz", otp_code="987654", portal_url="http://localhost:5173")
+    assert "Hello," in msg.body
 
 
 # ---------------------------------------------------------------------------
@@ -55,10 +68,13 @@ def test_project_invite_template() -> None:
         project_name="Awesome App",
         course_name="PSI",
         portal_url="http://localhost:5173",
+        recipient_name="Alice Student",
     )
     assert msg.to == "student@tul.cz"
+    assert "Hello Alice Student," in msg.body
     assert "Awesome App" in msg.body
     assert "PSI" in msg.body
+    assert "next steps" in msg.body.lower()
     assert "Awesome App" in msg.subject
     assert msg.subject.startswith("TUL Student Projects:")
     # Body should include a link to the portal.
@@ -73,14 +89,19 @@ def test_project_invite_template() -> None:
 def test_course_invite_template() -> None:
     """Course invite must address a lecturer, mention the course, and have a valid subject."""
     msg = EmailTemplate.course_invite(
-        to="lecturer@tul.cz", course_name="PSI", portal_url="http://localhost:5173"
+        to="lecturer@tul.cz",
+        course_name="PSI",
+        portal_url="http://localhost:5173",
+        recipient_name="Petr Lecturer",
     )
     assert msg.to == "lecturer@tul.cz"
+    assert "Hello Petr Lecturer," in msg.body
     assert "PSI" in msg.body
     assert "PSI" in msg.subject
     assert msg.subject.startswith("TUL Student Projects:")
     # The invite is specifically for a lecturer role.
     assert "lecturer" in msg.body.lower()
+    assert "fellow lecturers" in msg.body.lower()
     # Body should include a link to the portal.
     assert "http://localhost:5173" in msg.body
 
@@ -93,11 +114,16 @@ def test_course_invite_template() -> None:
 def test_results_unlocked_template() -> None:
     """Results unlocked must address the recipient, mention project name, and have valid subject."""
     msg = EmailTemplate.results_unlocked(
-        to="student@tul.cz", project_name="My Project", portal_url="http://localhost:5173"
+        to="student@tul.cz",
+        project_name="My Project",
+        portal_url="http://localhost:5173",
+        recipient_name="Jan Student",
     )
     assert msg.to == "student@tul.cz"
+    assert "Hello Jan Student," in msg.body
     assert "My Project" in msg.body
     assert "My Project" in msg.subject
+    assert "review the feedback" in msg.body.lower()
     assert msg.subject.startswith("TUL Student Projects:")
     # Body should include a link to the portal.
     assert "http://localhost:5173" in msg.body
@@ -119,6 +145,21 @@ def test_results_unlocked_template_peer_feedback_mentioned_when_enabled() -> Non
     )
     assert "peer feedback" in msg_with.body.lower()
     assert "peer feedback" not in msg_without.body.lower()
+
+
+def test_user_invite_template() -> None:
+    """User invite must include role, recipient details, and portal URL."""
+    msg = EmailTemplate.user_invite(
+        to="admin.new@tul.cz",
+        role="admin",
+        portal_url="http://localhost:5173",
+        recipient_name="Eva Admin",
+    )
+    assert msg.to == "admin.new@tul.cz"
+    assert "Hello Eva Admin," in msg.body
+    assert "admin" in msg.body.lower()
+    assert "complete your profile" in msg.body.lower()
+    assert "http://localhost:5173" in msg.body
 
 
 # ---------------------------------------------------------------------------

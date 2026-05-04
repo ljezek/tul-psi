@@ -13,6 +13,7 @@ from db import auth as db_auth
 from models import OtpToken, User
 from services.email import EmailSender, EmailTemplate
 from settings import get_settings
+from validators import derive_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -92,8 +93,18 @@ async def request_otp(email: str, session: AsyncSession) -> None:
 
     logger.info("OTP token generated.", extra={"email": email})
     _settings = get_settings()
+    recipient_name = (
+        user.name.strip()
+        if isinstance(user.name, str) and user.name.strip()
+        else derive_display_name(email)
+    )
     await EmailSender.from_settings(_settings).send(
-        EmailTemplate.otp(to=email, otp_code=otp, portal_url=_settings.frontend_url)
+        EmailTemplate.otp(
+            to=email,
+            otp_code=otp,
+            portal_url=_settings.frontend_url,
+            recipient_name=recipient_name,
+        )
     )
 
 

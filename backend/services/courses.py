@@ -329,7 +329,10 @@ class CoursesService:
         _settings = get_settings()
         await EmailSender.from_settings(_settings).send(
             EmailTemplate.course_invite(
-                to=body.email, course_name=course.name, portal_url=_settings.frontend_url
+                to=body.email,
+                course_name=course.name,
+                portal_url=_settings.frontend_url,
+                recipient_name=target_user.name,
             )
         )
         logger.info(

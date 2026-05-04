@@ -150,6 +150,7 @@ class UsersService:
                 to=body.email,
                 role=body.role.value.lower(),
                 portal_url=_settings.frontend_url,
+                recipient_name=user.name,
             )
         )
         # Note: We should probably have a better "welcome" email template,
