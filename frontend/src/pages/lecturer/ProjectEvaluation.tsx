@@ -6,6 +6,7 @@ import { getProject, getProjectEvaluation, submitProjectEvaluation, ApiError } f
 import { ProjectPublic, ProjectEvaluationDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
+import { isSafeUrl } from '@/utils/url';
 
 export const ProjectEvaluation = () => {
   const { id } = useParams<{ id: string }>();
@@ -202,7 +203,7 @@ export const ProjectEvaluation = () => {
                 {project.course.code}
               </span>
               <div className="flex gap-4">
-                {project.github_url && (
+                {project.github_url && isSafeUrl(project.github_url) && (
                   <>
                     <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
                       <GitHubLogo size={14} /> {t('common.repo')}
@@ -212,7 +213,7 @@ export const ProjectEvaluation = () => {
                     </a>
                   </>
                 )}
-                {project.live_url && (
+                {project.live_url && isSafeUrl(project.live_url) && (
                   <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
                     <Globe size={14} /> {t('common.app')}
                   </a>
