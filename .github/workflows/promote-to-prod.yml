@@ -245,12 +245,13 @@ jobs:
               az containerapp job execution show \
                 --name job-spc-prod-migrate \
                 --resource-group rg-spc-prod-pl \
-                --job-execution-name "$EXECUTION_NAME" -o jsonc || true
+                --job-execution-name "$EXECUTION_NAME" \
+                --query "{status: properties.status, startTime: properties.startTime, endTime: properties.endTime}" -o json || true
               CONTAINER_NAME=$(az containerapp job execution show \
                 --name job-spc-prod-migrate \
                 --resource-group rg-spc-prod-pl \
                 --job-execution-name "$EXECUTION_NAME" \
-                --query "properties.template.containers[0].name" -o tsv)
+                --query "properties.template.containers[0].name" -o tsv) || CONTAINER_NAME=""
               if [[ -n "$CONTAINER_NAME" ]]; then
                 az containerapp job logs show \
                   --name job-spc-prod-migrate \
