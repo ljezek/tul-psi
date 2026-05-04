@@ -650,6 +650,28 @@ async def test_patch_project_returns_500_on_service_error(client: AsyncClient) -
     assert response.status_code == 500
 
 
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("github_url", "javascript:alert(1)"),
+        ("github_url", "ftp://example.com"),
+        ("live_url", "javascript:void(0)"),
+        ("live_url", "data:text/html,<script>alert(1)</script>"),
+    ],
+)
+async def test_patch_project_rejects_non_http_url(
+    client: AsyncClient, field: str, value: str
+) -> None:
+    """PATCH /api/v1/projects/{id} must return HTTP 422 when a URL field is not http(s)."""
+    user = _make_authenticated_user()
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_projects_service] = lambda: _make_service()
+
+    response = await client.patch("/api/v1/projects/1", json={field: value})
+
+    assert response.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # POST /projects/{project_id}/members — endpoint tests
 # ---------------------------------------------------------------------------

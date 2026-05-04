@@ -36,9 +36,11 @@ class ErrorBoundaryInner extends Component<ErrorBoundaryInnerProps, State> {
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-slate-800 mb-2">{t('error.unexpected_title')}</h1>
           <p className="text-slate-500 text-sm mb-6">{t('error.unexpected_desc')}</p>
-          <pre className="font-mono text-xs text-red-600 bg-red-50 rounded-lg p-3 mb-6 text-left whitespace-pre-wrap break-all">
-            {error.message}
-          </pre>
+          {import.meta.env.DEV && (
+            <pre className="font-mono text-xs text-red-600 bg-red-50 rounded-lg p-3 mb-6 text-left whitespace-pre-wrap break-all">
+              {error.message}
+            </pre>
+          )}
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-tul-blue text-white rounded-lg text-sm font-semibold hover:bg-tul-blue/90 transition-colors"
