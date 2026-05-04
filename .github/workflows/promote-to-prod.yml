@@ -1,0 +1,418 @@
+name: "Promote to Production"
+
+on:
+  workflow_run:
+    workflows: ["E2E Tests"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Full commit SHA to promote (leave blank = HEAD of main)"
+        required: false
+        type: string
+      force:
+        description: "Skip SHA regression check — use for intentional rollback"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: promote-to-prod
+  cancel-in-progress: false   # never cancel an in-flight prod deploy
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ── Gate ─────────────────────────────────────────────────────────────────
+  # No `environment:` here — uses the main-branch OIDC federated credential so
+  # the gate runs automatically without requiring prod environment approval.
+  # Deploy jobs below carry `environment: prod`, so protection rules apply there.
+  gate:
+    name: "Gate: resolve SHA, check ACR and regression"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      sha: ${{ steps.checks.outputs.sha }}
+      should_skip: ${{ steps.checks.outputs.should_skip }}
+      has_backend_image: ${{ steps.checks.outputs.has_backend_image }}
+      current_prod_sha: ${{ steps.checks.outputs.current_prod_sha }}
+      is_forced: ${{ steps.checks.outputs.is_forced }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # full history needed for git merge-base ancestry check
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve SHA and run guards
+        id: checks
+        run: |
+          # ── Resolve SHA ──────────────────────────────────────────────────
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.sha }}" ]]; then
+            SHA="${{ inputs.sha }}"
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            SHA="${{ github.event.workflow_run.head_sha }}"
+          else
+            SHA="${{ github.sha }}"
+          fi
+          echo "Target SHA: $SHA"
+
+          # ── For workflow_dispatch: verify SHA is in main's history ────────
+          # Prevents promoting an unmerged feature-branch commit, which would
+          # bypass the merge + E2E contract that the automatic path enforces.
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if ! git merge-base --is-ancestor "$SHA" "origin/main" 2>/dev/null; then
+              echo "ERROR: SHA $SHA is not in the history of main."
+              echo "Only commits that have been merged to main can be promoted to production."
+              exit 1
+            fi
+            echo "SHA verified to be in main branch history."
+          fi
+
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          FORCE="${{ inputs.force || 'false' }}"
+          echo "is_forced=$FORCE" >> $GITHUB_OUTPUT
+
+          # ── SHA regression check ─────────────────────────────────────────
+          # Reads the promotedSha tag stamped after every successful smoke test.
+          # Blocks the promotion if the incoming SHA is older than what is already
+          # live, preventing a faster-but-older pipeline run from overwriting newer code.
+          CURRENT_SHA=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "tags.promotedSha" -o tsv 2>/dev/null || echo "")
+          echo "current_prod_sha=$CURRENT_SHA" >> $GITHUB_OUTPUT
+
+          if [[ "$FORCE" != "true" && -n "$CURRENT_SHA" && "$SHA" != "$CURRENT_SHA" ]]; then
+            if git merge-base --is-ancestor "$SHA" "$CURRENT_SHA"; then
+              echo "⚠️  SHA $SHA is older than currently promoted $CURRENT_SHA."
+              echo "    Use workflow_dispatch with force=true for an intentional rollback."
+              echo "should_skip=true" >> $GITHUB_OUTPUT
+              echo "has_backend_image=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          echo "should_skip=false" >> $GITHUB_OUTPUT
+
+          # ── ACR image check ──────────────────────────────────────────────
+          # Frontend-only commits have no backend image; backend deploy skips cleanly.
+          ACR_NAME=$(az acr list -g rg-spc-shared-pl --query "[0].name" -o tsv)
+          EXISTS=$(az acr repository show-tags \
+            --name "$ACR_NAME" \
+            --repository backend \
+            --query "contains(@, '$SHA')" -o tsv 2>/dev/null || echo "false")
+          echo "has_backend_image=$EXISTS" >> $GITHUB_OUTPUT
+
+          if [[ "$EXISTS" != "true" ]]; then
+            echo "ℹ️  No backend image for SHA $SHA (frontend-only change)."
+            echo "   Backend deployment will be skipped; frontend will still deploy."
+          fi
+
+          # ── Infrastructure change warning ────────────────────────────────
+          # Prod infra must be deployed manually. Warn if infra files changed
+          # since the last promoted SHA so the operator knows to run the infra
+          # workflow before (or alongside) this app promotion.
+          if [[ -n "$CURRENT_SHA" ]]; then
+            INFRA_CHANGED=$(git diff --name-only "$CURRENT_SHA" "$SHA" -- infrastructure/ | head -1)
+          else
+            INFRA_CHANGED=$(git diff --name-only "$SHA^" "$SHA" -- infrastructure/ | head -1)
+          fi
+          if [[ -n "$INFRA_CHANGED" ]]; then
+            echo "⚠️  Infrastructure files changed in this commit range."
+            echo "   Ensure prod infrastructure is up to date before or after this promotion:"
+            echo "   Actions → Infrastructure Deployment → Run workflow → env: prod"
+          fi
+
+  # ── Dev Health Gate ───────────────────────────────────────────────────────
+  verify-dev:
+    name: "Verify Dev is Healthy"
+    needs: gate
+    # Skip when: SHA regression blocked everything, OR this is a forced rollback
+    # (a prod incident rollback must not be blocked by a dev health failure).
+    if: needs.gate.outputs.should_skip == 'false' && needs.gate.outputs.is_forced != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: dev
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Health check dev backend (with retry)
+        run: |
+          BACKEND_FQDN=$(az containerapp show \
+            -n ca-spc-dev-backend -g rg-spc-dev-pl \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          URL="https://$BACKEND_FQDN/health"
+          echo "Probing $URL"
+          for i in $(seq 1 6); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "Attempt $i: HTTP $STATUS"
+            if [[ "$STATUS" == "200" ]]; then
+              echo "Dev health check passed."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Dev backend unhealthy — blocking prod promotion."
+          exit 1
+
+  # ── Backend Deploy ────────────────────────────────────────────────────────
+  deploy-backend-prod:
+    name: "Deploy Backend (prod)"
+    needs: [gate, verify-dev]
+    # Skipped cleanly when there is no backend image (frontend-only or infra-only SHA).
+    # verify-dev is skipped on force=true; GitHub evaluates skipped as satisfied for needs.
+    if: needs.gate.outputs.has_backend_image == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Re-check SHA regression after approval wait
+        # If a prod environment requires manual approval, another deployment may
+        # have completed while this job was waiting. Re-read the live promotedSha
+        # and abort if it changed, preventing a stale approval from overwriting
+        # a newer deployment.
+        run: |
+          LIVE_SHA=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "tags.promotedSha" -o tsv 2>/dev/null || echo "")
+          EXPECTED_SHA="${{ needs.gate.outputs.current_prod_sha }}"
+          if [[ "$LIVE_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "ERROR: Production SHA changed since the gate ran."
+            echo "  Expected: ${EXPECTED_SHA:-'(none - first deployment)'}"
+            echo "  Actual:   ${LIVE_SHA:-'(none)'}"
+            echo "Another deployment completed during the approval wait."
+            echo "Re-trigger promotion if this SHA should still be deployed."
+            exit 1
+          fi
+
+      - name: Get ACR name
+        id: get_acr
+        run: |
+          ACR_NAME=$(az acr list -g rg-spc-shared-pl --query "[0].name" -o tsv)
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+
+      - name: Update Migration Job Image
+        run: |
+          az containerapp job update \
+            --name job-spc-prod-migrate \
+            --resource-group rg-spc-prod-pl \
+            --image ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ needs.gate.outputs.sha }}
+
+      - name: Run Migrations
+        run: |
+          EXECUTION_NAME=$(az containerapp job start \
+            --name job-spc-prod-migrate \
+            --resource-group rg-spc-prod-pl \
+            --query name -o tsv)
+          echo "Started execution: $EXECUTION_NAME"
+
+          for i in $(seq 1 36); do
+            STATUS=$(az containerapp job execution show \
+              --name job-spc-prod-migrate \
+              --resource-group rg-spc-prod-pl \
+              --job-execution-name "$EXECUTION_NAME" \
+              --query "properties.status" -o tsv)
+            echo "[$i/36] $STATUS"
+
+            if [[ "$STATUS" == "Succeeded" ]]; then
+              echo "Migrations completed."
+              exit 0
+            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Stopped" ]]; then
+              echo "Migration failed. Fetching logs..."
+              sleep 5
+              az containerapp job execution show \
+                --name job-spc-prod-migrate \
+                --resource-group rg-spc-prod-pl \
+                --job-execution-name "$EXECUTION_NAME" \
+                --query "properties.template.containers[0].name" -o tsv | xargs -I {} \
+              az containerapp job log show \
+                --name job-spc-prod-migrate \
+                --resource-group rg-spc-prod-pl \
+                --job-execution-name "$EXECUTION_NAME" \
+                --container {} || true
+              exit 1
+            fi
+            sleep 10
+          done
+
+          echo "Timed out waiting for migration job after 6 minutes."
+          exit 1
+
+      - name: Deploy Backend
+        run: |
+          FRONTEND_URL=$(az staticwebapp show \
+            -n swa-spc-prod -g rg-spc-prod-pl \
+            --query "defaultHostname" -o tsv)
+
+          PREV_REVISION=$(az containerapp revision list \
+            --name ca-spc-prod-backend \
+            --resource-group rg-spc-prod-pl \
+            --query "[?properties.active].name | [0]" -o tsv)
+
+          az containerapp update \
+            --name ca-spc-prod-backend \
+            --resource-group rg-spc-prod-pl \
+            --container-name backend \
+            --image ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ needs.gate.outputs.sha }} \
+            --set-env-vars FRONTEND_URL=https://$FRONTEND_URL || \
+          (echo "Deploy failed — rolling back to $PREV_REVISION" && \
+           az containerapp revision activate \
+             --revision "$PREV_REVISION" \
+             --name ca-spc-prod-backend \
+             --resource-group rg-spc-prod-pl && exit 1)
+
+  # ── Frontend Deploy ───────────────────────────────────────────────────────
+  deploy-frontend-prod:
+    name: "Deploy Frontend (prod)"
+    needs: [gate, verify-dev]
+    if: needs.gate.outputs.should_skip == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.gate.outputs.sha }}   # pin to the exact SHA being promoted
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Re-check SHA regression after approval wait
+        # Mirrors the same guard in deploy-backend-prod. Prevents a stale approval
+        # on a frontend-only release from overwriting a newer frontend deployment.
+        run: |
+          LIVE_SHA=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "tags.promotedSha" -o tsv 2>/dev/null || echo "")
+          EXPECTED_SHA="${{ needs.gate.outputs.current_prod_sha }}"
+          if [[ "$LIVE_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "ERROR: Production SHA changed since the gate ran."
+            echo "  Expected: ${EXPECTED_SHA:-'(none - first deployment)'}"
+            echo "  Actual:   ${LIVE_SHA:-'(none)'}"
+            echo "Another deployment completed during the approval wait."
+            echo "Re-trigger promotion if this SHA should still be deployed."
+            exit 1
+          fi
+
+      - name: Fetch prod config
+        id: config
+        run: |
+          BACKEND_FQDN=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "backend_url=https://$BACKEND_FQDN" >> $GITHUB_OUTPUT
+
+          az extension add --name staticwebapp
+          SWA_TOKEN=$(az staticwebapp secrets list \
+            -n swa-spc-prod -g rg-spc-prod-pl \
+            --query "properties.apiKey" -o tsv)
+          echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
+
+          az extension add --name application-insights
+          AI_CONN_STR=$(az monitor app-insights component show \
+            --app ai-spc-prod -g rg-spc-prod-pl \
+            --query connectionString -o tsv)
+          echo "ai_conn_str=$AI_CONN_STR" >> $GITHUB_OUTPUT
+
+      - name: Build and Deploy to prod SWA
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          action: "upload"
+          app_location: "frontend"
+          output_location: "dist"
+          app_build_command: "npm run build"
+          azure_static_web_apps_api_token: ${{ steps.config.outputs.swa_token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          VITE_API_URL: ${{ steps.config.outputs.backend_url }}
+          VITE_LOGIC_APP_FEEDBACK_URL: ${{ secrets.VITE_LOGIC_APP_FEEDBACK_URL }}
+          VITE_APPINSIGHTS_CONNECTION_STRING: ${{ steps.config.outputs.ai_conn_str }}
+
+  # ── Smoke Test + Stamp ────────────────────────────────────────────────────
+  smoke-test:
+    name: "Smoke Test + Mark Promoted (prod)"
+    needs: [gate, verify-dev, deploy-backend-prod, deploy-frontend-prod]
+    # Run if at least one deploy succeeded and none failed.
+    # 'skipped' is acceptable (e.g. backend skipped on a frontend-only change,
+    # or verify-dev skipped on a force rollback).
+    if: |
+      always() &&
+      needs.gate.result == 'success' &&
+      (needs.verify-dev.result == 'success' || needs.verify-dev.result == 'skipped') &&
+      (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped') &&
+      (needs.deploy-frontend-prod.result == 'success' || needs.deploy-frontend-prod.result == 'skipped') &&
+      (needs.deploy-backend-prod.result == 'success' || needs.deploy-frontend-prod.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: prod
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Health check prod backend (with retry)
+        run: |
+          BACKEND_FQDN=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          URL="https://$BACKEND_FQDN/health"
+          echo "Probing $URL"
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "Attempt $i: HTTP $STATUS"
+            if [[ "$STATUS" == "200" ]]; then
+              echo "Prod health check passed."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Health check failed after 10 attempts."
+          exit 1
+
+      - name: Stamp promotedSha tag on Container App
+        # Stamped after smoke test passes so the SHA regression check in gate
+        # always reflects what is actually healthy in production.
+        run: |
+          az containerapp update \
+            --name ca-spc-prod-backend \
+            --resource-group rg-spc-prod-pl \
+            --tags promotedSha=${{ needs.gate.outputs.sha }}
+
+      - name: Write deployment summary
+        run: |
+          echo "## Prod Deployment — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **SHA** | \`${{ needs.gate.outputs.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Forced rollback** | ${{ needs.gate.outputs.is_forced }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend** | ${{ needs.deploy-backend-prod.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Frontend** | ${{ needs.deploy-frontend-prod.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Smoke test** | passed |" >> $GITHUB_STEP_SUMMARY
