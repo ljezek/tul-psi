@@ -11,6 +11,9 @@ from httpx import ASGITransport, AsyncClient
 # unit tests because all database sessions are replaced by AsyncMock fixtures.
 # This must be set before "from main import app" triggers get_settings().
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test")
+# Disable IP-based rate limiting in unit tests so that tests sending many
+# requests to the same endpoint are not blocked by in-memory counters.
+os.environ.setdefault("DISABLE_RATE_LIMIT", "true")
 
 from main import app  # noqa: E402
 

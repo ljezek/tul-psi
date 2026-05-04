@@ -7,6 +7,7 @@ import sys
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger.json import JsonFormatter
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from api.auth import router as auth_router
 from api.courses import router as courses_router
@@ -61,13 +62,28 @@ setup_otel(app)
 cors_kwargs = {
     "allow_origins": settings.allowed_origins,
     "allow_credentials": True,
-    "allow_methods": ["*"],
-    "allow_headers": ["*"],
+    "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    "allow_headers": [
+        "Content-Type",
+        "X-XSRF-Token",
+        # W3C Trace Context and Application Insights correlation headers injected by
+        # @microsoft/applicationinsights-web when enableCorsCorrelation is enabled.
+        # Without these, browser preflight requests will block API calls.
+        "traceparent",
+        "Request-Id",
+        "Request-Context",
+    ],
 }
 if settings.allowed_origin_regex:
     cors_kwargs["allow_origin_regex"] = settings.allowed_origin_regex
 
 app.add_middleware(CORSMiddleware, **cors_kwargs)
+
+# Trust forwarded headers from the Azure Container Apps ingress proxy so that
+# request.client.host reflects the real client IP rather than the proxy address.
+# ACA's managed ingress strips client-supplied X-Forwarded-For before adding its
+# own, so trusting all sources here is safe within the ACA environment.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1")

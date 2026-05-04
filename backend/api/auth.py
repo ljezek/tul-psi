@@ -8,6 +8,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
+from rate_limit import rate_limit
 from services import auth_service
 from settings import get_settings
 from validators import validate_tul_email
@@ -66,6 +67,7 @@ class OtpVerifyBody(BaseModel):
 async def request_otp(
     body: OtpRequestBody,
     session: AsyncSession = Depends(get_session),
+    _rl: None = rate_limit(5, period_seconds=60),
 ) -> OtpRequestResponse:
     """Handle a request for a one-time password.
 
@@ -92,6 +94,7 @@ async def verify_otp(
     body: OtpVerifyBody,
     response: Response,
     session: AsyncSession = Depends(get_session),
+    _rl: None = rate_limit(10, period_seconds=60),
 ) -> dict[str, str]:
     """Handle OTP verification and JWT issuance for the user identified by *body.email*.
 

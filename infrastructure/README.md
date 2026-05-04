@@ -116,6 +116,14 @@ az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "audiences": ["api://AzureADTokenExchange"]
 }'
 
+# For the 'dev' environment (Required for Frontend & Environment-specific workflows)
+az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
+  "name": "gh-actions-spc-dev",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:ljezek/tul-psi:environment:dev",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
 # For Pull Requests
 az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "name": "gh-actions-spc-pr",
@@ -137,8 +145,8 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
 | `JWT_SECRET` | Secret key for signing session cookies. | [backend/.env](../backend/.env.example) |
 | `VITE_LOGIC_APP_FEEDBACK_URL` | The URL for your Logic App feedback. | Azure Portal |
 | `ALERTS_EMAIL` | Optional. Email address for monitoring alerts (defaults to developerIdentityEmail). | Environment Variable |
-| `PGADMIN_AAD_CLIENT_ID` | App Registration client ID for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
-| `PGADMIN_AAD_CLIENT_SECRET` | Client secret for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
+| `PGADMIN_AAD_CLIENT_ID` | Dev-only. App Registration client ID for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
+| `PGADMIN_AAD_CLIENT_SECRET` | Dev-only. Client secret for pgAdmin EasyAuth (`dev` only). Leave unset until Step 6. | Step 6 |
 
 ### Step 5: Configure GitHub Environments
 To manage differences between `dev` and `prod`:

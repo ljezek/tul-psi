@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -42,6 +43,9 @@ def _mock_settings() -> Generator[None, None, None]:
     # Provide minimal attributes expected by EmailSender/EmailTemplate.
     mock_settings.app_env = "local"
     mock_settings.frontend_url = "http://frontend.test"
+    # None so that auth_service falls through to _generate_otp() rather than
+    # treating the truthy MagicMock as an OTP string and passing it to bcrypt.
+    mock_settings.e2e_otp_override = None
     with patch("services.auth_service.get_settings", return_value=mock_settings):
         yield
 
@@ -196,3 +200,34 @@ async def test_otp_request_response_schema(client: AsyncClient) -> None:
         )
     assert response.status_code == 200
     assert set(response.json().keys()) == {"message"}
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting
+# ---------------------------------------------------------------------------
+
+
+async def test_otp_request_rate_limited_after_five_requests(client: AsyncClient) -> None:
+    """The 6th OTP request from the same IP within a minute must return HTTP 429."""
+    import rate_limit as rl
+
+    rl._windows.clear()
+
+    with (
+        patch.dict(os.environ, {"DISABLE_RATE_LIMIT": "false"}),
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None),
+    ):
+        for _ in range(5):
+            resp = await client.post(
+                "/api/v1/auth/otp/request",
+                json={"email": "ratelimit@tul.cz"},
+            )
+            assert resp.status_code == 200
+
+        resp = await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "ratelimit@tul.cz"},
+        )
+        assert resp.status_code == 429
+
+    rl._windows.clear()
