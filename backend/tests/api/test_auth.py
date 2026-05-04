@@ -42,6 +42,9 @@ def _mock_settings() -> Generator[None, None, None]:
     # Provide minimal attributes expected by EmailSender/EmailTemplate.
     mock_settings.app_env = "local"
     mock_settings.frontend_url = "http://frontend.test"
+    # None so that auth_service falls through to _generate_otp() rather than
+    # treating the truthy MagicMock as an OTP string and passing it to bcrypt.
+    mock_settings.e2e_otp_override = None
     with patch("services.auth_service.get_settings", return_value=mock_settings):
         yield
 

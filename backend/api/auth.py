@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
-from limiter import limiter
+from rate_limit import rate_limit
 from services import auth_service
 from settings import get_settings
 from validators import validate_tul_email
@@ -64,11 +64,10 @@ class OtpVerifyBody(BaseModel):
         "regardless of whether the address is registered to prevent user enumeration."
     ),
 )
-@limiter.limit("5/minute")
 async def request_otp(
-    request: Request,
     body: OtpRequestBody,
     session: AsyncSession = Depends(get_session),
+    _rl: None = rate_limit(5, period_seconds=60),
 ) -> OtpRequestResponse:
     """Handle a request for a one-time password.
 
@@ -91,12 +90,11 @@ async def request_otp(
         "invalid or expired code, and HTTP 429 when the per-token failed-attempt limit is exceeded."
     ),
 )
-@limiter.limit("10/minute")
 async def verify_otp(
-    request: Request,
     body: OtpVerifyBody,
     response: Response,
     session: AsyncSession = Depends(get_session),
+    _rl: None = rate_limit(10, period_seconds=60),
 ) -> dict[str, str]:
     """Handle OTP verification and JWT issuance for the user identified by *body.email*.
 
