@@ -91,6 +91,7 @@ module compute './modules/compute.bicep' = {
     aiConnectionString: monitoring.outputs.connectionString
     acsConnectionString: acs.outputs.connectionString
     acsFromAddress: acs.outputs.fromAddress
+    minReplicas: (env == 'prod') ? 1 : 0
     tags: tags
   }
 }

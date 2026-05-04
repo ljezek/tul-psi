@@ -23,6 +23,7 @@ param acsConnectionString string
 param acsFromAddress string
 
 param tags object
+param minReplicas int = 0
 
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var deployPgadminAuth = deployDebugTools && !empty(pgadminAadClientId) && !empty(pgadminAadClientSecret)
@@ -182,7 +183,7 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: minReplicas
         maxReplicas: 3
       }
     }
