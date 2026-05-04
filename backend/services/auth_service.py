@@ -93,11 +93,8 @@ async def request_otp(email: str, session: AsyncSession) -> None:
 
     logger.info("OTP token generated.", extra={"email": email})
     _settings = get_settings()
-    recipient_name = (
-        user.name.strip()
-        if isinstance(user.name, str) and user.name.strip()
-        else derive_display_name(email)
-    )
+    stripped_name = user.name.strip()
+    recipient_name = stripped_name or derive_display_name(email)
     await EmailSender.from_settings(_settings).send(
         EmailTemplate.otp(
             to=email,

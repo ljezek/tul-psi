@@ -55,7 +55,8 @@ class EmailTemplate:
     @staticmethod
     def _greeting(recipient_name: str | None) -> str:
         """Return a greeting line with an optional display name."""
-        greeting_name = recipient_name.strip() if recipient_name else ""
+        # Collapse all whitespace so user-provided names cannot create multi-line greetings.
+        greeting_name = " ".join(recipient_name.split()) if recipient_name else ""
         return f"Hello {greeting_name}," if greeting_name else "Hello,"
 
     @classmethod
