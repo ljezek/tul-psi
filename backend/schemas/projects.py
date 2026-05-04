@@ -8,6 +8,15 @@ from models.course import CourseLink, CourseTerm, EvaluationCriterion, ProjectTy
 from validators import validate_tul_email
 
 
+def _validate_http_url(v: str | None) -> str | None:
+    """Reject URLs that do not start with http:// or https://."""
+    if v is None:
+        return v
+    if not v.startswith(("http://", "https://")):
+        raise ValueError("URL must start with http:// or https://")
+    return v
+
+
 class LecturerPublic(BaseModel):
     """Representation of a lecturer assigned to a course.
 
@@ -132,6 +141,11 @@ class ProjectCreate(BaseModel):
     # Optional email of the student who owns this project.
     owner_email: EmailStr | None = None
 
+    @field_validator("github_url", "live_url")
+    @classmethod
+    def url_must_be_http(cls, v: str | None) -> str | None:
+        return _validate_http_url(v)
+
     @field_validator("owner_email")
     @classmethod
     def owner_email_must_be_tul_domain(cls, v: str | None) -> str | None:
@@ -153,6 +167,11 @@ class ProjectUpdate(BaseModel):
     github_url: str | None = None
     live_url: str | None = None
     technologies: list[str] | None = None
+
+    @field_validator("github_url", "live_url")
+    @classmethod
+    def url_must_be_http(cls, v: str | None) -> str | None:
+        return _validate_http_url(v)
 
 
 class AddUserBody(BaseModel):

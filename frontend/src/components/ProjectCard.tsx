@@ -5,6 +5,7 @@ import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { ProjectPublic, UserRole } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSafeUrl } from '@/utils/url';
 import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
 
 export interface ProjectCardProps {
@@ -110,10 +111,10 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
         </div>
         
         <div className="flex items-center gap-3 pointer-events-auto">
-          {project.github_url && (
-            <a 
-              href={project.github_url} 
-              target="_blank" 
+          {project.github_url && isSafeUrl(project.github_url) && (
+            <a
+              href={project.github_url}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-slate-400 hover:text-slate-800 transition-colors"
               title={t('project.source_code')}
@@ -121,10 +122,10 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
               <GitHubLogo size={18} />
             </a>
           )}
-          {project.live_url && (
-            <a 
-              href={project.live_url} 
-              target="_blank" 
+          {project.live_url && isSafeUrl(project.live_url) && (
+            <a
+              href={project.live_url}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-slate-400 hover:text-tul-blue transition-colors"
               title={t('project.live_demo')}

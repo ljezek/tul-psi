@@ -7,6 +7,8 @@ import sys
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger.json import JsonFormatter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from api.auth import router as auth_router
 from api.courses import router as courses_router
@@ -14,6 +16,7 @@ from api.deps import verify_csrf_token
 from api.health import router as health_router
 from api.projects import router as projects_router
 from api.users import router as users_router
+from limiter import limiter
 from observability import setup_otel
 from settings import get_settings
 
@@ -53,6 +56,8 @@ app = FastAPI(
     title="Student Projects Catalogue API",
     dependencies=[Depends(verify_csrf_token)],
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Setup OpenTelemetry BEFORE including routers to ensure all requests are traced.
 setup_otel(app)
@@ -61,8 +66,8 @@ setup_otel(app)
 cors_kwargs = {
     "allow_origins": settings.allowed_origins,
     "allow_credentials": True,
-    "allow_methods": ["*"],
-    "allow_headers": ["*"],
+    "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "X-XSRF-Token"],
 }
 if settings.allowed_origin_regex:
     cors_kwargs["allow_origin_regex"] = settings.allowed_origin_regex
