@@ -83,7 +83,7 @@ async def request_otp(email: str, session: AsyncSession) -> None:
 
     await db_auth.invalidate_active_otp_tokens(session, user.id)
 
-    otp = _generate_otp()
+    otp = get_settings().e2e_otp_override or _generate_otp()
     token = OtpToken(user_id=user.id, token_hash=_hash_otp(otp))
     db_auth.add_otp_token(session, token)
     # Commit here — this is the full unit of work: invalidate old tokens and

@@ -116,7 +116,7 @@ async def verify_otp(
 
     settings = get_settings()
     # Secure cookies require HTTPS; disable only for the local development environment.
-    secure_cookie = settings.app_env != "local"
+    secure_cookie = settings.app_env not in ("local", "e2e")
     # SameSite=None is required for cross-site AJAX (e.g., Azure Container Apps default URLs),
     # but it MUST be paired with Secure=True.  For local development (HTTP), we use Lax.
     samesite_policy = "none" if secure_cookie else "lax"
@@ -161,7 +161,7 @@ async def logout(response: Response) -> dict[str, str]:
     """
     settings = get_settings()
     # Mirror the Secure and SameSite flags used during login.
-    secure_cookie = settings.app_env != "local"
+    secure_cookie = settings.app_env not in ("local", "e2e")
     samesite_policy = "none" if secure_cookie else "lax"
 
     response.set_cookie(

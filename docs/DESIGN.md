@@ -640,17 +640,19 @@ OTP tokens are **single-use**, expire after **15 minutes**, and are invalidated 
 
 ### Integration / UI Tests (Playwright)
 
-End-to-end tests exercise complete user journeys against a running local Docker environment:
+End-to-end tests are implemented in [`e2e/`](../e2e/) — see the [E2E README](../e2e/README.md) for full setup and run instructions.
 
-| Test Suite | Key Scenarios Covered |
+Tests run against an ephemeral `docker-compose.e2e.yaml` stack (PostgreSQL + FastAPI backend). The frontend is built and served via `vite preview`. The database volume is discarded after each run (`docker compose down -v`), so no residual state ever accumulates.
+
+OTP authentication is bypassed in the e2e environment via `E2E_OTP_OVERRIDE=000000` (backend setting, only active when `APP_ENV=e2e` or `local`).
+
+| Group | Scenarios |
 |---|---|
-| `public_discovery` | Filter projects by course / technology / name; open project detail |
-| `otp_auth` | Request OTP, enter code, verify redirect to correct role route |
-| `student_zone` | Login via invite email link; edit project details; submit course evaluation & peer feedback |
-| `lecturer_panel` | Seed a project for a course and year; submit lecturer evaluation |
-| `evaluation_unlock` | Results become visible to student after all conditions are met |
-
-Tests run against the Docker Compose stack with a dedicated test database that is wiped and re-seeded from fixtures before each suite.
+| Public | Dashboard filters, project detail visibility, email address gating |
+| Student | OTP login, student home, course evaluation submission, locked/unlocked results |
+| Lecturer | Lecturer home, course projects, draft → submit evaluation, lock/unlock toggle |
+| Admin | Create user, deactivate/reactivate user, admin route access |
+| Access control | Unauthenticated redirects, cross-role route guards, non-member access |
 
 ### CI/CD Quality Gates
 

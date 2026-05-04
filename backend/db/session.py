@@ -36,8 +36,8 @@ def _session_factory() -> async_sessionmaker[AsyncSession]:
             "password": token_provider.get_token,
             "ssl": True,
         }
-    elif settings.app_env != "local":
-        # Force SSL by default in non-local environments if not explicitly disabled.
+    elif settings.app_env not in ("local", "e2e"):
+        # Force SSL by default in non-local/non-e2e environments if not explicitly disabled.
         # This prevents "no pg_hba.conf entry ... no encryption" errors when
         # connecting to cloud databases that require secure transport.
         if "ssl=disable" not in settings.database_url:

@@ -1,0 +1,66 @@
+# Minimal compose for e2e tests: only db + backend.
+# No observability stack (Jaeger/Prometheus/Grafana/OTel) — saves ~20 s startup time.
+#
+# Usage (first run — builds backend image):
+#   docker compose -f docker-compose.e2e.yaml up -d --wait --build
+# Usage (subsequent runs):
+#   docker compose -f docker-compose.e2e.yaml up -d --wait
+# Teardown:
+#   docker compose -f docker-compose.e2e.yaml down -v
+#
+# The `name` directive gives this project a distinct identity so it can coexist
+# with the dev stack (docker-compose.yaml) on the same machine without container
+# name collisions or orphan warnings.
+
+name: tul-psi-e2e
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: student_projects_e2e
+      POSTGRES_ADMIN_USER: tul_psi_e2e
+      POSTGRES_ADMIN_PASSWORD: tul_psi_e2e
+      POSTGRES_USER: tul_psi_e2e
+      POSTGRES_PASSWORD: tul_psi_e2e
+      # Single user for e2e — no privilege separation needed in an ephemeral container.
+      POSTGRES_APP_USER: tul_psi_e2e
+      POSTGRES_APP_PASSWORD: tul_psi_e2e
+    volumes:
+      - postgres-data-e2e:/var/lib/postgresql/data
+      - ./database/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tul_psi_e2e -d student_projects_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      APP_ENV: e2e
+      DATABASE_MIGRATION_URL: postgresql+asyncpg://tul_psi_e2e:tul_psi_e2e@db:5432/student_projects_e2e
+      DATABASE_URL: postgresql+asyncpg://tul_psi_e2e:tul_psi_e2e@db:5432/student_projects_e2e
+      JWT_SECRET: e2e-test-secret-do-not-use-in-production-32c!        # Long random secret — safe for ephemeral e2e use only.
+      # Fixed OTP for all requests in e2e — never set this in non-e2e environments.
+      E2E_OTP_OVERRIDE: "000000"
+      # Disable OTel export — no collector running in e2e.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ""
+      OTEL_COLLECTOR_HEALTH_URL: ""
+      LOG_LEVEL: info
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  postgres-data-e2e:

@@ -16,6 +16,10 @@ on:
           - dev
           - prod
 
+concurrency:
+  group: infra-${{ github.event.inputs.environment || 'dev' }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   id-token: write
   contents: read
