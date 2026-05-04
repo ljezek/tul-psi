@@ -131,6 +131,15 @@ resource db_dev 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-
   }
 }
 
+resource db_prod 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
+  parent: postgres
+  name: 'spc_prod'
+  properties: {
+    charset: 'UTF8'
+    collation: 'en_US.utf8'
+  }
+}
+
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: '${prefix}-${env}.postgres.database.azure.com'
   location: 'global'
