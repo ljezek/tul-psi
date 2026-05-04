@@ -231,3 +231,27 @@ async def test_otp_request_rate_limited_after_five_requests(client: AsyncClient)
         assert resp.status_code == 429
 
     rl._windows.clear()
+
+
+async def test_otp_request_not_rate_limited_in_e2e_env(client: AsyncClient) -> None:
+    """OTP request endpoint must bypass rate limiting in the e2e environment."""
+    import rate_limit as rl
+
+    rl._windows.clear()
+
+    mock_settings = MagicMock()
+    mock_settings.app_env = "e2e"
+
+    with (
+        patch.dict(os.environ, {"DISABLE_RATE_LIMIT": "false"}),
+        patch("rate_limit.get_settings", return_value=mock_settings),
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None),
+    ):
+        for _ in range(6):
+            resp = await client.post(
+                "/api/v1/auth/otp/request",
+                json={"email": "ratelimit@tul.cz"},
+            )
+            assert resp.status_code == 200
+
+    rl._windows.clear()

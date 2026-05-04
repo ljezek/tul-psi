@@ -6,48 +6,92 @@
 import { OTP } from '../fixtures/seed.js';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8001';
+const API_LOGIN_MAX_ATTEMPTS = 4;
+const API_LOGIN_RETRY_DELAY_MS = 2_000;
 
 interface SessionCookies {
   session: string;
   xsrf: string;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function responseBodySafe(response: Response): Promise<string> {
+  try {
+    return await response.text();
+  } catch {
+    return '';
+  }
+}
+
 /** Log in via the API (not the browser) and return raw session cookies. */
 export async function apiLogin(email: string): Promise<SessionCookies> {
-  // Step 1: request OTP
-  await fetch(`${BACKEND_URL}/api/v1/auth/otp/request`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  });
+  let lastFailure = 'unknown error';
 
-  // Step 2: verify OTP (E2E_OTP_OVERRIDE=000000)
-  const verifyRes = await fetch(`${BACKEND_URL}/api/v1/auth/otp/verify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, otp: OTP }),
-  });
+  for (let attempt = 1; attempt <= API_LOGIN_MAX_ATTEMPTS; attempt += 1) {
+    // Step 1: request OTP
+    const requestRes = await fetch(`${BACKEND_URL}/api/v1/auth/otp/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
 
-  if (!verifyRes.ok) {
-    throw new Error(`apiLogin failed for ${email}: ${verifyRes.status}`);
+    if (requestRes.status === 429) {
+      lastFailure = `OTP request rate-limited (429) on attempt ${attempt}`;
+      if (attempt < API_LOGIN_MAX_ATTEMPTS) {
+        await sleep(API_LOGIN_RETRY_DELAY_MS);
+        continue;
+      }
+    } else if (!requestRes.ok) {
+      const body = await responseBodySafe(requestRes);
+      throw new Error(`apiLogin OTP request failed for ${email}: ${requestRes.status} ${body}`);
+    }
+
+    // Step 2: verify OTP (E2E_OTP_OVERRIDE=000000)
+    const verifyRes = await fetch(`${BACKEND_URL}/api/v1/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp: OTP }),
+    });
+
+    if (verifyRes.status === 429 || verifyRes.status === 401) {
+      const body = await responseBodySafe(verifyRes);
+      lastFailure = `OTP verify returned ${verifyRes.status} on attempt ${attempt}: ${body}`;
+      if (attempt < API_LOGIN_MAX_ATTEMPTS) {
+        await sleep(API_LOGIN_RETRY_DELAY_MS);
+        continue;
+      }
+      throw new Error(`apiLogin OTP verify failed for ${email}: ${lastFailure}`);
+    } else if (!verifyRes.ok) {
+      const body = await responseBodySafe(verifyRes);
+      throw new Error(`apiLogin OTP verify failed for ${email}: ${verifyRes.status} ${body}`);
+    }
+
+    // getSetCookie() returns each Set-Cookie header as a separate array entry,
+    // avoiding the Node 20+ header-merging bug with headers.get('set-cookie').
+    const setCookieHeaders = verifyRes.headers.getSetCookie();
+    const sessionMatch = setCookieHeaders.find(h => h.includes('session='))?.match(/session=([^;]+)/);
+    const xsrfMatch = setCookieHeaders.find(h => h.includes('XSRF-TOKEN='))?.match(/XSRF-TOKEN=([^;]+)/);
+
+    // The verify endpoint currently returns an empty JSON object.
+    const body = await verifyRes.json().catch(() => ({})) as { xsrf_token?: string };
+    const xsrf = body.xsrf_token ?? xsrfMatch?.[1] ?? '';
+    const session = sessionMatch?.[1] ?? '';
+
+    if (session) {
+      return { session, xsrf };
+    }
+
+    lastFailure = `session cookie missing on attempt ${attempt}`;
+    if (attempt < API_LOGIN_MAX_ATTEMPTS) {
+      await sleep(API_LOGIN_RETRY_DELAY_MS);
+      continue;
+    }
   }
 
-  // getSetCookie() returns each Set-Cookie header as a separate array entry,
-  // avoiding the Node 20+ header-merging bug with headers.get('set-cookie').
-  const setCookieHeaders = verifyRes.headers.getSetCookie();
-  const sessionMatch = setCookieHeaders.find(h => h.includes('session='))?.match(/session=([^;]+)/);
-  const xsrfMatch = setCookieHeaders.find(h => h.includes('XSRF-TOKEN='))?.match(/XSRF-TOKEN=([^;]+)/);
-
-  // The XSRF token is also in the response body
-  const body = await verifyRes.json() as { xsrf_token?: string };
-  const xsrf = body.xsrf_token ?? xsrfMatch?.[1] ?? '';
-  const session = sessionMatch?.[1] ?? '';
-
-  if (!session) {
-    throw new Error(`apiLogin: session cookie missing for ${email} — check Set-Cookie headers`);
-  }
-
-  return { session, xsrf };
+  throw new Error(`apiLogin failed for ${email} after ${API_LOGIN_MAX_ATTEMPTS} attempts: ${lastFailure}`);
 }
 
 /** PATCH any resource on behalf of an authenticated user. */
