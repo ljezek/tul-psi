@@ -240,18 +240,26 @@ jobs:
               echo "Migrations completed."
               exit 0
             elif [[ "$STATUS" == "Failed" || "$STATUS" == "Stopped" ]]; then
-              echo "Migration failed. Fetching logs..."
+              echo "Migration failed. Fetching execution details and logs..."
               sleep 5
               az containerapp job execution show \
                 --name job-spc-prod-migrate \
                 --resource-group rg-spc-prod-pl \
-                --job-execution-name "$EXECUTION_NAME" \
-                --query "properties.template.containers[0].name" -o tsv | xargs -I {} \
-              az containerapp job log show \
+                --job-execution-name "$EXECUTION_NAME" -o jsonc || true
+              CONTAINER_NAME=$(az containerapp job execution show \
                 --name job-spc-prod-migrate \
                 --resource-group rg-spc-prod-pl \
                 --job-execution-name "$EXECUTION_NAME" \
-                --container {} || true
+                --query "properties.template.containers[0].name" -o tsv)
+              if [[ -n "$CONTAINER_NAME" ]]; then
+                az containerapp job logs show \
+                  --name job-spc-prod-migrate \
+                  --resource-group rg-spc-prod-pl \
+                  --job-execution-name "$EXECUTION_NAME" \
+                  --container "$CONTAINER_NAME" || true
+              else
+                echo "Could not determine migration container name for execution '$EXECUTION_NAME'."
+              fi
               exit 1
             fi
             sleep 10
