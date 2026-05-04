@@ -265,7 +265,7 @@ No manual setup is required if you follow the standard deployment sequence. The 
 
 - **Zero-Trust:** All services use **Managed Identities**.
 - **Automated Bootstrap:** A Bicep `deploymentScript` handles initial PostgreSQL role creation (`id-spc-dev-migrator` and `id-spc-dev-app`) within the private VNet.
-- **Scale-to-Zero:** The backend is configured with `minReplicas: 0` to minimize costs.
+- **Scale-to-Zero (dev only):** The dev backend is configured with `minReplicas: 0` to minimize costs. The prod backend uses `minReplicas: 1` to prevent cold starts.
 - **Permission Split:** The Migrator identity has DDL rights (Alembic), while the App identity is restricted to DML operations.
 - **Observability:** See the [Observability & Monitoring Guide](./TELEMETRY.md) for details on metrics, RUM traces, KQL queries, and alerting thresholds.
 

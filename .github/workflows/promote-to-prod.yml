@@ -40,6 +40,8 @@ jobs:
       sha: ${{ steps.checks.outputs.sha }}
       should_skip: ${{ steps.checks.outputs.should_skip }}
       has_backend_image: ${{ steps.checks.outputs.has_backend_image }}
+      current_prod_sha: ${{ steps.checks.outputs.current_prod_sha }}
+      is_forced: ${{ steps.checks.outputs.is_forced }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -63,17 +65,32 @@ jobs:
           else
             SHA="${{ github.sha }}"
           fi
-          echo "sha=$SHA" >> $GITHUB_OUTPUT
           echo "Target SHA: $SHA"
+
+          # ── For workflow_dispatch: verify SHA is in main's history ────────
+          # Prevents promoting an unmerged feature-branch commit, which would
+          # bypass the merge + E2E contract that the automatic path enforces.
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if ! git merge-base --is-ancestor "$SHA" "origin/main" 2>/dev/null; then
+              echo "ERROR: SHA $SHA is not in the history of main."
+              echo "Only commits that have been merged to main can be promoted to production."
+              exit 1
+            fi
+            echo "SHA verified to be in main branch history."
+          fi
+
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          FORCE="${{ inputs.force || 'false' }}"
+          echo "is_forced=$FORCE" >> $GITHUB_OUTPUT
 
           # ── SHA regression check ─────────────────────────────────────────
           # Reads the promotedSha tag stamped after every successful smoke test.
           # Blocks the promotion if the incoming SHA is older than what is already
           # live, preventing a faster-but-older pipeline run from overwriting newer code.
-          FORCE="${{ inputs.force || 'false' }}"
           CURRENT_SHA=$(az containerapp show \
             -n ca-spc-prod-backend -g rg-spc-prod-pl \
             --query "tags.promotedSha" -o tsv 2>/dev/null || echo "")
+          echo "current_prod_sha=$CURRENT_SHA" >> $GITHUB_OUTPUT
 
           if [[ "$FORCE" != "true" && -n "$CURRENT_SHA" && "$SHA" != "$CURRENT_SHA" ]]; then
             if git merge-base --is-ancestor "$SHA" "$CURRENT_SHA"; then
@@ -100,11 +117,28 @@ jobs:
             echo "   Backend deployment will be skipped; frontend will still deploy."
           fi
 
+          # ── Infrastructure change warning ────────────────────────────────
+          # Prod infra must be deployed manually. Warn if infra files changed
+          # since the last promoted SHA so the operator knows to run the infra
+          # workflow before (or alongside) this app promotion.
+          if [[ -n "$CURRENT_SHA" ]]; then
+            INFRA_CHANGED=$(git diff --name-only "$CURRENT_SHA" "$SHA" -- infrastructure/ | head -1)
+          else
+            INFRA_CHANGED=$(git diff --name-only "$SHA^" "$SHA" -- infrastructure/ | head -1)
+          fi
+          if [[ -n "$INFRA_CHANGED" ]]; then
+            echo "⚠️  Infrastructure files changed in this commit range."
+            echo "   Ensure prod infrastructure is up to date before or after this promotion:"
+            echo "   Actions → Infrastructure Deployment → Run workflow → env: prod"
+          fi
+
   # ── Dev Health Gate ───────────────────────────────────────────────────────
   verify-dev:
     name: "Verify Dev is Healthy"
     needs: gate
-    if: needs.gate.outputs.should_skip == 'false'
+    # Skip when: SHA regression blocked everything, OR this is a forced rollback
+    # (a prod incident rollback must not be blocked by a dev health failure).
+    if: needs.gate.outputs.should_skip == 'false' && needs.gate.outputs.is_forced != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: dev
@@ -139,7 +173,8 @@ jobs:
   deploy-backend-prod:
     name: "Deploy Backend (prod)"
     needs: [gate, verify-dev]
-    # Skipped cleanly when there is no backend image (frontend-only or infra-only SHA)
+    # Skipped cleanly when there is no backend image (frontend-only or infra-only SHA).
+    # verify-dev is skipped on force=true; GitHub evaluates skipped as satisfied for needs.
     if: needs.gate.outputs.has_backend_image == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -151,6 +186,25 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Re-check SHA regression after approval wait
+        # If a prod environment requires manual approval, another deployment may
+        # have completed while this job was waiting. Re-read the live promotedSha
+        # and abort if it changed, preventing a stale approval from overwriting
+        # a newer deployment.
+        run: |
+          LIVE_SHA=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "tags.promotedSha" -o tsv 2>/dev/null || echo "")
+          EXPECTED_SHA="${{ needs.gate.outputs.current_prod_sha }}"
+          if [[ "$LIVE_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "ERROR: Production SHA changed since the gate ran."
+            echo "  Expected: ${EXPECTED_SHA:-'(none - first deployment)'}"
+            echo "  Actual:   ${LIVE_SHA:-'(none)'}"
+            echo "Another deployment completed during the approval wait."
+            echo "Re-trigger promotion if this SHA should still be deployed."
+            exit 1
+          fi
 
       - name: Get ACR name
         id: get_acr
@@ -183,7 +237,7 @@ jobs:
 
             if [[ "$STATUS" == "Succeeded" ]]; then
               echo "Migrations completed."
-              break
+              exit 0
             elif [[ "$STATUS" == "Failed" || "$STATUS" == "Stopped" ]]; then
               echo "Migration failed. Fetching logs..."
               az containerapp logs show \
@@ -195,6 +249,9 @@ jobs:
             fi
             sleep 10
           done
+
+          echo "Timed out waiting for migration job after 6 minutes."
+          exit 1
 
       - name: Deploy Backend
         run: |
@@ -276,11 +333,12 @@ jobs:
     name: "Smoke Test + Mark Promoted (prod)"
     needs: [gate, verify-dev, deploy-backend-prod, deploy-frontend-prod]
     # Run if at least one deploy succeeded and none failed.
-    # 'skipped' is acceptable (e.g. backend skipped on a frontend-only change).
+    # 'skipped' is acceptable (e.g. backend skipped on a frontend-only change,
+    # or verify-dev skipped on a force rollback).
     if: |
       always() &&
       needs.gate.result == 'success' &&
-      needs.verify-dev.result == 'success' &&
+      (needs.verify-dev.result == 'success' || needs.verify-dev.result == 'skipped') &&
       (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped') &&
       (needs.deploy-frontend-prod.result == 'success' || needs.deploy-frontend-prod.result == 'skipped') &&
       (needs.deploy-backend-prod.result == 'success' || needs.deploy-frontend-prod.result == 'success')
@@ -329,6 +387,7 @@ jobs:
           echo "| | |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| **SHA** | \`${{ needs.gate.outputs.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Forced rollback** | ${{ needs.gate.outputs.is_forced }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Backend** | ${{ needs.deploy-backend-prod.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Frontend** | ${{ needs.deploy-frontend-prod.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Smoke test** | passed |" >> $GITHUB_STEP_SUMMARY

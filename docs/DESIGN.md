@@ -440,7 +440,7 @@ graph TB
 * **Private Networking**: The PostgreSQL instance has no public IP. It is only accessible via the `snet-db` delegated subnet.
 
 ### 💰 Cost Management
-* **Scale-to-Zero**: Azure Container Apps are configured with minReplicas: 0. Compute costs are only incurred during active requests.
+* **Scale-to-Zero (dev)**: The dev backend Container App is configured with `minReplicas: 0`. Compute costs are only incurred during active requests. The prod backend uses `minReplicas: 1` to avoid cold starts.
 * **Shared DB**: A single `Standard_B1ms` instance hosts separate `spc_dev` and `spc_prod` databases.
 * **SWA Free Tier**: The React frontend uses the Free tier, providing a global CDN and SSL for $0.
 
