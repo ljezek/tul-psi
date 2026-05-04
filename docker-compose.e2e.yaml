@@ -46,6 +46,8 @@ services:
       JWT_SECRET: e2e-test-secret-do-not-use-in-production-32c!        # Long random secret — safe for ephemeral e2e use only.
       # Fixed OTP for all requests in e2e — never set this in non-e2e environments.
       E2E_OTP_OVERRIDE: "000000"
+      # Disable auth endpoint throttling in e2e to keep login deterministic.
+      DISABLE_RATE_LIMIT: "true"
       # Disable OTel export — no collector running in e2e.
       OTEL_EXPORTER_OTLP_ENDPOINT: ""
       OTEL_COLLECTOR_HEALTH_URL: ""

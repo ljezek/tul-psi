@@ -6,6 +6,8 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException, Request, status
 
+from settings import get_settings
+
 # In-memory per-replica storage: key → deque of timestamps within the current window.
 # Safe for asyncio (single-threaded event loop). With multiple ACA replicas each replica
 # maintains its own counter, so the effective limit per client is max_calls × replica_count.
@@ -26,6 +28,9 @@ def rate_limit(max_calls: int, period_seconds: int = 60) -> Depends:
     Setting ``DISABLE_RATE_LIMIT=true`` bypasses all checks — used in test
     environments so the in-memory counters do not interfere with test suites.
 
+    The limiter is also bypassed automatically when ``APP_ENV=e2e`` to avoid
+    flaky OTP authentication in Playwright test runs.
+
     A ``Depends``-based implementation was chosen instead of the popular slowapi
     library because slowapi's decorator approach wraps endpoint functions in a way
     that breaks FastAPI's parameter inspection with Pydantic v2, causing request
@@ -34,6 +39,9 @@ def rate_limit(max_calls: int, period_seconds: int = 60) -> Depends:
     """
 
     def _check(request: Request) -> None:
+        settings = get_settings()
+        if settings.app_env == "e2e":
+            return
         if os.getenv("DISABLE_RATE_LIMIT", "").lower() == "true":
             return
         key = f"{_client_ip(request)}:{max_calls}/{period_seconds}"

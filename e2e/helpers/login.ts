@@ -2,9 +2,9 @@ import { Page } from '@playwright/test';
 import { OTP } from '../fixtures/seed.js';
 
 const LOGIN_MAX_ATTEMPTS = 4;
-const OTP_INPUT_TIMEOUT_MS = 35_000;
-const LOGIN_REDIRECT_TIMEOUT_MS = 20_000;
-const LOGIN_RETRY_DELAY_MS = 12_000;
+const OTP_INPUT_TIMEOUT_MS = 8_000;
+const LOGIN_REDIRECT_TIMEOUT_MS = 10_000;
+const LOGIN_RETRY_DELAY_MS = 1_500;
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));

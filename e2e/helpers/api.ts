@@ -6,8 +6,8 @@
 import { OTP } from '../fixtures/seed.js';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8001';
-const API_LOGIN_MAX_ATTEMPTS = 6;
-const API_LOGIN_RETRY_DELAY_MS = 12_000;
+const API_LOGIN_MAX_ATTEMPTS = 4;
+const API_LOGIN_RETRY_DELAY_MS = 2_000;
 
 interface SessionCookies {
   session: string;
@@ -63,6 +63,7 @@ export async function apiLogin(email: string): Promise<SessionCookies> {
         await sleep(API_LOGIN_RETRY_DELAY_MS);
         continue;
       }
+      throw new Error(`apiLogin OTP verify failed for ${email}: ${lastFailure}`);
     } else if (!verifyRes.ok) {
       const body = await responseBodySafe(verifyRes);
       throw new Error(`apiLogin OTP verify failed for ${email}: ${verifyRes.status} ${body}`);
