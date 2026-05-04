@@ -9,10 +9,14 @@ from validators import validate_tul_email
 
 
 def _validate_http_url(v: str | None) -> str | None:
-    """Reject URLs that do not start with http:// or https://."""
+    """Reject URLs whose scheme is not http or https.
+
+    URL schemes are case-insensitive (RFC 3986 §3.1), so normalise to
+    lowercase before checking to accept ``HTTPS://`` and ``Http://`` etc.
+    """
     if v is None:
         return v
-    if not v.startswith(("http://", "https://")):
+    if not v.strip().lower().startswith(("http://", "https://")):
         raise ValueError("URL must start with http:// or https://")
     return v
 
