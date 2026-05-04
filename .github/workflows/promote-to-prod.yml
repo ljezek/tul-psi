@@ -255,7 +255,7 @@ jobs:
                 az containerapp job logs show \
                   --name job-spc-prod-migrate \
                   --resource-group rg-spc-prod-pl \
-                  --job-execution-name "$EXECUTION_NAME" \
+                  --execution "$EXECUTION_NAME" \
                   --container "$CONTAINER_NAME" || true
               else
                 echo "Could not determine migration container name for execution '$EXECUTION_NAME'."
