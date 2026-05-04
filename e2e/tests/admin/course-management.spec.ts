@@ -17,19 +17,19 @@ test('admin can access admin, lecturer, and public routes', async ({ adminPage: 
 test('admin can open and close the course edit modal', async ({ adminPage: page }) => {
   await page.goto('/lecturer');
 
-  // Find the settings/edit icon next to a course and click it
-  const settingsBtn = page.getByRole('button', { name: /Upravit|Edit|Settings/i }).first();
-  if (await settingsBtn.isVisible()) {
-    await settingsBtn.click();
-    // Modal should open
-    await expect(
-      page.locator('[role="dialog"]').or(page.locator('form').filter({ has: page.getByLabel(/Zkratka|Code/i) }))
-    ).toBeVisible({ timeout: 5_000 });
-    await page.keyboard.press('Escape');
-  } else {
-    // No edit button visible — course list may not have inline edit, skip gracefully
-    console.log('No edit button found on lecturer home; test skipped gracefully.');
-  }
+  // Settings buttons are icon-only — match by title or aria-label attribute.
+  const settingsBtn = page
+    .getByTitle(/Upravit|Edit|Settings/i)
+    .or(page.locator('button[aria-label]').filter({ hasText: /Upravit|Edit|Settings/i }))
+    .first();
+  await expect(settingsBtn).toBeVisible({ timeout: 5_000 });
+  await settingsBtn.click();
+
+  // Modal should open
+  await expect(
+    page.locator('[role="dialog"]').or(page.locator('form').filter({ has: page.getByLabel(/Zkratka|Code/i) }))
+  ).toBeVisible({ timeout: 5_000 });
+  await page.keyboard.press('Escape');
 });
 
 // A-05: Course list page shows both seeded courses.

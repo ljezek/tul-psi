@@ -65,7 +65,7 @@ jobs:
 
       - name: Serve frontend (background)
         working-directory: frontend
-        run: npx vite preview --port 3000 &
+        run: npx vite preview --port 3000 --strictPort &
 
       - name: Wait for frontend to be ready
         working-directory: e2e

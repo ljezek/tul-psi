@@ -2,11 +2,13 @@ import { test as base, expect, USERS, PROJECTS } from '../../fixtures/index.js';
 import { login } from '../../helpers/login.js';
 import { apiLogin, apiPost, apiDelete } from '../../helpers/api.js';
 
+const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+
 // Use Jana Svobodová (id=12, project 4 member) — she has no existing CE in the seed,
 // so this test creates a new row without mutating any seeded data.
 const test = base.extend({
   janaPage: async ({ browser }, use) => {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ baseURL: BASE_URL });
     const page = await context.newPage();
     // Accept any window.confirm dialogs (e.g. useBlocker navigation guard)
     page.on('dialog', dialog => dialog.accept());
@@ -87,7 +89,7 @@ test('student submits course evaluation', async ({ janaPage: page }) => {
 
 // S-04: Student cannot see results when project is locked.
 test('student sees locked results page when results_unlocked=false', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ baseURL: BASE_URL });
   const page = await ctx.newPage();
   await login(page, USERS.jan.email);
 

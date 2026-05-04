@@ -32,14 +32,20 @@ export async function apiLogin(email: string): Promise<SessionCookies> {
     throw new Error(`apiLogin failed for ${email}: ${verifyRes.status}`);
   }
 
-  const setCookieHeader = verifyRes.headers.get('set-cookie') ?? '';
-  const sessionMatch = setCookieHeader.match(/session=([^;]+)/);
-  const xsrfMatch = setCookieHeader.match(/XSRF-TOKEN=([^;]+)/);
+  // getSetCookie() returns each Set-Cookie header as a separate array entry,
+  // avoiding the Node 20+ header-merging bug with headers.get('set-cookie').
+  const setCookieHeaders = verifyRes.headers.getSetCookie();
+  const sessionMatch = setCookieHeaders.find(h => h.includes('session='))?.match(/session=([^;]+)/);
+  const xsrfMatch = setCookieHeaders.find(h => h.includes('XSRF-TOKEN='))?.match(/XSRF-TOKEN=([^;]+)/);
 
   // The XSRF token is also in the response body
   const body = await verifyRes.json() as { xsrf_token?: string };
   const xsrf = body.xsrf_token ?? xsrfMatch?.[1] ?? '';
   const session = sessionMatch?.[1] ?? '';
+
+  if (!session) {
+    throw new Error(`apiLogin: session cookie missing for ${email} — check Set-Cookie headers`);
+  }
 
   return { session, xsrf };
 }

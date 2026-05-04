@@ -1,4 +1,4 @@
-import { test, expect } from '../../fixtures/index.js';
+import { test, expect, PROJECTS } from '../../fixtures/index.js';
 
 // AC-01: Unauthenticated users are redirected to /login for all protected routes.
 test('unauthenticated users are redirected to /login', async ({ page }) => {
@@ -36,10 +36,10 @@ test('lecturer is redirected from admin and student routes', async ({ lecturerPa
 });
 
 // AC-04: Student cannot access another project's evaluation form if not a member.
-// jan.novak (id=11) is member of project 4, not project 7.
+// jan.novak (id=11) is member of project 4, not project 7 (kanban).
 test('student cannot evaluate a project they are not a member of', async ({ studentPage: page }) => {
-  // Navigate directly to project 7's evaluation page
-  await page.goto('/student/project/7/evaluate');
+  // Navigate directly to kanban project's evaluation page
+  await page.goto(`/student/project/${PROJECTS.kanban.id}/evaluate`);
 
   // The API will return 403/404; the page should show an error state (not an empty form)
   await expect(

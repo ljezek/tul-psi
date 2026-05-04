@@ -13,9 +13,11 @@ type AuthFixtures = {
   studentAlicePage: Page;
 };
 
+const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+
 function makeAuthPage(email: string) {
   return async ({ browser }: { browser: Browser }, use: (page: Page) => Promise<void>) => {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ baseURL: BASE_URL });
     const page = await context.newPage();
     await login(page, email);
     await use(page);
