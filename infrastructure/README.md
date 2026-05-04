@@ -116,11 +116,11 @@ az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
   "audiences": ["api://AzureADTokenExchange"]
 }'
 
-# For the 'dev' environment (Required for Frontend & Environment-specific workflows)
+# For the 'prod' environment (Required for Frontend & Environment-specific workflows)
 az ad app federated-credential create --id $APP_OBJECT_ID --parameters '{
-  "name": "gh-actions-spc-dev",
+  "name": "gh-actions-spc-prod",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:ljezek/tul-psi:environment:dev",
+  "subject": "repo:ljezek/tul-psi:environment:prod",
   "audiences": ["api://AzureADTokenExchange"]
 }'
 
