@@ -25,31 +25,31 @@ export const MainLayout = () => {
 
   const NavLinks = () => (
     <>
-      <Link to="/" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
+      <Link to="/" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
         {t('nav.dashboard')}
       </Link>
-      <Link to="/courses" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
+      <Link to="/courses" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
         {t('nav.courses')}
       </Link>
       {user?.role === UserRole.STUDENT && (
-        <Link to="/student" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
+        <Link to="/student" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
           {t('nav.student_zone')}
         </Link>
       )}
       {user?.role === UserRole.ADMIN && (
         <>
-          <Link to="/lecturer" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2">
+          <Link to="/lecturer" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2">
             <BookOpen size={16} />
             {t('nav.lecturer_panel')}
           </Link>
-          <Link to="/admin/users" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2">
+          <Link to="/admin/users" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2">
             <Shield size={16} />
             {t('admin.user_management')}
           </Link>
         </>
       )}
       {user?.role === UserRole.LECTURER && (
-        <Link to="/lecturer" className="text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
+        <Link to="/lecturer" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50">
           {t('nav.lecturer_panel')}
         </Link>
       )}
@@ -64,12 +64,15 @@ export const MainLayout = () => {
           <div className="flex justify-between h-20 items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="bg-tul-blue w-9 h-9 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-tul-blue/20 group-hover:scale-105 transition-transform">
+              <div className="bg-fm-orange w-9 h-9 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-fm-orange/20 group-hover:scale-105 transition-transform">
                 FM
               </div>
-              <span className="text-xl font-black text-slate-800 tracking-tighter">
-                {t('app.title')}
-              </span>
+              <div className="flex flex-col leading-none">
+                <span className="text-[10px] font-black tracking-widest text-fm-orange uppercase">FM TUL</span>
+                <span className="text-lg font-black text-slate-800 tracking-tighter">
+                  {t('app.title')}
+                </span>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
@@ -83,7 +86,7 @@ export const MainLayout = () => {
               <div className="flex items-center gap-4">
                 <button 
                   onClick={toggleLanguage}
-                  className="flex items-center gap-2 text-xs font-black tracking-widest text-slate-400 hover:text-tul-blue transition-colors px-3 py-1.5 rounded-lg border border-slate-100 bg-slate-50 uppercase cursor-pointer"
+                  className="flex items-center gap-2 text-xs font-black tracking-widest text-slate-400 hover:text-fm-orange transition-colors px-3 py-1.5 rounded-lg border border-slate-100 bg-slate-50 uppercase cursor-pointer"
                 >
                   <Globe size={14} />
                   <span>{language}</span>
@@ -189,7 +192,7 @@ export const MainLayout = () => {
 
       {/* Backend Resurrection Banner */}
       {isResurrecting && (
-        <div className="bg-tul-blue text-white py-2 px-4 flex items-center justify-center gap-3 animate-pulse sticky top-20 z-30 shadow-md">
+        <div className="bg-fm-orange text-white py-2 px-4 flex items-center justify-center gap-3 animate-pulse sticky top-20 z-30 shadow-md">
           <RefreshCw size={16} className="animate-spin" />
           <span className="text-sm font-bold tracking-wide">{t('common.resurrecting')}</span>
         </div>

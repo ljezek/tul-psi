@@ -231,7 +231,7 @@ export const CourseProjects = () => {
           <div>
             <Link 
               to={`/courses/${course.id}`}
-              className="inline-block bg-tul-blue text-white px-3 py-1 rounded text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-colors mb-3"
+              className="inline-block bg-fm-orange text-white px-3 py-1 rounded text-xs font-black uppercase tracking-widest hover:bg-fm-orange/90 transition-colors mb-3"
             >
               {course.code}
             </Link>
@@ -262,7 +262,7 @@ export const CourseProjects = () => {
             </button>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="inline-flex items-center px-5 py-2.5 bg-tul-blue hover:bg-tul-blue/90 text-white rounded-xl transition-colors font-black text-sm shadow-sm"
+              className="inline-flex items-center px-5 py-2.5 bg-fm-orange hover:bg-fm-orange/90 text-white rounded-xl transition-colors font-black text-sm shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               {t('lecturer.add_project')}
@@ -285,7 +285,7 @@ export const CourseProjects = () => {
                     onChange={e => setLecturerEmail(e.target.value.split('@')[0])}
                     placeholder={t('form.email_placeholder')}
                     aria-label={t('login.email_label')}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
                 </div>
@@ -304,7 +304,7 @@ export const CourseProjects = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
           <div className="space-y-4">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-              <BookOpen size={16} className="text-tul-blue" />
+              <BookOpen size={16} className="text-fm-orange" />
               {t('courseDetail.syllabus')}
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed line-clamp-4">{course.syllabus}</p>
@@ -314,7 +314,7 @@ export const CourseProjects = () => {
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('courseDetail.links')}</h4>
                 <div className="flex flex-wrap gap-3">
                   {course.links.map((link, i) => (
-                    <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-tul-blue hover:underline flex items-center gap-1">
+                    <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-fm-orange hover:underline flex items-center gap-1">
                       <ExternalLink size={12} />
                       {link.label}
                     </a>
@@ -326,7 +326,7 @@ export const CourseProjects = () => {
 
           <div className="space-y-4">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-              <ListChecks size={16} className="text-tul-blue" />
+              <ListChecks size={16} className="text-fm-orange" />
               {t('courseDetail.evaluation_criteria')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -336,9 +336,9 @@ export const CourseProjects = () => {
                   <div className="text-sm font-black text-slate-700">{c.max_score} {t('label.points')}</div>
                 </div>
               ))}
-              <div className="bg-tul-blue/[0.03] p-3 rounded-xl border border-tul-blue/10">
-                <div className="text-[10px] font-black text-tul-blue/60 uppercase tracking-widest mb-1">{t('courseDetail.min_score')}</div>
-                <div className="text-sm font-black text-tul-blue">{course.min_score} {t('label.points')}</div>
+              <div className="bg-fm-orange/[0.03] p-3 rounded-xl border border-fm-orange/10">
+                <div className="text-[10px] font-black text-fm-orange/60 uppercase tracking-widest mb-1">{t('courseDetail.min_score')}</div>
+                <div className="text-sm font-black text-fm-orange">{course.min_score} {t('label.points')}</div>
               </div>
               {course.peer_bonus_budget !== null && (
                 <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
@@ -367,7 +367,7 @@ export const CourseProjects = () => {
 
       {/* Add Project Form */}
       {showAddForm && (
-        <div className="bg-tul-blue/[0.02] p-8 rounded-3xl border border-tul-blue/20 shadow-sm">
+        <div className="bg-fm-orange/[0.02] p-8 rounded-3xl border border-fm-orange/20 shadow-sm">
           <h2 className="text-2xl font-black text-slate-800 mb-6">{t('lecturer.add_project')}</h2>
           <form onSubmit={handleCreateProject} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -378,7 +378,7 @@ export const CourseProjects = () => {
                   required
                   value={addTitle}
                   onChange={e => setAddTitle(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                 />
               </div>
               <div>
@@ -388,7 +388,7 @@ export const CourseProjects = () => {
                   required
                   value={addYear}
                   onChange={e => setAddYear(parseInt(e.target.value, 10))}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                 />
               </div>
               <div>
@@ -399,7 +399,7 @@ export const CourseProjects = () => {
                     value={addOwnerEmail}
                     onChange={e => setAddOwnerEmail(e.target.value.split('@')[0])}
                     placeholder={t('form.email_placeholder')}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-20 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-20 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
                 </div>
@@ -410,7 +410,7 @@ export const CourseProjects = () => {
               <button type="button" onClick={() => setShowAddForm(false)} className="px-6 py-2.5 rounded-xl text-sm font-black transition-colors text-slate-500 hover:bg-slate-100">
                 {t('lecturer.cancel')}
               </button>
-              <button type="submit" className="bg-tul-blue hover:bg-tul-blue/90 text-white px-6 py-2.5 rounded-xl text-sm font-black transition-colors shadow-sm">
+              <button type="submit" className="bg-fm-orange hover:bg-fm-orange/90 text-white px-6 py-2.5 rounded-xl text-sm font-black transition-colors shadow-sm">
                 {t('lecturer.add_project')}
               </button>
             </div>
@@ -450,7 +450,7 @@ export const CourseProjects = () => {
                   </div>
                 )}
                 
-                <div className="group bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col md:flex-row">
+                <div className="group bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-fm-orange/30 transition-all duration-300 overflow-hidden flex flex-col md:flex-row">
                   <div className="flex-1 p-8 space-y-4">
                     <div className="flex justify-between items-start">
                       <div className="flex gap-2">
@@ -541,7 +541,7 @@ export const CourseProjects = () => {
                                   aria-label={t('form.email_placeholder')}
                                   value={memberEmail}
                                   onChange={e => setMemberEmail(e.target.value.split('@')[0])}
-                                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1 flex-1"
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-fm-orange focus:ring-1 flex-1"
                                 />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
                               </div>
@@ -557,7 +557,7 @@ export const CourseProjects = () => {
                         ) : (
                           <button 
                             onClick={() => setAddingMemberTo(project.id)}
-                            className="text-xs font-bold text-tul-blue hover:text-tul-blue/80 transition-colors uppercase tracking-wider flex items-center group/add"
+                            className="text-xs font-bold text-fm-orange hover:text-fm-orange/80 transition-colors uppercase tracking-wider flex items-center group/add"
                           >
                             <Plus size={14} className="mr-1 group-hover/add:scale-110 transition-transform"/> {t('lecturer.add_member')}
                           </button>
@@ -630,7 +630,7 @@ export const CourseProjects = () => {
                         {project.results_unlocked ? (
                           <Link
                             to={`/lecturer/project/${project.id}/results`}
-                            className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
+                            className="px-5 py-2.5 bg-slate-50 hover:bg-fm-orange hover:text-white text-fm-orange rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-fm-orange uppercase tracking-wider"
                           >
                             {t('student.show_results')}
                           </Link>
@@ -638,7 +638,7 @@ export const CourseProjects = () => {
                           canSeeEvaluations && (
                             <Link
                               to={`/lecturer/project/${project.id}/evaluate`}
-                              className="px-5 py-2.5 bg-slate-50 hover:bg-tul-blue hover:text-white text-tul-blue rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-tul-blue uppercase tracking-wider"
+                              className="px-5 py-2.5 bg-slate-50 hover:bg-fm-orange hover:text-white text-fm-orange rounded-xl transition-colors font-black text-xs border border-slate-200 hover:border-fm-orange uppercase tracking-wider"
                             >
                               {userEval ? t('lecturer.edit_evaluation') : t('lecturer.evaluate')}
                             </Link>

@@ -43,7 +43,7 @@ class ErrorBoundaryInner extends Component<ErrorBoundaryInnerProps, State> {
           )}
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-tul-blue text-white rounded-lg text-sm font-semibold hover:bg-tul-blue/90 transition-colors"
+            className="px-4 py-2 bg-fm-orange text-white rounded-lg text-sm font-semibold hover:bg-fm-orange/90 transition-colors"
           >
             {t('error.reload')}
           </button>

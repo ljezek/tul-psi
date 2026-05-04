@@ -134,7 +134,7 @@ export const CourseDetailView = () => {
       {/* Back Link */}
       <Link 
         to="/courses" 
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-tul-blue mb-8 transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-fm-orange mb-8 transition-colors"
       >
         <ArrowLeft size={16} />
         {t('courseDetail.back_to_list')}
@@ -143,7 +143,7 @@ export const CourseDetailView = () => {
       {/* Header */}
       <div className="mb-12">
         <div className="flex flex-wrap items-center gap-3 mb-4">
-          <span className="px-3 py-1 bg-tul-blue text-white text-sm font-bold rounded uppercase">
+          <span className="px-3 py-1 bg-fm-orange text-white text-sm font-bold rounded uppercase">
             {course.code}
           </span>
           <span className="flex items-center gap-1.5 text-slate-500 font-medium">
@@ -160,7 +160,7 @@ export const CourseDetailView = () => {
           {course.lecturers.map((lecturer, idx) => (
             <div 
               key={idx} 
-              className="flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-tul-blue transition-all relative group/lecturer"
+              className="flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-fm-orange transition-all relative group/lecturer"
             >
               {canManageLecturers && course.lecturers.length > 1 && (
                 <button
@@ -173,9 +173,9 @@ export const CourseDetailView = () => {
               )}
               <Link 
                 to={`/courses?lecturer=${encodeURIComponent(lecturer.name)}`}
-                className="flex items-center gap-2 text-slate-700 hover:text-tul-blue transition-colors group"
+                className="flex items-center gap-2 text-slate-700 hover:text-fm-orange transition-colors group"
               >
-                <User size={18} className="text-slate-400 group-hover:text-tul-blue" />
+                <User size={18} className="text-slate-400 group-hover:text-fm-orange" />
                 <span className="font-bold">{lecturer.name}</span>
               </Link>
               <div className="flex flex-col gap-1 text-[11px]">
@@ -184,7 +184,7 @@ export const CourseDetailView = () => {
                     href={`https://github.com/${lecturer.github_alias}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors font-medium"
+                    className="flex items-center gap-1.5 text-slate-500 hover:text-fm-orange transition-colors font-medium"
                   >
                     <GitHubLogo size={12} />
                     {lecturer.github_alias}
@@ -193,7 +193,7 @@ export const CourseDetailView = () => {
                 {lecturer.email && (
                   <a 
                     href={`mailto:${lecturer.email}`}
-                    className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors font-medium"
+                    className="flex items-center gap-1.5 text-slate-500 hover:text-fm-orange transition-colors font-medium"
                   >
                     <Mail size={12} />
                     {lecturer.email}
@@ -206,7 +206,7 @@ export const CourseDetailView = () => {
           {canManageLecturers && (
             <div className="flex flex-col gap-2">
               {isAddingLecturer ? (
-                <form onSubmit={handleAddLecturer} className="flex items-center gap-2 bg-white p-2 border border-tul-blue/20 rounded-2xl shadow-sm">
+                <form onSubmit={handleAddLecturer} className="flex items-center gap-2 bg-white p-2 border border-fm-orange/20 rounded-2xl shadow-sm">
                   <div className="relative">
                     <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
@@ -215,7 +215,7 @@ export const CourseDetailView = () => {
                       value={newLecturerEmail.includes('@') ? newLecturerEmail.split('@')[0] : newLecturerEmail}
                       onChange={e => setNewLecturerEmail(e.target.value)}
                       placeholder={t('form.email_placeholder')}
-                      className="pl-8 pr-16 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-tul-blue/20 w-48"
+                      className="pl-8 pr-16 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-fm-orange/20 w-48"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
                   </div>
@@ -233,9 +233,9 @@ export const CourseDetailView = () => {
               ) : (
                 <button
                   onClick={() => setIsAddingLecturer(true)}
-                  className="flex items-center gap-2 p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-slate-500 hover:text-tul-blue hover:border-tul-blue hover:bg-tul-blue/5 transition-all group"
+                  className="flex items-center gap-2 p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-slate-500 hover:text-fm-orange hover:border-fm-orange hover:bg-fm-orange/5 transition-all group"
                 >
-                  <Plus size={18} className="text-slate-400 group-hover:text-tul-blue" />
+                  <Plus size={18} className="text-slate-400 group-hover:text-fm-orange" />
                   <span className="text-sm font-bold">{t('course.add_lecturer')}</span>
                 </button>
               )}
@@ -251,7 +251,7 @@ export const CourseDetailView = () => {
           {/* Syllabus */}
           <section>
             <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-              <BookOpen size={24} className="text-tul-blue" />
+              <BookOpen size={24} className="text-fm-orange" />
               {t('courseDetail.syllabus')}
             </h2>
             <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
@@ -264,7 +264,7 @@ export const CourseDetailView = () => {
           {/* Evaluation Criteria */}
           <section>
             <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-              <ListChecks size={24} className="text-tul-blue" />
+              <ListChecks size={24} className="text-fm-orange" />
               {t('courseDetail.evaluation_criteria')}
             </h2>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -304,7 +304,7 @@ export const CourseDetailView = () => {
 
                   <tr className="bg-slate-50/50 font-bold border-t-2 border-slate-100">
                     <td className="px-6 py-4 text-slate-900">{t('courseDetail.min_score')}</td>
-                    <td className="px-6 py-4 text-right text-tul-blue">{course.min_score} {t('courseDetail.points')}</td>
+                    <td className="px-6 py-4 text-right text-fm-orange">{course.min_score} {t('courseDetail.points')}</td>
                   </tr>
                 </tbody>
               </table>
@@ -314,7 +314,7 @@ export const CourseDetailView = () => {
           {/* Projects */}
           <section>
             <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-              <FolderKanban size={24} className="text-tul-blue" />
+              <FolderKanban size={24} className="text-fm-orange" />
               {t('courseDetail.projects')}
             </h2>
             {sortedProjects.length > 0 ? (
@@ -330,10 +330,10 @@ export const CourseDetailView = () => {
                       )}
                       <Link 
                         to={`/projects/${project.id}`}
-                        className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md hover:border-tul-blue/20 transition-all group gap-4"
+                        className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md hover:border-fm-orange/20 transition-all group gap-4"
                       >
                         <div className="min-w-0 flex-grow">
-                          <h4 className="font-bold text-slate-800 group-hover:text-tul-blue transition-colors truncate">
+                          <h4 className="font-bold text-slate-800 group-hover:text-fm-orange transition-colors truncate">
                             {project.title}
                           </h4>
                           <div className="flex items-center gap-3 mt-0.5">
@@ -345,7 +345,7 @@ export const CourseDetailView = () => {
                             </span>
                           </div>
                         </div>
-                        <ArrowRight size={18} className="text-slate-300 group-hover:text-tul-blue group-hover:translate-x-1 transition-all flex-shrink-0" />
+                        <ArrowRight size={18} className="text-slate-300 group-hover:text-fm-orange group-hover:translate-x-1 transition-all flex-shrink-0" />
                       </Link>
                     </Fragment>
                   );

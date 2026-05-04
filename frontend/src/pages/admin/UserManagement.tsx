@@ -177,14 +177,14 @@ export const UserManagement = () => {
             placeholder={t('admin.search_placeholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue transition-all font-bold"
+            className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange transition-all font-bold"
           />
         </div>
         
         <select
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
-          className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-tul-blue/20"
+          className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-fm-orange/20"
         >
           <option value="all">{t('common.all')} {t('admin.role').toLowerCase()}</option>
           <option value={UserRole.ADMIN}>{t('role.admin')}</option>
@@ -200,7 +200,7 @@ export const UserManagement = () => {
               checked={showInactive}
               onChange={e => setShowInactive(e.target.checked)}
             />
-            <div className={`w-10 h-6 rounded-full transition-colors ${showInactive ? 'bg-tul-blue' : 'bg-slate-200'}`} />
+            <div className={`w-10 h-6 rounded-full transition-colors ${showInactive ? 'bg-fm-orange' : 'bg-slate-200'}`} />
             <div className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform ${showInactive ? 'translate-x-4' : ''}`} />
           </div>
           <span className="text-sm font-black text-slate-600 uppercase tracking-widest">{t('admin.inactive')}</span>
@@ -236,7 +236,7 @@ export const UserManagement = () => {
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
                       u.role === UserRole.ADMIN ? 'bg-slate-800 text-white' :
-                      u.role === UserRole.LECTURER ? 'bg-tul-blue text-white' :
+                      u.role === UserRole.LECTURER ? 'bg-fm-orange text-white' :
                       'bg-purple-100 text-purple-600'
                     }`}>
                       <Shield size={10} />
@@ -257,7 +257,7 @@ export const UserManagement = () => {
                   <td className="px-6 py-4 text-right">
                     <button
                       onClick={() => openEditModal(u)}
-                      className="p-2 text-slate-400 hover:text-tul-blue hover:bg-tul-blue/5 rounded-xl transition-all"
+                      className="p-2 text-slate-400 hover:text-fm-orange hover:bg-fm-orange/5 rounded-xl transition-all"
                       title={t('admin.edit_user')}
                     >
                       <Edit2 size={18} />
@@ -300,7 +300,7 @@ export const UserManagement = () => {
                 value={name}
                 onChange={e => handleNameChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange font-bold"
               />
             </div>
 
@@ -316,7 +316,7 @@ export const UserManagement = () => {
                   onChange={e => setEmail(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={t('form.email_placeholder')}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue disabled:opacity-50 font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange disabled:opacity-50 font-bold"
                 />
                 {!editingUser && (
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
@@ -332,7 +332,7 @@ export const UserManagement = () => {
                 value={githubAlias}
                 onChange={e => setGithubAlias(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange font-bold"
               />
             </div>
 
@@ -343,7 +343,7 @@ export const UserManagement = () => {
                   id="user-role"
                   value={role}
                   onChange={e => setRole(e.target.value as UserRole)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 >
                   <option value={UserRole.STUDENT}>{t('role.student')}</option>
                   <option value={UserRole.LECTURER}>{t('role.lecturer')}</option>
@@ -362,7 +362,7 @@ export const UserManagement = () => {
                       checked={isActive}
                       onChange={e => setIsActive(e.target.checked)}
                     />
-                    <div className={`w-10 h-6 rounded-full transition-colors ${isActive ? 'bg-tul-blue' : 'bg-slate-200'}`} />
+                    <div className={`w-10 h-6 rounded-full transition-colors ${isActive ? 'bg-fm-orange' : 'bg-slate-200'}`} />
                     <div className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform ${isActive ? 'translate-x-4' : ''}`} />
                   </div>
                   <span className="text-sm font-black text-slate-600 uppercase tracking-widest">{isActive ? t('admin.active') : t('admin.inactive')}</span>

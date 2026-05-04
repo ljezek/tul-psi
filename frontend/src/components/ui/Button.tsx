@@ -20,7 +20,7 @@ export const Button = ({
   const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
   
   const variants = {
-    primary: "bg-tul-blue hover:bg-blue-700 text-white shadow-md shadow-blue-500/20",
+    primary: "bg-fm-orange hover:bg-fm-orange/90 text-white shadow-md shadow-fm-orange/20",
     secondary: "bg-slate-800 hover:bg-slate-900 text-white",
     outline: "border border-slate-300 hover:bg-slate-100 text-slate-700",
     ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"

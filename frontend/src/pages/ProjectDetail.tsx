@@ -139,7 +139,7 @@ export const ProjectDetail = () => {
       {/* Back Link */}
       <Link 
         to="/" 
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-tul-blue mb-8 transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-fm-orange mb-8 transition-colors"
       >
         <ArrowLeft size={16} />
         {t('project.back_to_projects')}
@@ -150,13 +150,13 @@ export const ProjectDetail = () => {
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <Link 
             to={`/courses/${project.course.id}`}
-            className="px-3 py-1 bg-tul-blue text-white text-sm font-bold rounded uppercase hover:bg-blue-700 transition-colors"
+            className="px-3 py-1 bg-fm-orange text-white text-sm font-bold rounded uppercase hover:bg-fm-orange/90 transition-colors"
           >
             {project.course.code}
           </Link>
           <Link 
             to={`/courses/${project.course.id}`}
-            className="text-slate-500 font-medium hover:text-tul-blue transition-colors"
+            className="text-slate-500 font-medium hover:text-fm-orange transition-colors"
           >
             {project.course.name}
           </Link>
@@ -177,7 +177,7 @@ export const ProjectDetail = () => {
           {/* Description */}
           <section>
             <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <BookOpen size={20} className="text-tul-blue" />
+              <BookOpen size={20} className="text-fm-orange" />
               {t('form.full_desc')}
             </h2>
             <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed">
@@ -192,7 +192,7 @@ export const ProjectDetail = () => {
           {/* Technologies */}
           <section>
             <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Award size={20} className="text-tul-blue" />
+              <Award size={20} className="text-fm-orange" />
               {t('project.technologies')}
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -237,7 +237,7 @@ export const ProjectDetail = () => {
           {/* Team Members */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Users size={20} className="text-tul-blue" />
+              <Users size={20} className="text-fm-orange" />
               {t('project.members')}
             </h2>
             <ul className="space-y-4">
@@ -259,7 +259,7 @@ export const ProjectDetail = () => {
                         href={`https://github.com/${member.github_alias}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 hover:text-tul-blue transition-colors"
+                        className="flex items-center gap-1 hover:text-fm-orange transition-colors"
                       >
                         <GitHubLogo size={12} />
                         {member.github_alias}
@@ -268,7 +268,7 @@ export const ProjectDetail = () => {
                     {member.email && (
                       <a 
                         href={`mailto:${member.email}`}
-                        className="flex items-center gap-1 hover:text-tul-blue transition-colors"
+                        className="flex items-center gap-1 hover:text-fm-orange transition-colors"
                       >
                         <Mail size={12} />
                         {member.email}
@@ -303,7 +303,7 @@ export const ProjectDetail = () => {
                     <div key={i} className="flex flex-col gap-1">
                       <Link 
                         to={`/courses?lecturer=${encodeURIComponent(l.name)}`}
-                        className="font-bold text-slate-700 hover:text-tul-blue transition-colors"
+                        className="font-bold text-slate-700 hover:text-fm-orange transition-colors"
                       >
                         {l.name}
                       </Link>
@@ -313,7 +313,7 @@ export const ProjectDetail = () => {
                             href={`https://github.com/${l.github_alias}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 hover:text-tul-blue transition-colors"
+                            className="flex items-center gap-1 hover:text-fm-orange transition-colors"
                           >
                             <GitHubLogo size={10} />
                             {l.github_alias}
@@ -322,7 +322,7 @@ export const ProjectDetail = () => {
                         {l.email && (
                           <a 
                             href={`mailto:${l.email}`}
-                            className="flex items-center gap-1 hover:text-tul-blue transition-colors"
+                            className="flex items-center gap-1 hover:text-fm-orange transition-colors"
                           >
                             <Mail size={10} />
                             {l.email}
@@ -363,7 +363,7 @@ export const ProjectDetail = () => {
                         className="w-full justify-start gap-3"
                         onClick={() => setIsEditModalOpen(true)}
                       >
-                        <Edit2 size={18} className="text-tul-blue" />
+                        <Edit2 size={18} className="text-fm-orange" />
                         {t('admin.update_project')}
                       </Button>
                       <Button 
@@ -371,14 +371,14 @@ export const ProjectDetail = () => {
                         className="w-full justify-start gap-3"
                         onClick={() => setIsAddMemberModalOpen(true)}
                       >
-                        <UserPlus size={18} className="text-tul-blue" />
+                        <UserPlus size={18} className="text-fm-orange" />
                         {t('lecturer.add_member')}
                       </Button>
                     </>
                   )}
                   <Link to={`/lecturer/project/${project.id}/evaluate`} className="block">
                     <Button variant="outline" className="w-full justify-start gap-3">
-                      <CheckCircle size={18} className="text-tul-blue" />
+                      <CheckCircle size={18} className="text-fm-orange" />
                       {t('project.evaluate')}
                     </Button>
                   </Link>
@@ -423,7 +423,7 @@ export const ProjectDetail = () => {
                 value={memberEmail}
                 onChange={e => setMemberEmail(e.target.value.split('@')[0])}
                 placeholder={t('form.email_placeholder')}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
             </div>
