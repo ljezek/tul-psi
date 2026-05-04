@@ -36,9 +36,6 @@ def rate_limit(max_calls: int, period_seconds: int = 60) -> Depends:
     def _check(request: Request) -> None:
         if os.getenv("DISABLE_RATE_LIMIT", "").lower() == "true":
             return
-        # request.client.host is resolved to the real client IP by the
-        # ProxyHeadersMiddleware added in main.py, which reads X-Forwarded-For
-        # from the trusted Azure Container Apps ingress proxy.
         key = f"{_client_ip(request)}:{max_calls}/{period_seconds}"
         now = datetime.now(UTC)
         cutoff = now - timedelta(seconds=period_seconds)

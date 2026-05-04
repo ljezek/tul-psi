@@ -70,4 +70,16 @@ describe('ErrorBoundary', () => {
     renderWithBoundary(<ThrowingComponent message="secret internal detail" />);
     expect(screen.getByText('secret internal detail')).toBeInTheDocument();
   });
+
+  it('hides error message in production mode', () => {
+    // Temporarily set import.meta.env.DEV to false to simulate a production build.
+    const origDev = import.meta.env.DEV;
+    (import.meta.env as Record<string, unknown>).DEV = false;
+    try {
+      renderWithBoundary(<ThrowingComponent message="secret production detail" />);
+      expect(screen.queryByText('secret production detail')).not.toBeInTheDocument();
+    } finally {
+      (import.meta.env as Record<string, unknown>).DEV = origDev;
+    }
+  });
 });
