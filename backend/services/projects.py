@@ -320,6 +320,7 @@ async def _check_and_auto_unlock_project(
                 project_name=p.title,
                 portal_url=_settings.frontend_url,
                 peer_feedback_enabled=peer_feedback_enabled,
+                recipient_name=participant.name,
             )
         )
     logger.info(
@@ -733,6 +734,7 @@ class ProjectsService:
                 project_name=project.title,
                 course_name=course.name,
                 portal_url=_settings.frontend_url,
+                recipient_name=target_user.name,
             )
         )
         logger.info(
@@ -814,6 +816,7 @@ class ProjectsService:
                     project_name=project.title,
                     course_name=course.name,
                     portal_url=_settings.frontend_url,
+                    recipient_name=owner_user.name,
                 )
             )
             logger.info(

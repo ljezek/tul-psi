@@ -7,7 +7,7 @@ Azure-managed domain. The app authenticates via the ACS **connection string** (a
 API key, not a personal credential), stored as an encrypted ACA secret and injected
 into the container as `ACS_CONNECTION_STRING`.
 
-Emails are sent from `DoNotReply@<hash>.azurecomm.net` (the address provisioned by
+Emails are sent from `tul-student-projects-catalogue@<hash>.azurecomm.net` (the address provisioned by
 ACS when the `AzureManagedDomain` resource is created).
 
 ### Why not SMTP with `lukas.jezek@tul.cz`?
