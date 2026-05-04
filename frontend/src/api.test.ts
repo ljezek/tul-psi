@@ -55,4 +55,15 @@ describe('api.ts', () => {
       expect.anything()
     );
   });
+
+  it('throws ApiError with code "request_timeout" when fetch rejects with AbortError', async () => {
+    const abortError = new DOMException('The user aborted a request.', 'AbortError');
+    (fetch as Mock).mockRejectedValue(abortError);
+
+    const err = await requestOtp('test@tul.cz').catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(408);
+    expect(err.code).toBe('request_timeout');
+    expect(err.detail).toBeNull();
+  });
 });

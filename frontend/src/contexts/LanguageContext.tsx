@@ -345,6 +345,11 @@ const translations: Record<string, Record<Language, string>> = {
   'feedback.submit': { cs: 'Odeslat', en: 'Submit' },
   'feedback.success': { cs: 'Děkujeme! Vaše zpětná vazba byla odeslána.', en: 'Thank you! Your feedback has been submitted.' },
   'feedback.error': { cs: 'Omlouváme se, odeslání se nezdařilo. Zkuste to prosím později.', en: 'Sorry, submission failed. Please try again later.' },
+
+  // Error Boundary
+  'error.unexpected_title': { cs: 'Něco se pokazilo', en: 'Something went wrong' },
+  'error.unexpected_desc': { cs: 'Nastala neočekávaná chyba. Zkuste stránku načíst znovu.', en: 'An unexpected error occurred. Reload the page to try again.' },
+  'error.reload': { cs: 'Načíst stránku znovu', en: 'Reload page' },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);

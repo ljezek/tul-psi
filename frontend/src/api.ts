@@ -23,12 +23,14 @@ import {
 export class ApiError extends Error {
   status: number;
   detail: unknown;
+  code?: string;
 
-  constructor(status: number, detail: unknown) {
+  constructor(status: number, detail: unknown, code?: string) {
     super(`API Error: ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.detail = detail;
+    this.code = code;
   }
 }
 
@@ -70,10 +72,7 @@ async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof 
   } catch (err) {
     clearTimeout(timeoutId);
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError(
-        408,
-        'The server is taking too long to respond. It may be starting up — please try again in a moment.',
-      );
+      throw new ApiError(408, null, 'request_timeout');
     }
     throw err;
   }

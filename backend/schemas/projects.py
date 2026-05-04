@@ -18,7 +18,7 @@ def _validate_http_url(v: str | None) -> str | None:
         return v
     if not v.strip().lower().startswith(("http://", "https://")):
         raise ValueError("URL must start with http:// or https://")
-    return v
+    return v.strip()
 
 
 class LecturerPublic(BaseModel):

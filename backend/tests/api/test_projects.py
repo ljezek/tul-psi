@@ -1322,3 +1322,50 @@ def _make_lecturer_user(user_id: int = 7) -> MagicMock:
 async def _mock_unauthenticated() -> None:
     """Mock for unauthenticated user dependency."""
     return None
+
+
+# ---------------------------------------------------------------------------
+# URL validation — schema level
+# ---------------------------------------------------------------------------
+
+
+def test_project_create_rejects_javascript_github_url() -> None:
+    """ProjectCreate must reject a javascript: scheme github_url with a validation error."""
+    from pydantic import ValidationError
+
+    from schemas.projects import ProjectCreate
+
+    with pytest.raises(ValidationError):
+        ProjectCreate(title="Test", academic_year=2025, github_url="javascript:alert(1)")
+
+
+def test_project_create_rejects_javascript_live_url() -> None:
+    """ProjectCreate must reject a javascript: scheme live_url with a validation error."""
+    from pydantic import ValidationError
+
+    from schemas.projects import ProjectCreate
+
+    with pytest.raises(ValidationError):
+        ProjectCreate(title="Test", academic_year=2025, live_url="javascript:void(0)")
+
+
+def test_project_create_strips_whitespace_from_urls() -> None:
+    """_validate_http_url must strip leading/trailing whitespace from URL values."""
+    from schemas.projects import ProjectCreate
+
+    project = ProjectCreate(
+        title="Test",
+        academic_year=2025,
+        github_url="  https://github.com/example/repo  ",
+    )
+    assert project.github_url == "https://github.com/example/repo"
+
+
+def test_project_update_rejects_javascript_url() -> None:
+    """ProjectUpdate must also reject javascript: scheme URLs."""
+    from pydantic import ValidationError
+
+    from schemas.projects import ProjectUpdate
+
+    with pytest.raises(ValidationError):
+        ProjectUpdate(github_url="javascript:alert(document.cookie)")
