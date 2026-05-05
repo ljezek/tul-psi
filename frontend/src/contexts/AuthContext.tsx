@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserPublic } from '@/types';
-import { getCurrentUser, verifyOtp, logout as apiLogout, ApiError, storeCsrfToken } from '@/api';
+import { getCurrentUser, verifyOtp, logout as apiLogout, refreshCsrfToken, ApiError, storeCsrfToken, getStoredCsrfToken } from '@/api';
 
 interface AuthContextType {
   user: UserPublic | null;
@@ -27,6 +27,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userData = await getCurrentUser();
       setUser(userData);
+      // Recover CSRF token for sessions that pre-date the localStorage approach.
+      if (!getStoredCsrfToken()) {
+        try { await refreshCsrfToken(); } catch { /* best-effort */ }
+      }
     } catch (error) {
       // Only clear the user session on authentication errors (401).
       // Transient failures (network errors, 5xx) should not log the user out.
