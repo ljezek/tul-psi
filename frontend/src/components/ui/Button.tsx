@@ -21,9 +21,9 @@ export const Button = ({
   
   const variants = {
     primary: "bg-fm-orange hover:bg-fm-orange/90 text-white shadow-md shadow-fm-orange/20",
-    secondary: "bg-slate-800 hover:bg-slate-900 text-white",
-    outline: "border border-slate-300 hover:bg-slate-100 text-slate-700",
-    ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    secondary: "bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-700 dark:hover:bg-slate-600",
+    outline: "border border-slate-300 hover:bg-slate-100 text-slate-700 dark:border-slate-600 dark:hover:bg-slate-800 dark:text-slate-300",
+    ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
   };
 
   const sizes = {

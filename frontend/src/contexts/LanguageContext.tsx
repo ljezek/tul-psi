@@ -19,6 +19,8 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.logout': { cs: 'Odhlásit', en: 'Log Out' },
   'nav.open_menu': { cs: 'Otevřít menu', en: 'Open menu' },
   'nav.close_menu': { cs: 'Zavřít menu', en: 'Close menu' },
+  'theme.to_dark': { cs: 'Tmavý režim', en: 'Dark mode' },
+  'theme.to_light': { cs: 'Světlý režim', en: 'Light mode' },
   'role.public': { cs: 'Veřejnost', en: 'Public' },
   'role.student': { cs: 'Student', en: 'Student' },
   'role.lecturer': { cs: 'Lektor', en: 'Lecturer' },

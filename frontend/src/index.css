@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-fm-orange: #ea7603;
   --color-tul-purple: #5948AD;
@@ -9,7 +11,7 @@
 
 @layer base {
   body {
-    @apply font-sans bg-slate-50 text-slate-900;
+    @apply font-sans bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
   }
   button, select {
     @apply cursor-pointer;
