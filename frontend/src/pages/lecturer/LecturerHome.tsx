@@ -98,10 +98,10 @@ export const LecturerHome = () => {
       {/* TODO: Add evaluation overview table (stretch goal) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <header>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+          <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">
             {t('lecturer.title')}
           </h1>
-          <div className="flex items-center gap-2 text-slate-500 font-medium">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium">
             <div className="w-2 h-2 rounded-full bg-fm-orange animate-pulse" />
             {t('lecturer.subtitle')}
           </div>
@@ -116,11 +116,11 @@ export const LecturerHome = () => {
 
       {filteredCourses.length === 0 ? (
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-          <div className="bg-white rounded-3xl p-12 shadow-xl shadow-slate-200/50 border border-slate-100">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-12 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
+            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
               <BookOpen size={40} className="text-slate-300" />
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-2">{t('lecturer.no_courses')}</h2>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">{t('lecturer.no_courses')}</h2>
           </div>
         </div>
       ) : (
@@ -130,17 +130,17 @@ export const LecturerHome = () => {
             return (
               <div
                 key={course.id}
-                className={`group bg-white rounded-3xl border ${isUserLecturer ? 'border-fm-orange ring-2 ring-fm-orange/5' : 'border-slate-200'} shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 overflow-hidden flex flex-col`}
+                className={`group bg-white dark:bg-slate-800 rounded-3xl border ${isUserLecturer ? 'border-fm-orange ring-2 ring-fm-orange/5' : 'border-slate-200 dark:border-slate-700'} shadow-sm hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 transition-all duration-300 overflow-hidden flex flex-col`}
               >
                 <div className="p-8 flex-grow space-y-6">
                   <div>
                     <Link
                       to={`/lecturer/course/${course.id}`}
-                      className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-fm-orange group-hover:border-fm-orange/30 transition-colors inline-block mb-3"
+                      className="bg-slate-50 dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-600 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 group-hover:text-fm-orange group-hover:border-fm-orange/30 transition-colors inline-block mb-3"
                     >
                       {course.code}
                     </Link>
-                    <h3 className="text-2xl font-black text-slate-800 line-clamp-2">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 line-clamp-2">
                       <Link to={`/lecturer/course/${course.id}`} className="hover:text-fm-orange transition-colors">
                         {course.name}
                       </Link>
@@ -150,7 +150,7 @@ export const LecturerHome = () => {
                   <div className="space-y-3">
                     <div className="flex items-start gap-2">
                       <Users size={16} className="text-slate-400 shrink-0 mt-0.5" />
-                      <div className="text-sm font-bold text-slate-500 line-clamp-2">
+                      <div className="text-sm font-bold text-slate-500 dark:text-slate-400 line-clamp-2">
                         {course.lecturer_names.map((name, idx) => (
                           <span key={idx} className={name === user?.name ? 'text-fm-orange font-black underline decoration-fm-orange/30 underline-offset-4' : ''}>
                             {name}{idx < course.lecturer_names.length - 1 ? ', ' : ''}
@@ -187,7 +187,7 @@ export const LecturerHome = () => {
                 <div className="p-6 pt-0 mt-auto flex gap-2">
                   <Link
                     to={`/lecturer/course/${course.id}`}
-                    className="flex-1 text-center px-4 py-3 bg-slate-50 hover:bg-fm-orange hover:text-white text-fm-orange text-sm font-black rounded-xl transition-colors border border-slate-200 hover:border-fm-orange"
+                    className="flex-1 text-center px-4 py-3 bg-slate-50 dark:bg-slate-700 hover:bg-fm-orange hover:text-white text-fm-orange text-sm font-black rounded-xl transition-colors border border-slate-200 dark:border-slate-600 hover:border-fm-orange"
                   >
                     {t('lecturer.manage_projects')}
                   </Link>

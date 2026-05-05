@@ -226,7 +226,7 @@ export const CourseProjects = () => {
       </div>
 
       {/* Course Header */}
-      <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm space-y-8">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-700 shadow-sm space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <Link 
@@ -235,8 +235,8 @@ export const CourseProjects = () => {
             >
               {course.code}
             </Link>
-            <h1 className="text-3xl font-black text-slate-900">{course.name}</h1>
-            <div className="flex flex-wrap gap-4 mt-2 text-slate-500 font-bold text-sm">
+            <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100">{course.name}</h1>
+            <div className="flex flex-wrap gap-4 mt-2 text-slate-500 dark:text-slate-400 font-bold text-sm">
               <span>{t(`enum.${course.term}`)}</span>
               <span className="text-slate-300">&bull;</span>
               <span>{t(`enum.${course.project_type}`)}</span>
@@ -272,11 +272,11 @@ export const CourseProjects = () => {
 
         {/* Add Lecturer Form */}
         {showAddLecturerForm && (
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mt-6 animate-in slide-in-from-top-4">
-            <h2 className="text-lg font-black text-slate-800 mb-4">{t('courseDetail.lecturers')}</h2>
+          <div className="bg-slate-50 dark:bg-slate-700 p-6 rounded-2xl border border-slate-200 dark:border-slate-600 mt-6 animate-in slide-in-from-top-4">
+            <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-4">{t('courseDetail.lecturers')}</h2>
             <form onSubmit={handleAddLecturer} className="flex items-end gap-4">
               <div className="flex-1 max-w-md">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('login.email_label')}</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">{t('login.email_label')}</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -285,7 +285,7 @@ export const CourseProjects = () => {
                     onChange={e => setLecturerEmail(e.target.value.split('@')[0])}
                     placeholder={t('form.email_placeholder')}
                     aria-label={t('login.email_label')}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
+                    className="w-full bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-xl px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
                 </div>
@@ -301,13 +301,13 @@ export const CourseProjects = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-100 dark:border-slate-700">
           <div className="space-y-4">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
               <BookOpen size={16} className="text-fm-orange" />
               {t('courseDetail.syllabus')}
             </h3>
-            <p className="text-sm text-slate-600 leading-relaxed line-clamp-4">{course.syllabus}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-4">{course.syllabus}</p>
             
             {course.links.length > 0 && (
               <div className="pt-2">
@@ -325,15 +325,15 @@ export const CourseProjects = () => {
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
               <ListChecks size={16} className="text-fm-orange" />
               {t('courseDetail.evaluation_criteria')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               {course.evaluation_criteria.map(c => (
-                <div key={c.code} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div key={c.code} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-xl border border-slate-100 dark:border-slate-600">
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-tight">{c.description}</div>
-                  <div className="text-sm font-black text-slate-700">{c.max_score} {t('label.points')}</div>
+                  <div className="text-sm font-black text-slate-700 dark:text-slate-200">{c.max_score} {t('label.points')}</div>
                 </div>
               ))}
               <div className="bg-fm-orange/[0.03] p-3 rounded-xl border border-fm-orange/10">
@@ -352,9 +352,9 @@ export const CourseProjects = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 bg-white rounded-xl p-1 border border-slate-200/60 shadow-sm w-fit">
+      <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-xl p-1 border border-slate-200/60 dark:border-slate-700 shadow-sm w-fit">
         <select
-          className="bg-transparent text-slate-700 font-bold px-3 py-1.5 focus:outline-none cursor-pointer"
+          className="bg-transparent text-slate-700 dark:text-slate-200 font-bold px-3 py-1.5 focus:outline-none cursor-pointer"
           value={yearFilter}
           onChange={(e) => setYearFilter(e.target.value)}
         >
@@ -367,39 +367,39 @@ export const CourseProjects = () => {
 
       {/* Add Project Form */}
       {showAddForm && (
-        <div className="bg-fm-orange/[0.02] p-8 rounded-3xl border border-fm-orange/20 shadow-sm">
-          <h2 className="text-2xl font-black text-slate-800 mb-6">{t('lecturer.add_project')}</h2>
+        <div className="bg-fm-orange/[0.02] dark:bg-slate-800 p-8 rounded-3xl border border-fm-orange/20 dark:border-slate-700 shadow-sm">
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-6">{t('lecturer.add_project')}</h2>
           <form onSubmit={handleCreateProject} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('lecturer.project_title')}</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">{t('lecturer.project_title')}</label>
                 <input
                   type="text"
                   required
                   value={addTitle}
                   onChange={e => setAddTitle(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
+                  className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('dashboard.filter_year')}</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">{t('dashboard.filter_year')}</label>
                 <input
                   type="number"
                   required
                   value={addYear}
                   onChange={e => setAddYear(parseInt(e.target.value, 10))}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
+                  className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('lecturer.owner_email')}</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">{t('lecturer.owner_email')}</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={addOwnerEmail}
                     onChange={e => setAddOwnerEmail(e.target.value.split('@')[0])}
                     placeholder={t('form.email_placeholder')}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-20 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
+                    className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 pr-20 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
                 </div>
@@ -421,7 +421,7 @@ export const CourseProjects = () => {
       {/* Projects List */}
       <div className="space-y-12">
         {filteredProjects.length === 0 ? (
-          <div className="text-slate-400 font-medium text-center py-12 bg-white rounded-3xl border border-slate-100">{t('dashboard.no_results')}</div>
+          <div className="text-slate-400 font-medium text-center py-12 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">{t('dashboard.no_results')}</div>
         ) : (
           filteredProjects.map((project, index) => {
             const userEval = project.project_evaluations?.find(ev => user && ev.lecturer_id === user.id);
@@ -450,11 +450,11 @@ export const CourseProjects = () => {
                   </div>
                 )}
                 
-                <div className="group bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-fm-orange/30 transition-all duration-300 overflow-hidden flex flex-col md:flex-row">
+                <div className="group bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 hover:border-fm-orange/30 transition-all duration-300 overflow-hidden flex flex-col md:flex-row">
                   <div className="flex-1 p-8 space-y-4">
                     <div className="flex justify-between items-start">
                       <div className="flex gap-2">
-                        <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <span className="bg-slate-50 dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-600 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                           {project.academic_year}
                         </span>
                         {project.results_unlocked && (
@@ -465,7 +465,7 @@ export const CourseProjects = () => {
                       </div>
                     </div>
                     
-                    <h3 className="text-2xl font-black text-slate-800 transition-colors">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 transition-colors">
                       {project.title}
                     </h3>
                     
@@ -532,7 +532,7 @@ export const CourseProjects = () => {
                       <div className="pt-2">
                         {addingMemberTo === project.id ? (
                           <div className="space-y-2">
-                            <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-100 max-w-sm">
+                            <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-2 bg-slate-50 dark:bg-slate-700 p-2 rounded-xl border border-slate-100 dark:border-slate-600 max-w-sm">
                               <div className="relative flex-1">
                                 <input 
                                   type="text" 
@@ -541,7 +541,7 @@ export const CourseProjects = () => {
                                   aria-label={t('form.email_placeholder')}
                                   value={memberEmail}
                                   onChange={e => setMemberEmail(e.target.value.split('@')[0])}
-                                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-fm-orange focus:ring-1 flex-1"
+                                  className="w-full bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-fm-orange focus:ring-1 flex-1"
                                 />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
                               </div>
@@ -565,18 +565,18 @@ export const CourseProjects = () => {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
+                    <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
                       <div className="flex items-center gap-6 flex-wrap">
                         {canSeeEvaluations && (
                           <div className="flex items-center gap-1.5 text-xs font-bold">
                             {userEval ? (
                               userEval.submitted ? (
-                                <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700">{t('lecturer.eval_submitted')}</span></>
+                                <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-slate-700 dark:text-slate-200">{t('lecturer.eval_submitted')}</span></>
                               ) : (
-                                <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700">{t('lecturer.eval_draft')}</span></>
+                                <><Clock className="w-4 h-4 text-amber-500" /><span className="text-slate-700 dark:text-slate-200">{t('lecturer.eval_draft')}</span></>
                               )
                             ) : (
-                              <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500">{t('lecturer.eval_not_done')}</span></>
+                              <><AlertCircle className="w-4 h-4 text-slate-400" /><span className="text-slate-500 dark:text-slate-400">{t('lecturer.eval_not_done')}</span></>
                             )}
                           </div>
                         )}

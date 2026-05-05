@@ -71,12 +71,12 @@ export const StudentHome = () => {
   if (projects.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div className="bg-white rounded-3xl p-12 shadow-xl shadow-slate-200/50 border border-slate-100">
-          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-12 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
+          <div className="w-20 h-20 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
             <ClipboardCheck size={40} className="text-slate-300" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2">{t('student.no_project')}</h2>
-          <p className="text-slate-500 font-medium">
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">{t('student.no_project')}</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">
             {t('student.contact_teacher')}
           </p>
         </div>
@@ -87,7 +87,7 @@ export const StudentHome = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <header className="mb-12">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+        <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">
           {t('student.zone_title')}
         </h1>
         <div className="flex items-center gap-2 text-slate-500 font-medium">
@@ -99,12 +99,12 @@ export const StudentHome = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {projects.map(project => {
           return (
-            <div key={project.id} className="group bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-fm-orange/30 transition-all duration-300 overflow-hidden flex flex-col">
+            <div key={project.id} className="group bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 hover:border-fm-orange/30 transition-all duration-300 overflow-hidden flex flex-col">
               <div className="p-8 flex-grow">
                 <div className="flex justify-between items-start mb-4">
                   <Link 
                     to={`/courses/${project.course.id}`}
-                    className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-fm-orange hover:border-fm-orange/30 transition-colors"
+                    className="bg-slate-50 dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-600 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-fm-orange hover:border-fm-orange/30 transition-colors"
                   >
                     {project.course.code}
                   </Link>
@@ -115,7 +115,7 @@ export const StudentHome = () => {
                 </div>
 
                 <Link to={`/projects/${project.id}`} className="block group/title">
-                  <h3 className="text-2xl font-black text-slate-800 mb-2 group-hover/title:text-fm-orange transition-colors line-clamp-2">
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2 group-hover/title:text-fm-orange transition-colors line-clamp-2">
                     {project.title}
                   </h3>
                 </Link>
@@ -136,7 +136,7 @@ export const StudentHome = () => {
                 {!project.results_unlocked && (
                   <div className="mb-6">
                     {addingMemberTo === project.id ? (
-                      <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                      <form onSubmit={(e) => handleAddMember(e, project.id)} className="flex items-center gap-2 mt-4 bg-slate-50 dark:bg-slate-700 p-2 rounded-xl border border-slate-100 dark:border-slate-600">
                         <div className="relative flex-1">
                           <input 
                             type="text" 
@@ -144,7 +144,7 @@ export const StudentHome = () => {
                             placeholder={t('form.email_placeholder')}
                             value={memberEmail}
                             onChange={e => setMemberEmail(e.target.value.split('@')[0])}
-                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-fm-orange focus:ring-1"
+                            className="w-full bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-fm-orange focus:ring-1"
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
                         </div>

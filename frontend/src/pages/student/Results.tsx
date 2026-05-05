@@ -51,11 +51,11 @@ export const Results = () => {
   if (!project.results_unlocked) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-12 max-w-lg mx-auto">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-12 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 max-w-lg mx-auto">
           <div className="bg-amber-50 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-amber-500">
             <ShieldAlert size={40} />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2">{t('results.not_available')}</h2>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">{t('results.not_available')}</h2>
           <button onClick={() => navigate(-1)} className="mt-8 inline-block">
             <ArrowLeft size={16} className="inline mr-2" />
             {t('project.back_to_projects')}
@@ -97,10 +97,10 @@ export const Results = () => {
           {t('project.back_to_projects')}
         </button>
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 {t('results.title')}
               </h1>
               <div className={`px-4 py-1.5 rounded-xl border flex items-center gap-2 font-black text-sm tracking-tight ${
@@ -110,16 +110,16 @@ export const Results = () => {
                 {isPass ? t('results.pass') : t('results.fail')}
               </div>
             </div>
-            <p className="text-slate-500 font-medium text-lg">
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
               {project.title} <span className="text-slate-300 mx-2">|</span> <Link to={`/courses/${project.course.id}`} className="text-fm-orange hover:underline underline-offset-4">{project.course.code}</Link>
             </p>
 
-            <div className="flex flex-wrap gap-x-8 gap-y-2 mt-4 pt-4 border-t border-slate-50">
+            <div className="flex flex-wrap gap-x-8 gap-y-2 mt-4 pt-4 border-t border-slate-50 dark:border-slate-700">
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
                   {t('results.avg_score')}
                 </span>
-                <span className="text-lg font-black text-slate-700">
+                <span className="text-lg font-black text-slate-700 dark:text-slate-200">
                   {Math.round(lecturerTotal * 10) / 10}
                 </span>
               </div>
@@ -144,7 +144,7 @@ export const Results = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+          <div className="flex items-center gap-6 bg-slate-50/50 dark:bg-slate-700/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
             <div className="text-right">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
                 {t('results.total_score')}
@@ -163,11 +163,11 @@ export const Results = () => {
 
       <div className="space-y-12">
         {/* Lecturer Feedback */}
-        <section className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-          <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+        <section className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="bg-slate-50 dark:bg-slate-700 px-8 py-6 border-b border-slate-100 dark:border-slate-600 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Award className="text-fm-orange" size={24} />
-              <h2 className="text-xl font-black text-slate-800">{t('results.lecturer_eval')}</h2>
+              <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">{t('results.lecturer_eval')}</h2>
             </div>
             <div className="bg-fm-orange/5 text-fm-orange px-4 py-2 rounded-2xl border border-fm-orange/10 text-xs font-black uppercase">
               {t('results.avg_score')}: {Math.round(lecturerTotal * 10) / 10}
@@ -175,19 +175,19 @@ export const Results = () => {
           </div>
           <div className="p-8 space-y-12">
             {avgScores.map(c => (
-              <div key={c.code} className="space-y-6 pb-12 last:pb-0 border-b last:border-0 border-slate-50">
+              <div key={c.code} className="space-y-6 pb-12 last:pb-0 border-b last:border-0 border-slate-50 dark:border-slate-700">
                 <div className="flex justify-between items-end">
                   <div>
-                    <h3 className="text-xl font-black text-slate-800">{c.description}</h3>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{c.description}</h3>
                   </div>
                   <div className="text-right">
-                    <span className="text-3xl font-black text-slate-700">{Math.round(c.avg * 10) / 10}</span>
+                    <span className="text-3xl font-black text-slate-700 dark:text-slate-200">{Math.round(c.avg * 10) / 10}</span>
                     <span className="text-slate-300 font-bold mx-1 text-xl">/</span>
                     <span className="text-slate-400 font-bold text-xl">{c.max_score}</span>
                   </div>
                 </div>
                 {/* Progress Bar */}
-                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-3 w-full bg-slate-100 dark:bg-slate-600 rounded-full overflow-hidden">
                   <div 
                     className={`h-full transition-all duration-1000 ${
                       (c.avg / c.max_score) > 0.7 ? 'bg-green-500' : (c.avg / c.max_score) > 0.4 ? 'bg-amber-500' : 'bg-red-500'
@@ -201,14 +201,14 @@ export const Results = () => {
                     const score = evalItem.scores.find(s => s.criterion_code === c.code);
                     if (!score?.strengths && !score?.improvements) return null;
                     return (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-2xl bg-slate-50/30 border border-slate-100">
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-2xl bg-slate-50/30 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
                         <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-[10px] font-black text-green-700 uppercase tracking-widest mb-1">
+                          <div className="flex items-center gap-2 text-[10px] font-black text-green-700 dark:text-green-400 uppercase tracking-widest mb-1">
                             <ThumbsUp size={12} />
                             {t('student.label_strengths')}
                           </div>
                           {score.strengths ? (
-                            <div className="prose prose-sm prose-slate max-w-none text-slate-600 italic">
+                            <div className="prose prose-sm prose-slate dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 italic">
                               <ReactMarkdown>{score.strengths}</ReactMarkdown>
                             </div>
                           ) : (
@@ -216,12 +216,12 @@ export const Results = () => {
                           )}
                         </div>
                         <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-[10px] font-black text-orange-700 uppercase tracking-widest mb-1">
+                          <div className="flex items-center gap-2 text-[10px] font-black text-orange-700 dark:text-orange-400 uppercase tracking-widest mb-1">
                             <TrendingUp size={12} />
                             {t('student.label_improvements')}
                           </div>
                           {score.improvements ? (
-                            <div className="prose prose-sm prose-slate max-w-none text-slate-600 italic">
+                            <div className="prose prose-sm prose-slate dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 italic">
                               <ReactMarkdown>{score.improvements}</ReactMarkdown>
                             </div>
                           ) : (
@@ -239,11 +239,11 @@ export const Results = () => {
 
         {/* Peer Feedback */}
         {project.course.project_type === 'TEAM' && (
-          <section className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-            <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+          <section className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <div className="bg-slate-50 dark:bg-slate-700 px-8 py-6 border-b border-slate-100 dark:border-slate-600 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <User className="text-purple-600" size={24} />
-                <h2 className="text-xl font-black text-slate-800">{t('results.peer_feedback')}</h2>
+                <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">{t('results.peer_feedback')}</h2>
               </div>
               {project.course.peer_bonus_budget !== null && (
                 <div className="bg-purple-50 text-purple-700 px-4 py-2 rounded-2xl border border-purple-100 text-xs font-black uppercase">
@@ -255,8 +255,8 @@ export const Results = () => {
               {peerBonus.length > 0 ? (
                 <div className="space-y-8">
                   {peerBonus.map((f, idx) => (
-                    <div key={idx} className="bg-slate-50/50 rounded-2xl p-8 border border-slate-100 space-y-6">
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-2">
+                    <div key={idx} className="bg-slate-50/50 dark:bg-slate-700/50 rounded-2xl p-8 border border-slate-100 dark:border-slate-700 space-y-6">
+                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-600 pb-4 mb-2">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('results.feedback')} #{idx + 1}</span>
                         {project.course.peer_bonus_budget !== null && (
                           <div className="flex items-center gap-2">
@@ -267,12 +267,12 @@ export const Results = () => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
-                          <span className="text-[10px] font-black text-green-700 uppercase tracking-wider flex items-center gap-2">
+                          <span className="text-[10px] font-black text-green-700 dark:text-green-400 uppercase tracking-wider flex items-center gap-2">
                             <ThumbsUp size={12} />
                             {t('student.label_strengths')}
                           </span>
                           {f.strengths ? (
-                            <div className="prose prose-sm prose-slate max-w-none text-slate-700 leading-relaxed italic">
+                            <div className="prose prose-sm prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed italic">
                               <ReactMarkdown>{f.strengths}</ReactMarkdown>
                             </div>
                           ) : (
@@ -280,12 +280,12 @@ export const Results = () => {
                           )}
                         </div>
                         <div className="space-y-3">
-                          <span className="text-[10px] font-black text-orange-700 uppercase tracking-wider flex items-center gap-2">
+                          <span className="text-[10px] font-black text-orange-700 dark:text-orange-400 uppercase tracking-wider flex items-center gap-2">
                             <TrendingUp size={12} />
                             {t('student.label_improvements')}
                           </span>
                           {f.improvements ? (
-                            <div className="prose prose-sm prose-slate max-w-none text-slate-700 leading-relaxed italic">
+                            <div className="prose prose-sm prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed italic">
                               <ReactMarkdown>{f.improvements}</ReactMarkdown>
                             </div>
                           ) : (
@@ -297,7 +297,7 @@ export const Results = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                <div className="text-center py-12 bg-slate-50 dark:bg-slate-700 rounded-3xl border border-dashed border-slate-200 dark:border-slate-600">
                   <p className="text-slate-400 italic">{t('feedback.no_feedback')}</p>
                 </div>
               )}
