@@ -182,8 +182,8 @@ async def test_otp_verify_returns_429_when_attempt_limit_reached(client: AsyncCl
 async def test_otp_verify_success_sets_cookie_and_marks_token_used(
     client: AsyncClient,
 ) -> None:
-    """A valid OTP must return 200 with an empty body, set the session cookie, and mark the token
-    used."""
+    """A valid OTP must return 200 with an xsrf_token in the body, set the session cookie, and
+    mark the token used."""
     mock_user = _make_user()
     mock_token = _make_token(otp="483921")
     with (
@@ -196,7 +196,9 @@ async def test_otp_verify_success_sets_cookie_and_marks_token_used(
             json={"email": "jan.novak@tul.cz", "otp": "483921"},
         )
     assert response.status_code == 200
-    assert response.json() == {}
+    body = response.json()
+    assert "xsrf_token" in body
+    assert isinstance(body["xsrf_token"], str) and len(body["xsrf_token"]) > 0
     assert "session" in response.cookies
     mock_mark_used.assert_called_once()
     assert mock_mark_used.call_args[0][1] == mock_token.id
@@ -222,6 +224,7 @@ async def test_otp_verify_success_sets_xsrf_cookie(client: AsyncClient) -> None:
     assert xsrf_header, "XSRF-TOKEN Set-Cookie header not found"
     assert "httponly" not in xsrf_header.lower()
     assert "samesite=lax" in xsrf_header.lower()
+    assert response.json().get("xsrf_token") == response.cookies["XSRF-TOKEN"]
 
 
 async def test_otp_verify_jwt_claims_and_expiry(client: AsyncClient) -> None:

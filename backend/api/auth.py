@@ -39,6 +39,12 @@ class OtpRequestResponse(BaseModel):
     message: str
 
 
+class OtpVerifyResponse(BaseModel):
+    """Response body for the OTP verify endpoint."""
+
+    xsrf_token: str
+
+
 class OtpVerifyBody(BaseModel):
     """Request body for the OTP verify endpoint."""
 
@@ -82,12 +88,15 @@ async def request_otp(
 
 @router.post(
     "/otp/verify",
+    response_model=OtpVerifyResponse,
     status_code=status.HTTP_200_OK,
     summary="Verify a one-time password",
     description=(
         "Validates the OTP for the user identified by ``email``, marks it as used, and sets "
-        "an HttpOnly ``session`` cookie containing a signed JWT.  Returns HTTP 401 for an "
-        "invalid or expired code, and HTTP 429 when the per-token failed-attempt limit is exceeded."
+        "an HttpOnly ``session`` cookie containing a signed JWT.  Returns the XSRF token in the "
+        "response body so that cross-origin frontends can store it for CSRF protection.  "
+        "Returns HTTP 401 for an invalid or expired code, and HTTP 429 when the per-token "
+        "failed-attempt limit is exceeded."
     ),
 )
 async def verify_otp(
@@ -95,7 +104,7 @@ async def verify_otp(
     response: Response,
     session: AsyncSession = Depends(get_session),
     _rl: None = rate_limit(10, period_seconds=60),
-) -> dict[str, str]:
+) -> OtpVerifyResponse:
     """Handle OTP verification and JWT issuance for the user identified by *body.email*.
 
     On success, a signed JWT is stored in an HttpOnly cookie named ``session``.
@@ -133,16 +142,19 @@ async def verify_otp(
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
     # Non-HttpOnly XSRF-TOKEN cookie for Double Submit Cookie CSRF protection.
-    # JavaScript reads this value and echoes it as X-XSRF-Token on mutating requests.
+    # The token is also returned in the response body so that cross-origin frontends
+    # (where document.cookie cannot read a cookie set on the API's domain) can store
+    # it and echo it back as X-XSRF-Token on mutating requests.
+    xsrf_token = secrets.token_hex(32)
     response.set_cookie(
         key="XSRF-TOKEN",
-        value=secrets.token_hex(32),
+        value=xsrf_token,
         httponly=False,
         secure=secure_cookie,
         samesite=samesite_policy,
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
-    return {}
+    return OtpVerifyResponse(xsrf_token=xsrf_token)
 
 
 @router.post(

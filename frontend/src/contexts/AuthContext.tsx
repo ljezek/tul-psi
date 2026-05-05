@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserPublic } from '@/types';
-import { getCurrentUser, verifyOtp, logout as apiLogout, ApiError } from '@/api';
+import { getCurrentUser, verifyOtp, logout as apiLogout, ApiError, storeCsrfToken } from '@/api';
 
 interface AuthContextType {
   user: UserPublic | null;
@@ -45,7 +45,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, otp: string) => {
-    await verifyOtp(email, otp);
+    const { xsrf_token } = await verifyOtp(email, otp);
+    storeCsrfToken(xsrf_token);
     await fetchUser();
   };
 
