@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(userData);
       // Recover CSRF token for sessions that pre-date the localStorage approach.
       if (!getStoredCsrfToken()) {
-        try { await refreshCsrfToken(); } catch { /* best-effort */ }
+        try { await refreshCsrfToken(); } catch { /* Non-fatal: a token refresh failure should not block app load. */ }
       }
     } catch (error) {
       // Only clear the user session on authentication errors (401).

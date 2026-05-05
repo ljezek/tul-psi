@@ -13,7 +13,6 @@ from main import app
 from models import User
 from models.user import UserRole
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

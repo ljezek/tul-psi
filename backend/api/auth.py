@@ -47,6 +47,12 @@ class OtpVerifyResponse(BaseModel):
     xsrf_token: str
 
 
+class CsrfTokenResponse(BaseModel):
+    """Response body for the CSRF token refresh endpoint."""
+
+    xsrf_token: str
+
+
 class OtpVerifyBody(BaseModel):
     """Request body for the OTP verify endpoint."""
 
@@ -202,7 +208,7 @@ async def logout(response: Response) -> dict[str, str]:
 
 @router.get(
     "/csrf-token",
-    response_model=OtpVerifyResponse,
+    response_model=CsrfTokenResponse,
     status_code=status.HTTP_200_OK,
     summary="Refresh the CSRF token",
     description=(
@@ -215,7 +221,7 @@ async def logout(response: Response) -> dict[str, str]:
 async def refresh_csrf_token(
     response: Response,
     _current_user: User = Depends(require_current_user),
-) -> OtpVerifyResponse:
+) -> CsrfTokenResponse:
     """Issue a new XSRF-TOKEN for the authenticated session.
 
     GET is exempt from the global CSRF check, so this endpoint is safe to call
@@ -234,4 +240,4 @@ async def refresh_csrf_token(
         samesite=samesite_policy,
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
-    return OtpVerifyResponse(xsrf_token=xsrf_token)
+    return CsrfTokenResponse(xsrf_token=xsrf_token)
