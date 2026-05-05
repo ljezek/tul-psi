@@ -143,7 +143,7 @@ export const Login = () => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+      <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700">
         {/* TUL Branding Header */}
         <div className="bg-fm-orange p-8 text-white text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
@@ -162,7 +162,7 @@ export const Login = () => {
           {step === 'email' ? (
             <form onSubmit={handleSendOtp} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">
+                <label htmlFor="email" className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5 ml-1">
                   {t('login.email_label')}
                 </label>
                 <div className="relative group flex">
@@ -177,13 +177,13 @@ export const Login = () => {
                       autoFocus
                       autoComplete="username"
                       disabled={loading}
-                      className="block w-full pl-11 pr-3 py-3.5 border border-slate-200 rounded-l-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange focus:bg-white transition-all text-slate-900 text-right disabled:opacity-50"
+                      className="block w-full pl-11 pr-3 py-3.5 border border-slate-200 dark:border-slate-600 rounded-l-xl leading-5 bg-slate-50 dark:bg-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange focus:bg-white dark:focus:bg-slate-700 transition-all text-slate-900 dark:text-slate-100 text-right disabled:opacity-50"
                       placeholder="jan.novak"
                       value={emailPrefix}
                       onChange={(e) => setEmailPrefix(e.target.value.split('@')[0])}
                     />
                   </div>
-                  <div className="flex items-center px-4 bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl text-slate-500 font-bold text-sm">
+                  <div className="flex items-center px-4 bg-slate-100 dark:bg-slate-600 border border-l-0 border-slate-200 dark:border-slate-600 rounded-r-xl text-slate-500 dark:text-slate-300 font-bold text-sm">
                     @tul.cz
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export const Login = () => {
             <form onSubmit={handleVerifyOtp} className="space-y-6">
               <div>
                 <div className="flex justify-between items-end mb-4 ml-1">
-                  <label className="block text-sm font-semibold text-slate-700">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
                     {t('login.otp_label')}
                   </label>
                   <button
@@ -250,14 +250,14 @@ export const Login = () => {
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       onPaste={index === 0 ? handlePaste : undefined}
-                      className="w-full h-14 text-center text-2xl font-black border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange focus:bg-white transition-all text-slate-900"
+                      className="w-full h-14 text-center text-2xl font-black border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange focus:bg-white dark:focus:bg-slate-700 transition-all text-slate-900 dark:text-slate-100"
                     />
                   ))}
                 </div>
 
-                <p className="mt-6 text-sm text-slate-500 text-center">
+                <p className="mt-6 text-sm text-slate-500 dark:text-slate-400 text-center">
                   {t('login.code_sent')}{' '}
-                  <span className="font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded-lg">{fullEmail}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-lg">{fullEmail}</span>
                 </p>
               </div>
 
@@ -292,7 +292,7 @@ export const Login = () => {
           )}
         </div>
         
-        <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
+        <div className="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700 text-center">
            <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">
              Technická univerzita v Liberci
            </p>

@@ -151,16 +151,16 @@ export const Dashboard = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-10 text-center max-w-3xl mx-auto">
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
+        <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight mb-3">
           {t('dashboard.title')}
         </h1>
-        <p className="text-lg text-slate-500">
+        <p className="text-lg text-slate-500 dark:text-slate-400">
           {t('dashboard.subtitle')}
         </p>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Search Bar */}
           <div className="md:col-span-12 lg:col-span-4 relative">
@@ -169,7 +169,7 @@ export const Dashboard = () => {
             </div>
             <input
               type="text"
-              className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange transition-all"
+              className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange transition-all"
               placeholder={t('dashboard.search_placeholder')}
               aria-label={t('dashboard.search_placeholder')}
               value={searchQuery}
@@ -185,7 +185,7 @@ export const Dashboard = () => {
                 <BookOpen size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
                 value={selectedCourse}
                 onChange={(e) => updateFilter('course', e.target.value)}
                 aria-label={t('dashboard.filter_subject')}
@@ -205,7 +205,7 @@ export const Dashboard = () => {
                 <User size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
                 value={selectedLecturer}
                 onChange={(e) => updateFilter('lecturer', e.target.value)}
                 aria-label={t('dashboard.filter_lecturer')}
@@ -225,7 +225,7 @@ export const Dashboard = () => {
                 <Calendar size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
                 value={selectedYear}
                 onChange={(e) => updateFilter('year', e.target.value)}
                 aria-label={t('dashboard.filter_year')}
@@ -245,7 +245,7 @@ export const Dashboard = () => {
                 <Tag size={16} />
               </div>
               <select
-                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
+                className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange appearance-none transition-all cursor-pointer"
                 value={selectedTech}
                 onChange={(e) => updateFilter('tech', e.target.value)}
                 aria-label={t('dashboard.filter_technology')}
@@ -270,14 +270,14 @@ export const Dashboard = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-slate-200 shadow-inner">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-400 mb-4">
+        <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 shadow-inner">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-700 text-slate-400 mb-4">
             <AlertCircle size={32} />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">
+          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
             {t('dashboard.no_results')}
           </h3>
-          <p className="text-slate-500 max-w-sm mx-auto">
+          <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
             {t('dashboard.try_adjust')}
           </p>
           <button 

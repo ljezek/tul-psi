@@ -10,7 +10,7 @@ interface LanguageContextType {
 
 const translations: Record<string, Record<Language, string>> = {
   // Navigation & Roles
-  'app.title': { cs: 'Katalog Projektů', en: 'Project Catalog' },
+  'app.title': { cs: 'Katalog Studentských Projektů', en: 'Student Projects Catalogue' },
   'nav.dashboard': { cs: 'Projekty', en: 'Projects' },
   'nav.courses': { cs: 'Předměty', en: 'Courses' },
   'nav.student_zone': { cs: 'Studentská zóna', en: 'Student Zone' },

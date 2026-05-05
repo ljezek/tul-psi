@@ -12,7 +12,10 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = localStorage.getItem('theme');
-    return stored === 'dark' ? 'dark' : 'light';
+    const isDark = stored === 'dark';
+    // Apply the class synchronously so the first paint already uses the correct palette.
+    document.documentElement.classList.toggle('dark', isDark);
+    return isDark ? 'dark' : 'light';
   });
 
   useEffect(() => {

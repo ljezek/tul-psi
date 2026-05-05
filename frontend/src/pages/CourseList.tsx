@@ -62,10 +62,10 @@ export const CourseList = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-10">
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
+        <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight mb-3">
           {t('courseList.title')}
         </h1>
-        <p className="text-lg text-slate-500">
+        <p className="text-lg text-slate-500 dark:text-slate-400">
           {t('courseList.subtitle')}
         </p>
       </div>
@@ -106,7 +106,7 @@ export const CourseList = () => {
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange transition-all shadow-sm"
+          className="block w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange transition-all shadow-sm"
           placeholder={t('dashboard.search_placeholder')}
           aria-label={t('dashboard.search_placeholder')}
           value={searchTerm}
@@ -121,7 +121,7 @@ export const CourseList = () => {
             <Link 
               key={course.id} 
               to={`/courses/${course.id}`}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-fm-orange/20 transition-all group flex flex-col h-full"
+              className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-fm-orange/20 transition-all group flex flex-col h-full"
             >
               <div className="flex items-start justify-between mb-4">
                 <span className="px-2 py-1 bg-fm-orange/10 text-fm-orange text-xs font-bold rounded uppercase tracking-wider">
@@ -132,22 +132,22 @@ export const CourseList = () => {
                 </span>
               </div>
               
-              <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-fm-orange transition-colors">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3 group-hover:text-fm-orange transition-colors">
                 {course.name}
               </h3>
               
               <div className="space-y-2 mb-6 flex-grow">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
-                  <User size={16} className="text-slate-400" />
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+                  <User size={16} className="text-slate-400 dark:text-slate-500" />
                   <span className="line-clamp-1">{course.lecturer_names.join(', ')}</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
-                  <BookOpen size={16} className="text-slate-400" />
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+                  <BookOpen size={16} className="text-slate-400 dark:text-slate-500" />
                   <span>{course.stats.academic_years.join(', ')}</span>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-50 flex items-center text-fm-orange text-sm font-bold mt-auto">
+              <div className="pt-4 border-t border-slate-50 dark:border-slate-700 flex items-center text-fm-orange text-sm font-bold mt-auto">
                 {t('courseDetail.view_detail')}
                 <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -155,8 +155,8 @@ export const CourseList = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-slate-200">
-          <p className="text-slate-500">{t('courseList.no_courses')}</p>
+        <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+          <p className="text-slate-500 dark:text-slate-400">{t('courseList.no_courses')}</p>
         </div>
       )}
     </div>

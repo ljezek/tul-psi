@@ -66,9 +66,9 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+      <div className="p-5 bg-slate-50 dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-[0.15em]">
             <Shield size={12} />
             {t('profile.role')}
           </div>
@@ -76,11 +76,11 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
         </div>
         
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-[0.15em]">
             <Mail size={12} />
             {t('login.email_label')}
           </div>
-          <div className="text-sm font-medium text-slate-600 bg-white px-3 py-2.5 rounded-xl border border-slate-100 break-all shadow-sm">
+          <div className="text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-600 px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-500 break-all shadow-sm">
             {user.email}
           </div>
         </div>
@@ -101,7 +101,7 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white"
+              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
               required
             />
           </div>
@@ -121,7 +121,7 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
               type="text"
               value={github}
               onChange={(e) => setGithub(e.target.value)}
-              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white"
+              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
               placeholder="github-username"
             />
           </div>

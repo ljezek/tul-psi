@@ -237,8 +237,26 @@ export const MainLayout = () => {
 
             <div className="text-slate-500 text-sm text-center md:text-right dark:text-slate-400">
               <p className="font-medium">{t('footer.copyright')}</p>
-              <p className="text-slate-400 text-xs mt-1">
-                Technická univerzita v Liberci | Studentská 1402/2 | 461 17 Liberec 1
+              <p className="text-slate-400 text-xs mt-1 dark:text-slate-500">
+                <a
+                  href="https://www.fm.tul.cz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-fm-orange transition-colors"
+                >
+                  Fakulta mechatroniky, informatiky a mezioborových studií
+                </a>
+                {' | '}
+                <a
+                  href="https://www.tul.cz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-fm-orange transition-colors"
+                >
+                  Technická univerzita v Liberci
+                </a>
+                {' | '}
+                Studentská 1402/2 | 461 17 Liberec 1
               </p>
             </div>
           </div>
