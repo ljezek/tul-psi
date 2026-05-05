@@ -84,7 +84,7 @@ export const CourseEvaluationStatusCard = ({
               {t('student.results_status')}
             </span>
             {project.results_unlocked && (
-              <span className={`inline-flex items-center gap-1.5 ${isPass ? 'text-green-600' : 'text-red-600'} ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-wider bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100`}>
+              <span className={`inline-flex items-center gap-1.5 ${isPass ? 'text-green-600' : 'text-red-600'} ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-black uppercase tracking-wider bg-slate-50 dark:bg-slate-700 px-2 py-0.5 rounded-lg border border-slate-100 dark:border-slate-600`}>
                 {isPass ? <CheckCircle size={12} /> : <XCircle size={12} />}
                 {isPass ? t('results.pass') : t('results.fail')}
               </span>

@@ -194,12 +194,12 @@ export const ProjectEvaluation = () => {
         </Link>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm relative overflow-hidden space-y-6">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-200/60 dark:border-slate-700 shadow-sm relative overflow-hidden space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6">
           <div className="flex-1">
-            <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title}</h1>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 mb-2">{project.title}</h1>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-slate-500 font-bold text-sm">
-              <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest">
+              <span className="bg-slate-50 dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-600 text-[10px] font-black uppercase tracking-widest dark:text-slate-300">
                 {project.course.code}
               </span>
               <div className="flex gap-4">
@@ -249,11 +249,11 @@ export const ProjectEvaluation = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {project.members.map(member => (
               <div key={member.id} className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 font-black shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 font-black shrink-0">
                   {member.name.charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
+                  <div className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{member.name}</div>
                   <div className="flex flex-col gap-1 mt-1">
                     <a href={`mailto:${member.email}`} className="text-[10px] font-bold text-slate-400 hover:text-fm-orange flex items-center gap-1">
                       <Mail size={10} /> {member.email}
@@ -289,10 +289,10 @@ export const ProjectEvaluation = () => {
         {project.course.evaluation_criteria.map((criterion) => {
           const val = scores[criterion.code] || { score: '', strengths: '', improvements: '' };
           return (
-            <div key={criterion.code} className="bg-white border border-slate-200/60 rounded-3xl p-8 shadow-sm space-y-8">
+            <div key={criterion.code} className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-3xl p-8 shadow-sm space-y-8">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="flex-1">
-                  <h3 className="text-xl font-black text-slate-800 mb-2 whitespace-pre-line leading-tight">{criterion.description}</h3>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 mb-2 whitespace-pre-line leading-tight">{criterion.description}</h3>
                 </div>
                 <div className={`flex items-center gap-4 p-4 rounded-2xl border ${getBgColor(val.score, criterion.max_score)} shrink-0 w-full md:w-auto transition-colors duration-300`}>
                    <div className="flex-1 md:w-32">
@@ -313,7 +313,7 @@ export const ProjectEvaluation = () => {
                       <span>{criterion.max_score}</span>
                     </div>
                   </div>
-                  <div className={`bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-black text-lg min-w-[3rem] text-center shadow-sm ${getScoreColor(val.score, criterion.max_score)} transition-colors duration-300`}>
+                  <div className={`bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 font-black text-lg min-w-[3rem] text-center shadow-sm ${getScoreColor(val.score, criterion.max_score)} transition-colors duration-300`}>
                     {val.score === '' ? 0 : val.score}
                   </div>
                 </div>
@@ -333,7 +333,7 @@ export const ProjectEvaluation = () => {
                     rows={4}
                     placeholder={t('lecturer.placeholder_strengths')}
                     aria-label={`${criterion.description} - ${t('student.label_strengths')}`}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium resize-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 disabled:opacity-70 disabled:bg-slate-50"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl px-4 py-3 text-slate-700 dark:text-slate-200 font-medium resize-none focus:bg-white dark:focus:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 disabled:opacity-70 disabled:bg-slate-50 dark:disabled:bg-slate-700"
                   />
                 </div>
                 <div>
@@ -349,7 +349,7 @@ export const ProjectEvaluation = () => {
                     rows={4}
                     placeholder={t('lecturer.placeholder_improvements')}
                     aria-label={`${criterion.description} - ${t('student.label_improvements')}`}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-700 font-medium resize-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 disabled:opacity-70 disabled:bg-slate-50"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl px-4 py-3 text-slate-700 dark:text-slate-200 font-medium resize-none focus:bg-white dark:focus:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 disabled:opacity-70 disabled:bg-slate-50 dark:disabled:bg-slate-700"
                   />
                 </div>
               </div>
@@ -363,7 +363,7 @@ export const ProjectEvaluation = () => {
           <button
             onClick={() => handleSubmit(false)}
             disabled={saving}
-            className="inline-flex items-center justify-center px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-colors border border-slate-200 shadow-sm disabled:opacity-50 font-black text-sm tracking-wide"
+            className="inline-flex items-center justify-center px-6 py-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-colors border border-slate-200 dark:border-slate-600 shadow-sm disabled:opacity-50 font-black text-sm tracking-wide"
           >
             <Save className="w-4 h-4 mr-2 text-slate-400" />
             {t('lecturer.save_draft')}

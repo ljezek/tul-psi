@@ -13,7 +13,7 @@ export const Profile = () => {
             <User size={24} />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-slate-800 tracking-tight">
+            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
               {t('profile.title')}
             </h1>
             <p className="text-slate-500 font-medium italic">
@@ -22,7 +22,7 @@ export const Profile = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8 overflow-hidden relative">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 p-8 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-fm-orange/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
           
           <div className="relative z-10">

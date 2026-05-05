@@ -151,7 +151,7 @@ export const CourseDetailView = () => {
             {t(`enum.${course.term}`)}
           </span>
         </div>
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-6">
+        <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight mb-6">
           {course.name}
         </h1>
         
@@ -160,12 +160,12 @@ export const CourseDetailView = () => {
           {course.lecturers.map((lecturer, idx) => (
             <div 
               key={idx} 
-              className="flex flex-col gap-2 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-fm-orange transition-all relative group/lecturer"
+              className="flex flex-col gap-2 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-sm hover:border-fm-orange transition-all relative group/lecturer"
             >
               {canManageLecturers && course.lecturers.length > 1 && (
                 <button
                   onClick={() => handleRemoveLecturer(lecturer.id)}
-                  className="absolute -top-2 -right-2 p-1 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover/lecturer:opacity-100 transition-all"
+                  className="absolute -top-2 -right-2 p-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-full text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover/lecturer:opacity-100 transition-all"
                   title={t('common.delete')}
                 >
                   <X size={14} />
@@ -173,7 +173,7 @@ export const CourseDetailView = () => {
               )}
               <Link 
                 to={`/courses?lecturer=${encodeURIComponent(lecturer.name)}`}
-                className="flex items-center gap-2 text-slate-700 hover:text-fm-orange transition-colors group"
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-fm-orange transition-colors group"
               >
                 <User size={18} className="text-slate-400 group-hover:text-fm-orange" />
                 <span className="font-bold">{lecturer.name}</span>
@@ -206,7 +206,7 @@ export const CourseDetailView = () => {
           {canManageLecturers && (
             <div className="flex flex-col gap-2">
               {isAddingLecturer ? (
-                <form onSubmit={handleAddLecturer} className="flex items-center gap-2 bg-white p-2 border border-fm-orange/20 rounded-2xl shadow-sm">
+                <form onSubmit={handleAddLecturer} className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 border border-fm-orange/20 rounded-2xl shadow-sm">
                   <div className="relative">
                     <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
@@ -215,7 +215,7 @@ export const CourseDetailView = () => {
                       value={newLecturerEmail.includes('@') ? newLecturerEmail.split('@')[0] : newLecturerEmail}
                       onChange={e => setNewLecturerEmail(e.target.value)}
                       placeholder={t('form.email_placeholder')}
-                      className="pl-8 pr-16 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-fm-orange/20 w-48"
+                      className="pl-8 pr-16 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 w-48"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
                   </div>
@@ -233,7 +233,7 @@ export const CourseDetailView = () => {
               ) : (
                 <button
                   onClick={() => setIsAddingLecturer(true)}
-                  className="flex items-center gap-2 p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-slate-500 hover:text-fm-orange hover:border-fm-orange hover:bg-fm-orange/5 transition-all group"
+                  className="flex items-center gap-2 p-4 bg-slate-50 dark:bg-slate-700 border border-dashed border-slate-300 dark:border-slate-600 rounded-2xl text-slate-500 dark:text-slate-400 hover:text-fm-orange hover:border-fm-orange hover:bg-fm-orange/5 transition-all group"
                 >
                   <Plus size={18} className="text-slate-400 group-hover:text-fm-orange" />
                   <span className="text-sm font-bold">{t('course.add_lecturer')}</span>
@@ -250,11 +250,11 @@ export const CourseDetailView = () => {
         <div className="lg:col-span-2 space-y-12">
           {/* Syllabus */}
           <section>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-3">
               <BookOpen size={24} className="text-fm-orange" />
               {t('courseDetail.syllabus')}
             </h2>
-            <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
               <ReactMarkdown>
                 {course.syllabus || t('project.no_description')}
               </ReactMarkdown>
@@ -263,25 +263,25 @@ export const CourseDetailView = () => {
 
           {/* Evaluation Criteria */}
           <section>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-3">
               <ListChecks size={24} className="text-fm-orange" />
               {t('courseDetail.evaluation_criteria')}
             </h2>
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
+                  <tr className="bg-slate-50 dark:bg-slate-700 border-b border-slate-100 dark:border-slate-600">
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('course.criterion')}</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">{t('lecturer.score')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                   {course.evaluation_criteria.map((criterion, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-800">{criterion.description}</div>
+                        <div className="font-semibold text-slate-800 dark:text-slate-100">{criterion.description}</div>
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-slate-700">
+                      <td className="px-6 py-4 text-right font-mono font-bold text-slate-700 dark:text-slate-200">
                         {criterion.max_score}
                       </td>
                     </tr>
@@ -289,21 +289,21 @@ export const CourseDetailView = () => {
                   
                   {/* Students peer-bonus body */}
                   {course.peer_bonus_budget != null && (
-                    <tr className="bg-blue-50/30">
+                    <tr className="bg-blue-50/30 dark:bg-blue-900/20">
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 font-bold text-blue-800">
+                        <div className="flex items-center gap-2 font-bold text-blue-800 dark:text-blue-300">
                           <Star size={16} className="text-blue-500 fill-blue-500" />
                           {t('courseDetail.peer_bonus')}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-blue-700">
+                      <td className="px-6 py-4 text-right font-mono font-bold text-blue-700 dark:text-blue-400">
                         {course.peer_bonus_budget}
                       </td>
                     </tr>
                   )}
 
-                  <tr className="bg-slate-50/50 font-bold border-t-2 border-slate-100">
-                    <td className="px-6 py-4 text-slate-900">{t('courseDetail.min_score')}</td>
+                  <tr className="bg-slate-50/50 dark:bg-slate-700/50 font-bold border-t-2 border-slate-100 dark:border-slate-600">
+                    <td className="px-6 py-4 text-slate-900 dark:text-slate-100">{t('courseDetail.min_score')}</td>
                     <td className="px-6 py-4 text-right text-fm-orange">{course.min_score} {t('courseDetail.points')}</td>
                   </tr>
                 </tbody>
@@ -313,7 +313,7 @@ export const CourseDetailView = () => {
 
           {/* Projects */}
           <section>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-3">
               <FolderKanban size={24} className="text-fm-orange" />
               {t('courseDetail.projects')}
             </h2>
@@ -330,10 +330,10 @@ export const CourseDetailView = () => {
                       )}
                       <Link 
                         to={`/projects/${project.id}`}
-                        className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md hover:border-fm-orange/20 transition-all group gap-4"
+                        className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-fm-orange/20 transition-all group gap-4"
                       >
                         <div className="min-w-0 flex-grow">
-                          <h4 className="font-bold text-slate-800 group-hover:text-fm-orange transition-colors truncate">
+                          <h4 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-fm-orange transition-colors truncate">
                             {project.title}
                           </h4>
                           <div className="flex items-center gap-3 mt-0.5">
@@ -352,7 +352,7 @@ export const CourseDetailView = () => {
                 })}
               </div>
             ) : (
-              <p className="text-slate-500 italic px-4 py-8 border border-dashed border-slate-200 rounded-2xl text-center">
+              <p className="text-slate-500 dark:text-slate-400 italic px-4 py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-center">
                 {t('courseDetail.no_projects')}
               </p>
             )}

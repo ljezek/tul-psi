@@ -95,18 +95,18 @@ export const ProjectResults = () => {
           {t('common.back')}
         </button>
         
-        <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row justify-between gap-8">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 flex flex-col md:flex-row justify-between gap-8">
           <div className="space-y-6 flex-1">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-fm-orange text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">
                   {project.course.code}
                 </span>
-                <span className="bg-slate-50 px-3 py-1 rounded border border-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                <span className="bg-slate-50 dark:bg-slate-700 px-3 py-1 rounded border border-slate-100 dark:border-slate-600 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                   {project.academic_year}
                 </span>
               </div>
-              <h1 className="text-3xl font-black text-slate-900 leading-tight mb-4">
+              <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 leading-tight mb-4">
                 {project.title}
               </h1>
               
@@ -132,10 +132,10 @@ export const ProjectResults = () => {
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-6 pt-6 border-t border-slate-50">
+            <div className="flex flex-wrap gap-6 pt-6 border-t border-slate-50 dark:border-slate-700">
               {project.members.map(m => (
                 <div key={m.id} className="space-y-1">
-                  <div className="text-xs font-black text-slate-800">{m.name}</div>
+                  <div className="text-xs font-black text-slate-800 dark:text-slate-100">{m.name}</div>
                   <div className="flex items-center gap-3">
                     <a href={`mailto:${m.email}`} title={m.email || undefined} className="text-slate-400 hover:text-fm-orange transition-colors">
                       <Mail size={12} />
@@ -151,7 +151,7 @@ export const ProjectResults = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 h-fit self-center">
+          <div className="flex items-center gap-8 bg-slate-50/50 dark:bg-slate-700/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-600 h-fit self-center">
             <div className="text-right">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
                 {t('lecturer.lecturer_scores')}
@@ -172,9 +172,9 @@ export const ProjectResults = () => {
         {/* Left Column: Summary and Student results */}
         <div className="lg:col-span-1 space-y-8">
           {/* Criterion Summary */}
-          <section className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+          <section className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <div className="bg-slate-50 dark:bg-slate-700 px-6 py-4 border-b border-slate-100 dark:border-slate-600">
+              <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
                 <ListChecks size={14} className="text-fm-orange" />
                 {t('lecturer.avg_score')}
               </h3>
@@ -183,10 +183,10 @@ export const ProjectResults = () => {
               {stats.criteriaAverages.map(c => (
                 <div key={c.code} className="space-y-2">
                   <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-slate-500 truncate mr-2">{c.description}</span>
+                    <span className="text-slate-500 dark:text-slate-400 truncate mr-2">{c.description}</span>
                     <span className={`font-black ${getScoreColor(c.avg, c.max_score)}`}>{Math.round(c.avg * 10) / 10} / {c.max_score}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-600 rounded-full overflow-hidden">
                     <div 
                       className={`h-full transition-all duration-1000 ${c.avg / c.max_score < 0.5 ? 'bg-red-500' : c.avg / c.max_score < 0.75 ? 'bg-amber-500' : 'bg-green-500'}`}
                       style={{ width: `${(c.avg / c.max_score) * 100}%` }}
@@ -198,9 +198,9 @@ export const ProjectResults = () => {
           </section>
 
           {/* Student Final Scores */}
-          <section className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+          <section className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <div className="bg-slate-50 dark:bg-slate-700 px-6 py-4 border-b border-slate-100 dark:border-slate-600">
+              <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
                 <Users size={14} className="text-fm-orange" />
                 {t('student.results_status')}
               </h3>
@@ -216,10 +216,10 @@ export const ProjectResults = () => {
                 const isPass = totalPoints >= project.course.min_score;
 
                 return (
-                  <div key={member.id} className="p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
+                  <div key={member.id} className="p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
+                        <div className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{member.name}</div>
                         <div className="flex items-center gap-1.5">
                           <a href={`mailto:${member.email}`} title={member.email || undefined} className="text-slate-300 hover:text-fm-orange transition-colors">
                             <Mail size={10} />
@@ -237,7 +237,7 @@ export const ProjectResults = () => {
                         <span className="text-[10px] font-black text-slate-500">{t('results.total_score')}: {Math.round(totalPoints * 10) / 10}</span>
                       </div>
                     </div>
-                    <div className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isPass ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                    <div className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isPass ? 'bg-green-50 dark:bg-green-900/20 text-green-600 border border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-800'}`}>
                       {isPass ? <CheckCircle size={10} /> : <XCircle size={10} />}
                       {isPass ? t('results.pass') : t('results.fail')}
                     </div>
@@ -253,7 +253,7 @@ export const ProjectResults = () => {
           {/* Lecturer Feedback */}
           <section className="space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+              <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-3">
                 <Award size={24} className="text-fm-orange" />
                 {t('lecturer.lecturer_scores')}
               </h2>
@@ -263,16 +263,16 @@ export const ProjectResults = () => {
               {project.course.evaluation_criteria.map((criterion) => (
                 <div key={criterion.code} className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest px-4 py-1.5 bg-slate-50 rounded-lg border border-slate-200 shadow-sm">
+                    <h3 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest px-4 py-1.5 bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
                       {criterion.description}
                     </h3>
-                    <div className="h-px bg-slate-200 flex-1" />
+                    <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1" />
                   </div>
 
-                  <div className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-slate-50/80 border-b border-slate-100">
+                        <tr className="bg-slate-50/80 dark:bg-slate-700/80 border-b border-slate-100 dark:border-slate-600">
                           <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-left w-[40%]">
                             {t('student.label_strengths')}
                           </th>
@@ -284,21 +284,21 @@ export const ProjectResults = () => {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                         {project.project_evaluations?.map((ev) => {
                           const score = ev.scores.find(s => s.criterion_code === criterion.code);
                           if (!score) return null;
 
                           return (
-                            <tr key={ev.lecturer_id} className="group hover:bg-slate-50/30 transition-colors">
-                              <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
+                            <tr key={ev.lecturer_id} className="group hover:bg-slate-50/30 dark:hover:bg-slate-700/30 transition-colors">
+                              <td className="px-8 py-6 text-sm text-slate-600 dark:text-slate-300 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none dark:prose-invert">
                                 <ReactMarkdown>{score.strengths}</ReactMarkdown>
                               </td>
-                              <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none border-l border-slate-50">
+                              <td className="px-8 py-6 text-sm text-slate-600 dark:text-slate-300 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none dark:prose-invert border-l border-slate-50 dark:border-slate-700">
                                 <ReactMarkdown>{score.improvements}</ReactMarkdown>
                               </td>
-                              <td className="px-8 py-6 text-center border-l border-slate-50">
-                                <span className={`px-4 py-1.5 rounded-xl text-sm font-black bg-white border border-slate-200 shadow-sm ${getScoreColor(score.score, criterion.max_score)}`}>
+                              <td className="px-8 py-6 text-center border-l border-slate-50 dark:border-slate-700">
+                                <span className={`px-4 py-1.5 rounded-xl text-sm font-black bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 shadow-sm ${getScoreColor(score.score, criterion.max_score)}`}>
                                   {score.score}
                                 </span>
                               </td>
@@ -316,7 +316,7 @@ export const ProjectResults = () => {
           {/* Peer Feedback */}
           {project.course.project_type === 'TEAM' && (
             <section className="space-y-6">
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+              <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-3">
                 <Users size={24} className="text-purple-600" />
                 {t('lecturer.peer_feedback')}
               </h2>
@@ -328,17 +328,17 @@ export const ProjectResults = () => {
                   return (
                     <div key={member.id} className="space-y-4">
                       <div className="flex items-center gap-4">
-                        <h3 className="text-[11px] font-black text-purple-600 uppercase tracking-widest px-4 py-1.5 bg-purple-50 rounded-lg border border-purple-200 shadow-sm flex items-center gap-2">
+                        <h3 className="text-[11px] font-black text-purple-600 uppercase tracking-widest px-4 py-1.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 shadow-sm flex items-center gap-2">
                           <Users size={14} />
                           {member.name}
                         </h3>
-                        <div className="h-px bg-purple-100 flex-1" />
+                        <div className="h-px bg-purple-100 dark:bg-purple-900/40 flex-1" />
                       </div>
 
-                      <div className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
+                      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
                         <table className="w-full border-collapse">
                           <thead>
-                            <tr className="bg-slate-50/80 border-b border-slate-100">
+                            <tr className="bg-slate-50/80 dark:bg-slate-700/80 border-b border-slate-100 dark:border-slate-600">
                               <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-3 text-left w-[40%]">
                                 {t('student.label_strengths')}
                               </th>
@@ -350,17 +350,17 @@ export const ProjectResults = () => {
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-50">
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                             {receivedFeedback.map((f, i) => (
-                              <tr key={i} className="group hover:bg-slate-50/30 transition-colors">
-                                <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
+                              <tr key={i} className="group hover:bg-slate-50/30 dark:hover:bg-slate-700/30 transition-colors">
+                                <td className="px-8 py-6 text-sm text-slate-600 dark:text-slate-300 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none dark:prose-invert">
                                   <ReactMarkdown>{f.strengths || '---'}</ReactMarkdown>
                                 </td>
-                                <td className="px-8 py-6 text-sm text-slate-600 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none border-l border-slate-50">
+                                <td className="px-8 py-6 text-sm text-slate-600 dark:text-slate-300 italic leading-relaxed whitespace-pre-line prose prose-sm max-w-none dark:prose-invert border-l border-slate-50 dark:border-slate-700">
                                   <ReactMarkdown>{f.improvements || '---'}</ReactMarkdown>
                                 </td>
-                                <td className="px-8 py-6 text-center border-l border-slate-50">
-                                  <span className={`px-4 py-1.5 rounded-xl text-sm font-black bg-white border border-slate-200 shadow-sm ${f.bonus_points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                                <td className="px-8 py-6 text-center border-l border-slate-50 dark:border-slate-700">
+                                  <span className={`px-4 py-1.5 rounded-xl text-sm font-black bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 shadow-sm ${f.bonus_points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
                                     {f.bonus_points}
                                   </span>
                                 </td>

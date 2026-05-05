@@ -49,6 +49,6 @@ describe('App', () => {
     expect(screen.getByText(/Technická univerzita v Liberci/i)).toBeInTheDocument();
     
     // App title in nav
-    expect(screen.getByText('Katalog Projektů')).toBeInTheDocument();
+    expect(screen.getByText('Katalog Studentských Projektů')).toBeInTheDocument();
   });
 });

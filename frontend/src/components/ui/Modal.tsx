@@ -47,19 +47,19 @@ export const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }:
         onClick={onClose} 
       />
       <div 
-        className={`relative w-full ${sizeClasses[size]} bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]`}
+        className={`relative w-full ${sizeClasses[size]} bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-          <h3 id="modal-title" className="text-lg font-black text-slate-900 uppercase tracking-widest">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-700/50 shrink-0">
+          <h3 id="modal-title" className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">
             {title}
           </h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-xl text-slate-400 hover:text-slate-600 transition-all"
+            className="p-2 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all"
             aria-label={t('nav.close_menu')}
           >
             <X size={20} />
@@ -73,7 +73,7 @@ export const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }:
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 shrink-0">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/50 flex justify-end gap-3 shrink-0">
             {footer}
           </div>
         )}

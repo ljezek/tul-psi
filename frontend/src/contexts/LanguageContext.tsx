@@ -10,7 +10,7 @@ interface LanguageContextType {
 
 const translations: Record<string, Record<Language, string>> = {
   // Navigation & Roles
-  'app.title': { cs: 'Katalog Projektů', en: 'Project Catalog' },
+  'app.title': { cs: 'Katalog Studentských Projektů', en: 'Student Projects Catalogue' },
   'nav.dashboard': { cs: 'Projekty', en: 'Projects' },
   'nav.courses': { cs: 'Předměty', en: 'Courses' },
   'nav.student_zone': { cs: 'Studentská zóna', en: 'Student Zone' },
@@ -19,6 +19,8 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.logout': { cs: 'Odhlásit', en: 'Log Out' },
   'nav.open_menu': { cs: 'Otevřít menu', en: 'Open menu' },
   'nav.close_menu': { cs: 'Zavřít menu', en: 'Close menu' },
+  'theme.to_dark': { cs: 'Tmavý režim', en: 'Dark mode' },
+  'theme.to_light': { cs: 'Světlý režim', en: 'Light mode' },
   'role.public': { cs: 'Veřejnost', en: 'Public' },
   'role.student': { cs: 'Student', en: 'Student' },
   'role.lecturer': { cs: 'Lektor', en: 'Lecturer' },

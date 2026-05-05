@@ -94,7 +94,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
         {/* Left Column: Basic Info & Links */}
         <div className="space-y-6">
           <div className="space-y-4">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">{t('course.info')}</h3>
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2">{t('course.info')}</h3>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -105,7 +105,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   required
                   value={code}
                   onChange={e => setCode(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 />
               </div>
               <div>
@@ -114,7 +114,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   id="course-term"
                   value={term}
                   onChange={e => setTerm(e.target.value as CourseTerm)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 >
                   <option value={CourseTerm.WINTER}>{t('enum.WINTER')}</option>
                   <option value={CourseTerm.SUMMER}>{t('enum.SUMMER')}</option>
@@ -130,7 +130,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                 required
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
               />
             </div>
 
@@ -150,7 +150,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                     value={ownerEmail.includes('@') ? ownerEmail.split('@')[0] : ownerEmail}
                     onChange={e => setOwnerEmail(e.target.value)}
                     placeholder="lecturer"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-16 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl pl-10 pr-16 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
                 </div>
@@ -167,15 +167,15 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                 value={syllabus}
                 onChange={e => setSyllabus(e.target.value)}
                 rows={3}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold text-sm"
+                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold text-sm"
               />
             </div>
           </div>
 
           {/* Links Section */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
                 <LinkIcon size={16} className="text-fm-orange" />
                 {t('course.links')}
               </h3>
@@ -198,7 +198,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                       value={link.label}
                       onChange={e => updateLink(i, 'label', e.target.value)}
                       placeholder="e.g. eLearning"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                      className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                     />
                   </div>
                   <div className="flex-[2]">
@@ -208,7 +208,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                       value={link.url}
                       onChange={e => updateLink(i, 'url', e.target.value)}
                       placeholder="https://..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                      className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                     />
                   </div>
                   <button
@@ -227,7 +227,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
         {/* Right Column: Project Type, Scores & Criteria */}
         <div className="space-y-6">
           <div className="space-y-4">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">{t('project.type')} & {t('lecturer.score')}</h3>
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2">{t('project.type')} & {t('lecturer.score')}</h3>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -242,7 +242,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                       setPeerBonusBudget(10);
                     }
                   }}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 >
                   <option value={ProjectType.TEAM}>{t('enum.TEAM')}</option>
                   <option value={ProjectType.INDIVIDUAL}>{t('enum.INDIVIDUAL')}</option>
@@ -257,13 +257,13 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   min={0}
                   value={minScore}
                   onChange={e => setMinScore(parseInt(e.target.value, 10))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 />
               </div>
             </div>
 
             {projectType === ProjectType.TEAM && (
-              <div className={`p-4 rounded-2xl border transition-colors ${peerBonusBudget > 0 ? 'bg-purple-50 border-purple-100' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`p-4 rounded-2xl border transition-colors ${peerBonusBudget > 0 ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800' : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
                 <label htmlFor="course-peer-bonus" className={`block text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1 ${peerBonusBudget > 0 ? 'text-purple-400' : 'text-slate-400'}`}>
                   {t('course.peer_bonus')}
                 </label>
@@ -274,9 +274,9 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                     min={0}
                     value={peerBonusBudget}
                     onChange={e => setPeerBonusBudget(parseInt(e.target.value, 10) || 0)}
-                    className="w-24 bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                    className="w-24 bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-xl px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                   />
-                  <div className="flex-1 flex items-start gap-2 text-[10px] font-bold text-slate-500 leading-tight">
+                  <div className="flex-1 flex items-start gap-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-tight">
                     <Info size={14} className="shrink-0 text-slate-400 mt-0.5" />
                     {t('course.peer_bonus_hint')}
                   </div>
@@ -287,8 +287,8 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
 
           {/* Evaluation Criteria Section */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
                 <ListChecks size={16} className="text-fm-orange" />
                 {t('course.criteria')}
               </h3>
@@ -304,11 +304,11 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
 
             <div className="space-y-3">
               {evaluationCriteria.map((c, i) => (
-                <div key={i} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 relative group">
+                <div key={i} className="bg-slate-50 dark:bg-slate-700 p-4 rounded-2xl border border-slate-200 dark:border-slate-600 space-y-3 relative group">
                   <button
                     type="button"
                     onClick={() => removeCriterion(i)}
-                    className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -321,7 +321,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                         value={c.description}
                         onChange={e => updateCriterion(i, 'description', e.target.value)}
                         placeholder="e.g. Code Quality"
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                        className="w-full bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                       />
                     </div>
                     <div className="flex-1">
@@ -332,7 +332,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                         min={1}
                         value={c.max_score}
                         onChange={e => updateCriterion(i, 'max_score', parseInt(e.target.value, 10))}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
+                        className="w-full bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                       />
                     </div>
                   </div>
@@ -345,7 +345,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
 
       {error && <ErrorMessage message={error} />}
       
-      <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+      <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-700">
         <Button variant="ghost" type="button" onClick={() => window.history.back()}>{t('common.cancel')}</Button>
         <Button type="submit" isLoading={isLoading} className="px-12">
           {initialData ? t('common.save') : t('form.add')}

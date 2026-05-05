@@ -279,10 +279,10 @@ export const CourseEvaluation = () => {
         </Link>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+            <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">
               {t('student.courseEvaluation.title')}
             </h1>
-            <p className="text-slate-500 font-medium text-lg">
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
               {project.title} <span className="text-slate-300 mx-2">|</span> <Link to={`/courses/${project.course.id}`} className="text-fm-orange hover:underline">{project.course.code}</Link>
             </p>
           </div>
@@ -297,14 +297,14 @@ export const CourseEvaluation = () => {
 
       <form onSubmit={handleSubmit} className="space-y-12">
         {/* Subject Evaluation Section */}
-        <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-          <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center gap-3">
+        <section className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="bg-slate-50 dark:bg-slate-700 px-8 py-6 border-b border-slate-100 dark:border-slate-600 flex items-center gap-3">
             <ThumbsUp className="text-fm-orange" size={24} />
-            <h2 className="text-xl font-black text-slate-800">{t('student.course_eval')}</h2>
+            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">{t('student.course_eval')}</h2>
           </div>
           <div className="p-8 space-y-8">
             <div className="space-y-4">
-              <label className="block text-sm font-black text-slate-500 uppercase tracking-widest">{t('student.course_eval')}</label>
+              <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t('student.course_eval')}</label>
               <StarRating rating={rating} onChange={setRating} disabled={isResultsUnlocked} />
             </div>
 
@@ -319,12 +319,12 @@ export const CourseEvaluation = () => {
                   disabled={isResultsUnlocked}
                   value={strengths}
                   onChange={(e) => setStrengths(e.target.value)}
-                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white resize-none text-slate-700 font-medium disabled:opacity-70"
+                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 dark:border-slate-600 focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-700 resize-none text-slate-700 dark:text-slate-200 font-medium disabled:opacity-70"
                   placeholder={t('student.course_strengths_ph')}
                 />
               </div>
               <div className="space-y-3">
-                <label htmlFor="improvements" className="flex items-center gap-2 text-sm font-black text-orange-700 uppercase tracking-widest">
+                <label htmlFor="improvements" className="flex items-center gap-2 text-sm font-black text-orange-700 dark:text-orange-400 uppercase tracking-widest">
                   <TrendingUp size={16} /> {t('student.course_improvements')}
                 </label>
                 <textarea
@@ -333,7 +333,7 @@ export const CourseEvaluation = () => {
                   disabled={isResultsUnlocked}
                   value={improvements}
                   onChange={(e) => setImprovements(e.target.value)}
-                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white resize-none text-slate-700 font-medium disabled:opacity-70"
+                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 dark:border-slate-600 focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-700 resize-none text-slate-700 dark:text-slate-200 font-medium disabled:opacity-70"
                   placeholder={t('student.course_improvements_ph')}
                 />
               </div>
@@ -343,11 +343,11 @@ export const CourseEvaluation = () => {
 
         {/* Peer Evaluation Section */}
         {teammates.length > 0 && (
-          <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-            <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+          <section className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <div className="bg-slate-50 dark:bg-slate-700 px-8 py-6 border-b border-slate-100 dark:border-slate-600 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <User className="text-purple-600" size={24} />
-                <h2 className="text-xl font-black text-slate-800">{t('student.peer_eval')}</h2>
+                <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">{t('student.peer_eval')}</h2>
               </div>
               {budget !== null && !isResultsUnlocked && (
                 <div className="bg-purple-50 text-purple-700 px-4 py-2 rounded-2xl border border-purple-100 flex items-center gap-2 text-xs font-black uppercase" aria-live="polite">
@@ -359,14 +359,14 @@ export const CourseEvaluation = () => {
             
             <div className="p-8 space-y-12">
               {teammates.map(member => (
-                <div key={member.id} className="space-y-6 pb-12 border-b border-slate-100 last:border-0 last:pb-0">
+                <div key={member.id} className="space-y-6 pb-12 border-b border-slate-100 dark:border-slate-700 last:border-0 last:pb-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-700 font-black text-xl">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-black text-xl">
                         {member.name.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="font-black text-slate-800 text-lg">{member.name}</h3>
+                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-lg">{member.name}</h3>
                         <div className="flex items-center gap-4 mt-1">
                           <a href={`mailto:${member.email}`} className="text-xs font-bold text-slate-400 hover:text-fm-orange transition-colors flex items-center gap-1.5">
                             <Mail size={12} /> {member.email}
@@ -407,7 +407,7 @@ export const CourseEvaluation = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-[10px] font-black text-green-700 uppercase tracking-widest">
+                      <label className="flex items-center gap-2 text-[10px] font-black text-green-700 dark:text-green-400 uppercase tracking-widest">
                         <ThumbsUp size={12} /> {t('student.peer_strengths')}
                       </label>
                       <textarea
@@ -418,12 +418,12 @@ export const CourseEvaluation = () => {
                           ...peerTexts,
                           [member.id]: { ...(peerTexts[member.id] || { improvements: '' }), strengths: e.target.value }
                         })}
-                        className="w-full h-28 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all bg-slate-50 focus:bg-white resize-none text-sm font-medium disabled:opacity-70"
+                        className="w-full h-28 p-4 rounded-2xl border border-slate-200 dark:border-slate-600 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-700 resize-none text-sm text-slate-700 dark:text-slate-200 font-medium disabled:opacity-70"
                         placeholder={t('student.strengths_ph')}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-[10px] font-black text-orange-700 uppercase tracking-widest">
+                      <label className="flex items-center gap-2 text-[10px] font-black text-orange-700 dark:text-orange-400 uppercase tracking-widest">
                         <TrendingUp size={12} /> {t('student.peer_improvements')}
                       </label>
                       <textarea
@@ -434,7 +434,7 @@ export const CourseEvaluation = () => {
                           ...peerTexts,
                           [member.id]: { ...(peerTexts[member.id] || { strengths: '' }), improvements: e.target.value }
                         })}
-                        className="w-full h-28 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all bg-slate-50 focus:bg-white resize-none text-sm font-medium disabled:opacity-70"
+                        className="w-full h-28 p-4 rounded-2xl border border-slate-200 dark:border-slate-600 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-700 resize-none text-sm text-slate-700 dark:text-slate-200 font-medium disabled:opacity-70"
                         placeholder={t('student.improvements_ph')}
                       />
                     </div>
@@ -451,9 +451,9 @@ export const CourseEvaluation = () => {
                         value={peerPoints[member.id] || 0}
                         onChange={(e) => handlePointChange(member.id, Number(e.target.value))}
                         aria-label={`Points for ${member.name}`}
-                        className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full h-2 bg-slate-100 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
-                      <div className="flex justify-between mt-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                      <div className="flex justify-between mt-2 text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest">
                         <span>0</span>
                         <span>{budget}</span>
                         <span>{(budget || 0) * 2}</span>

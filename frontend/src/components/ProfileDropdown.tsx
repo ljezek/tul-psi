@@ -28,7 +28,7 @@ export const ProfileDropdown = () => {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-fm-orange transition-all px-2.5 py-1.5 rounded-xl hover:bg-slate-100 group cursor-pointer"
+        className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-fm-orange transition-all px-2.5 py-1.5 rounded-xl hover:bg-slate-100 group cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800"
       >
         <div className="w-8 h-8 rounded-full bg-fm-orange/10 flex items-center justify-center text-fm-orange group-hover:bg-fm-orange group-hover:text-white transition-colors">
           <User size={18} />
@@ -37,12 +37,12 @@ export const ProfileDropdown = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="font-bold text-slate-800">{t('profile.editing')}</h3>
-            <button 
-              onClick={() => setIsOpen(false)} 
-              className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 dark:bg-slate-800 dark:border-slate-700">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center dark:bg-slate-900 dark:border-slate-700">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100">{t('profile.editing')}</h3>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer dark:hover:bg-slate-700"
             >
               <X size={18} />
             </button>

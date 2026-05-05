@@ -166,7 +166,7 @@ export const ProjectDetail = () => {
             {project.academic_year}/{project.academic_year + 1}
           </span>
         </div>
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+        <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
           {project.title}
         </h1>
       </div>
@@ -176,7 +176,7 @@ export const ProjectDetail = () => {
         <div className="lg:col-span-2 space-y-10">
           {/* Description */}
           <section>
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
               <BookOpen size={20} className="text-fm-orange" />
               {t('form.full_desc')}
             </h2>
@@ -191,7 +191,7 @@ export const ProjectDetail = () => {
 
           {/* Technologies */}
           <section>
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Award size={20} className="text-fm-orange" />
               {t('project.technologies')}
             </h2>
@@ -199,7 +199,7 @@ export const ProjectDetail = () => {
               {project.technologies.map((tech, idx) => (
                 <span 
                   key={idx} 
-                  className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg border border-slate-200 uppercase tracking-wider"
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-600 uppercase tracking-wider"
                 >
                   {tech}
                 </span>
@@ -209,7 +209,7 @@ export const ProjectDetail = () => {
 
           {/* External Links */}
           {(project.github_url || project.live_url) && (
-            <section className="pt-6 border-t border-slate-100">
+            <section className="pt-6 border-t border-slate-100 dark:border-slate-700">
               <div className="flex flex-wrap gap-4">
                 {project.github_url && (
                   <a href={project.github_url} target="_blank" rel="noopener noreferrer">
@@ -234,9 +234,9 @@ export const ProjectDetail = () => {
 
         {/* Sidebar */}
         <div className="space-y-8">
-          {/* Team Members */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          {/* Team Members sidebar card */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Users size={20} className="text-fm-orange" />
               {t('project.members')}
             </h2>
@@ -252,7 +252,7 @@ export const ProjectDetail = () => {
                       <X size={12} />
                     </button>
                   )}
-                  <span className="font-semibold text-slate-800">{member.name}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-100">{member.name}</span>
                   <div className="flex items-center gap-3 text-xs text-slate-500">
                     {member.github_alias && (
                       <a 
@@ -281,20 +281,20 @@ export const ProjectDetail = () => {
           </div>
 
           {/* Course Info */}
-          <div className="bg-slate-50 rounded-2xl border border-slate-100 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
               {t('project.course_info')}
             </h2>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">{t('project.term')}</span>
-                <span className="font-medium text-slate-700">{project.course.term}</span>
+                <span className="text-slate-500 dark:text-slate-400">{t('project.term')}</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{project.course.term}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{t('project.type')}</span>
-                <span className="font-medium text-slate-700">{project.course.project_type}</span>
+                <span className="text-slate-500 dark:text-slate-400">{t('project.type')}</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{project.course.project_type}</span>
               </div>
-              <div className="pt-3 mt-3 border-t border-slate-200">
+              <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-600">
                 <p className="text-xs text-slate-400 uppercase font-bold mb-2 tracking-widest">
                   {t('role.lecturer')}
                 </p>
@@ -303,7 +303,7 @@ export const ProjectDetail = () => {
                     <div key={i} className="flex flex-col gap-1">
                       <Link 
                         to={`/courses?lecturer=${encodeURIComponent(l.name)}`}
-                        className="font-bold text-slate-700 hover:text-fm-orange transition-colors"
+                        className="font-bold text-slate-700 dark:text-slate-200 hover:text-fm-orange transition-colors"
                       >
                         {l.name}
                       </Link>
@@ -339,13 +339,13 @@ export const ProjectDetail = () => {
           {/* Role-based Action Links */}
           {(isMember || showLecturerControls) && (
             <div className="space-y-6">
-              <p className="text-xs text-slate-400 uppercase font-bold px-2 tracking-widest border-b border-slate-100 pb-2">
+              <p className="text-xs text-slate-400 dark:text-slate-500 uppercase font-bold px-2 tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2">
                 {showLecturerControls ? t('project.lecturer_links') : t('project.student_links')}
               </p>
               
               {isMember && (
                 <div className="space-y-4">
-                  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
                     <CourseEvaluationStatusCard 
                       project={project}
                       user={user}
