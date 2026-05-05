@@ -20,6 +20,34 @@ import {
   MemberPublic
 } from './types';
 
+// ---------------------------------------------------------------------------
+// CSRF token store
+//
+// The XSRF-TOKEN cookie is set on the *backend* domain, so document.cookie on
+// the frontend (SWA) domain cannot read it.  Instead, verify_otp returns the
+// token in the response body, and we persist it in localStorage so that it
+// survives page refreshes and is shared across tabs.
+// ---------------------------------------------------------------------------
+const _CSRF_STORAGE_KEY = 'xsrf-token';
+// In-memory fallback for environments where localStorage is unavailable (e.g. private browsing
+// with strict storage blocking).  Under normal conditions the token is always read fresh from
+// localStorage on each request so that cross-tab logout/login stays consistent.
+let _csrfTokenFallback: string | null = null;
+
+function getStoredCsrfToken(): string | null {
+  try { return localStorage.getItem(_CSRF_STORAGE_KEY); } catch { return _csrfTokenFallback; }
+}
+
+export function storeCsrfToken(token: string): void {
+  _csrfTokenFallback = token;
+  try { localStorage.setItem(_CSRF_STORAGE_KEY, token); } catch { /* storage unavailable */ }
+}
+
+function clearCsrfToken(): void {
+  _csrfTokenFallback = null;
+  try { localStorage.removeItem(_CSRF_STORAGE_KEY); } catch { /* storage unavailable */ }
+}
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
@@ -52,7 +80,7 @@ async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof 
   }
 
   if (MUTATING_METHODS.has((options.method ?? 'GET').toUpperCase())) {
-    const xsrfToken = getCookie('XSRF-TOKEN');
+    const xsrfToken = getStoredCsrfToken() || getCookie('XSRF-TOKEN');
     if (xsrfToken) {
       headers.set('X-XSRF-Token', xsrfToken);
     }
@@ -108,17 +136,19 @@ export async function requestOtp(email: string): Promise<{ message: string }> {
   });
 }
 
-export async function verifyOtp(email: string, otp: string): Promise<Record<string, never>> {
-  return apiFetch<Record<string, never>>('/api/v1/auth/otp/verify', {
+export async function verifyOtp(email: string, otp: string): Promise<{ xsrf_token: string }> {
+  return apiFetch<{ xsrf_token: string }>('/api/v1/auth/otp/verify', {
     method: 'POST',
     body: JSON.stringify({ email, otp }),
   });
 }
 
 export async function logout(): Promise<void> {
-  return apiFetch<void>('/api/v1/auth/logout', {
-    method: 'POST',
-  });
+  try {
+    await apiFetch<void>('/api/v1/auth/logout', { method: 'POST' });
+  } finally {
+    clearCsrfToken();
+  }
 }
 
 export async function getUsers(): Promise<UserPublic[]> {

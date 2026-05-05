@@ -199,7 +199,7 @@ Occurs during every **backend deployment** and **local startup**. Schema changes
 ### 3. Data Seeding (`seed.py`)
 Occurs automatically after migrations during startup:
 - **Idempotent:** It checks the `user` table and only runs if it is empty.
-- **Environment-aware:** Loads `seed_dev.sql` for `local`/`dev` (rich test data) and `seed_production.sql` for `production` (minimal setup with the initial admin user).
+- **Environment-aware:** Loads `seed_dev.sql` for `local`/`dev` (rich test data) and `seed_prod.sql` for `prod` (minimal setup with the initial admin user).
 - This ensures every fresh environment is immediately usable.
 
 ## Interaction Design
