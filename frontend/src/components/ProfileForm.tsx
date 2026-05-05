@@ -68,7 +68,7 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
     <div className="space-y-6">
       <div className="p-5 bg-slate-50 dark:bg-slate-700 rounded-2xl border border-slate-100 dark:border-slate-600 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-[0.15em]">
+          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
             <Shield size={12} />
             {t('profile.role')}
           </div>
@@ -76,7 +76,7 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
         </div>
         
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-[0.15em]">
+          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
             <Mail size={12} />
             {t('login.email_label')}
           </div>
