@@ -659,5 +659,6 @@ OTP authentication is bypassed in the e2e environment via `E2E_OTP_OVERRIDE=0000
 | Stage | Checks |
 |---|---|
 | PR (every push) | Ruff (Python lint + format), ESLint, `pytest` with coverage gate, `vitest` |
-| Merge to `main` | All PR checks + Playwright integration tests |
-| Deploy to DEV / PROD | _(Azure — milestone 3)_ |
+| Merge to `main` | All PR checks + Playwright E2E tests (ephemeral docker-compose stack) |
+| Deploy to DEV | Backend: Docker build → migration job → ACA update (rollback on fail). Frontend: SWA deploy with dev backend URL baked in. |
+| Deploy to PROD | SHA regression gate + dev health check + prod migration job + prod ACA/SWA deploy + smoke test. `promotedSha` tag stamped on success. |
