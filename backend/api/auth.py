@@ -133,16 +133,19 @@ async def verify_otp(
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
     # Non-HttpOnly XSRF-TOKEN cookie for Double Submit Cookie CSRF protection.
-    # JavaScript reads this value and echoes it as X-XSRF-Token on mutating requests.
+    # The token is also returned in the response body so that cross-origin frontends
+    # (where document.cookie cannot read a cookie set on the API's domain) can store
+    # it and echo it back as X-XSRF-Token on mutating requests.
+    xsrf_token = secrets.token_hex(32)
     response.set_cookie(
         key="XSRF-TOKEN",
-        value=secrets.token_hex(32),
+        value=xsrf_token,
         httponly=False,
         secure=secure_cookie,
         samesite=samesite_policy,
         max_age=_COOKIE_MAX_AGE_SECONDS,
     )
-    return {}
+    return {"xsrf_token": xsrf_token}
 
 
 @router.post(
