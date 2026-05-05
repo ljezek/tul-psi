@@ -132,10 +132,10 @@ export const ProjectResults = () => {
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-6 pt-6 border-t border-slate-50">
+            <div className="flex flex-wrap gap-6 pt-6 border-t border-slate-50 dark:border-slate-700">
               {project.members.map(m => (
                 <div key={m.id} className="space-y-1">
-                  <div className="text-xs font-black text-slate-800">{m.name}</div>
+                  <div className="text-xs font-black text-slate-800 dark:text-slate-100">{m.name}</div>
                   <div className="flex items-center gap-3">
                     <a href={`mailto:${m.email}`} title={m.email || undefined} className="text-slate-400 hover:text-fm-orange transition-colors">
                       <Mail size={12} />
@@ -237,7 +237,7 @@ export const ProjectResults = () => {
                         <span className="text-[10px] font-black text-slate-500">{t('results.total_score')}: {Math.round(totalPoints * 10) / 10}</span>
                       </div>
                     </div>
-                    <div className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isPass ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                    <div className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isPass ? 'bg-green-50 dark:bg-green-900/20 text-green-600 border border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-800'}`}>
                       {isPass ? <CheckCircle size={10} /> : <XCircle size={10} />}
                       {isPass ? t('results.pass') : t('results.fail')}
                     </div>
@@ -328,11 +328,11 @@ export const ProjectResults = () => {
                   return (
                     <div key={member.id} className="space-y-4">
                       <div className="flex items-center gap-4">
-                        <h3 className="text-[11px] font-black text-purple-600 uppercase tracking-widest px-4 py-1.5 bg-purple-50 rounded-lg border border-purple-200 shadow-sm flex items-center gap-2">
+                        <h3 className="text-[11px] font-black text-purple-600 uppercase tracking-widest px-4 py-1.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 shadow-sm flex items-center gap-2">
                           <Users size={14} />
                           {member.name}
                         </h3>
-                        <div className="h-px bg-purple-100 flex-1" />
+                        <div className="h-px bg-purple-100 dark:bg-purple-900/40 flex-1" />
                       </div>
 
                       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">

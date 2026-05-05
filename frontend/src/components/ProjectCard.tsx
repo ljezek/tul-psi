@@ -26,7 +26,7 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
   const displayedMembers = memberNames.slice(0, 3).join(', ') + (memberNames.length > 3 ? '...' : '');
 
   return (
-    <div className="relative bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-slate-100 flex flex-col h-full group">
+    <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col h-full group">
       {/* Primary stretched link covering the whole card for keyboard/screen-reader navigation. */}
       <Link
         to={`/projects/${project.id}`}
@@ -56,17 +56,17 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
             </button>
           )}
         </div>
-        <span className="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded">
+        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-medium rounded">
           {project.academic_year}/{project.academic_year + 1}
         </span>
       </div>
 
       {/* Content */}
       <div className="px-4 pb-4 flex-grow relative z-10 pointer-events-none">
-        <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-fm-orange transition-colors">
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-fm-orange transition-colors">
           {project.title}
         </h3>
-        <div className="text-slate-600 text-sm line-clamp-2 mb-4 prose-compact">
+        <div className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2 mb-4 prose-compact">
           {project.description ? (
             <ReactMarkdown>{project.description}</ReactMarkdown>
           ) : (
@@ -80,7 +80,7 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
           {project.technologies.slice(0, 3).map((tech, idx) => (
             <span 
               key={idx} 
-              className="px-2 py-0.5 bg-slate-50 text-slate-500 text-[10px] font-semibold rounded-full border border-slate-100 uppercase"
+              className="px-2 py-0.5 bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-semibold rounded-full border border-slate-100 dark:border-slate-600 uppercase"
             >
               {tech}
             </span>
@@ -104,8 +104,8 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center mt-auto relative z-10 pointer-events-none">
-        <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
+      <div className="px-4 py-3 bg-slate-50 dark:bg-slate-700 border-t border-slate-100 dark:border-slate-600 flex justify-between items-center mt-auto relative z-10 pointer-events-none">
+        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-medium">
           <Users size={14} />
           <span>{displayedMembers}</span>
         </div>
