@@ -40,8 +40,9 @@ Both `DATABASE_MIGRATION_URL` and `DATABASE_URL` are set on the job so `seed.py`
 `seed.py` is idempotent — it checks `SELECT COUNT(*) FROM user` and skips if data already exists.
 
 ### Scale-to-zero
-`minReplicas: 0` — the backend Container App does **not** start until the first HTTP request
-arrives. Do not assume the app is running just because it was deployed.
+**Dev:** `minReplicas: 0` — the backend Container App does **not** start until the first HTTP
+request arrives. Do not assume the app is running just because it was deployed.
+**Prod:** `minReplicas: 1` — always warm, no cold starts.
 
 ---
 
@@ -56,7 +57,10 @@ infrastructure/
   modules/
     compute.bicep         — ACA environment, backend app, migration job, pgAdmin app, SWA
     database-bootstrap.bicep — deploymentScript (ACI inside VNet) that creates DB roles
+    database-admin.bicep  — PostgreSQL Entra ID admin assignment
     monitoring.bicep      — Log Analytics workspace + Application Insights (per env)
+    alerts.bicep          — error-rate and p95-latency alert rules + action groups
+    acs.bicep             — Azure Communication Services (email delivery)
     network.bicep         — subnet definitions
     database.bicep        — PostgreSQL Flexible Server config
     acr.bicep / acr-role.bicep — Container Registry + pull-role assignments
@@ -88,9 +92,14 @@ apply automatically to every table Alembic creates.
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| `infrastructure.yml` | push to `infrastructure/**` or manual | Deploys shared + env Bicep |
+| `backend.yml` | PR touching `backend/**` | Ruff lint + pytest with coverage (PR gate) |
+| `frontend.yml` | PR touching `frontend/**` | ESLint + Vitest + SWA preview deploy (PR gate) |
+| `infrastructure-pr.yml` | PR touching `infrastructure/**` | `az bicep build` static analysis (PR gate) |
+| `infrastructure.yml` | push to `infrastructure/**` or manual | Deploys shared + env Bicep (prod gated by GitHub environment approval) |
 | `backend-dev.yml` | push to `backend/**` on `main` | Build image → run migration+seed job (polls for completion) → update ACA |
 | `frontend-dev.yml` | push to `frontend/**` on `main` | Deploy SPA to Azure Static Web App |
+| `e2e.yml` | after `backend-dev` or `frontend-dev` completes | Docker Compose stack + Playwright E2E tests |
+| `promote-to-prod.yml` | after E2E passes (or manual dispatch) | SHA regression gate → dev health check → prod backend + frontend deploy → smoke test |
 
 **Migration job wait pattern**: `az containerapp job start` returns an execution name; the
 workflow polls `az containerapp job execution show` every 10 s (max 6 min) before updating the
