@@ -144,7 +144,7 @@ export const Results = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-6 bg-slate-50/50 dark:bg-slate-700/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+          <div className="flex items-center gap-6 bg-slate-50/50 dark:bg-slate-700/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-600">
             <div className="text-right">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
                 {t('results.total_score')}

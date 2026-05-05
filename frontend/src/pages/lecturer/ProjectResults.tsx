@@ -151,7 +151,7 @@ export const ProjectResults = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-8 bg-slate-50/50 dark:bg-slate-700/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 h-fit self-center">
+          <div className="flex items-center gap-8 bg-slate-50/50 dark:bg-slate-700/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-600 h-fit self-center">
             <div className="text-right">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
                 {t('lecturer.lecturer_scores')}
