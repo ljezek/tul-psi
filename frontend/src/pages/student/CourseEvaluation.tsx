@@ -272,7 +272,7 @@ export const CourseEvaluation = () => {
       <div className="mb-10">
         <Link 
           to="/student"
-          className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-tul-blue transition-colors mb-6 group"
+          className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-fm-orange transition-colors mb-6 group"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           {t('project.back_to_student_zone')}
@@ -283,7 +283,7 @@ export const CourseEvaluation = () => {
               {t('student.courseEvaluation.title')}
             </h1>
             <p className="text-slate-500 font-medium text-lg">
-              {project.title} <span className="text-slate-300 mx-2">|</span> <Link to={`/courses/${project.course.id}`} className="text-tul-blue hover:underline">{project.course.code}</Link>
+              {project.title} <span className="text-slate-300 mx-2">|</span> <Link to={`/courses/${project.course.id}`} className="text-fm-orange hover:underline">{project.course.code}</Link>
             </p>
           </div>
           {isResultsUnlocked && (
@@ -299,7 +299,7 @@ export const CourseEvaluation = () => {
         {/* Subject Evaluation Section */}
         <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
           <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex items-center gap-3">
-            <ThumbsUp className="text-tul-blue" size={24} />
+            <ThumbsUp className="text-fm-orange" size={24} />
             <h2 className="text-xl font-black text-slate-800">{t('student.course_eval')}</h2>
           </div>
           <div className="p-8 space-y-8">
@@ -319,7 +319,7 @@ export const CourseEvaluation = () => {
                   disabled={isResultsUnlocked}
                   value={strengths}
                   onChange={(e) => setStrengths(e.target.value)}
-                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-tul-blue/10 focus:border-tul-blue transition-all bg-slate-50 focus:bg-white resize-none text-slate-700 font-medium disabled:opacity-70"
+                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white resize-none text-slate-700 font-medium disabled:opacity-70"
                   placeholder={t('student.course_strengths_ph')}
                 />
               </div>
@@ -333,7 +333,7 @@ export const CourseEvaluation = () => {
                   disabled={isResultsUnlocked}
                   value={improvements}
                   onChange={(e) => setImprovements(e.target.value)}
-                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-tul-blue/10 focus:border-tul-blue transition-all bg-slate-50 focus:bg-white resize-none text-slate-700 font-medium disabled:opacity-70"
+                  className="w-full h-40 p-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white resize-none text-slate-700 font-medium disabled:opacity-70"
                   placeholder={t('student.course_improvements_ph')}
                 />
               </div>
@@ -368,12 +368,12 @@ export const CourseEvaluation = () => {
                       <div>
                         <h3 className="font-black text-slate-800 text-lg">{member.name}</h3>
                         <div className="flex items-center gap-4 mt-1">
-                          <a href={`mailto:${member.email}`} className="text-xs font-bold text-slate-400 hover:text-tul-blue transition-colors flex items-center gap-1.5">
+                          <a href={`mailto:${member.email}`} className="text-xs font-bold text-slate-400 hover:text-fm-orange transition-colors flex items-center gap-1.5">
                             <Mail size={12} /> {member.email}
                           </a>
                           {member.github_alias && (
                             <>
-                              <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-slate-400 hover:text-tul-blue transition-colors flex items-center gap-1.5">
+                              <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-slate-400 hover:text-fm-orange transition-colors flex items-center gap-1.5">
                                 <GitHubLogo size={12} /> {member.github_alias}
                               </a>
                               {project.github_url && (
@@ -381,7 +381,7 @@ export const CourseEvaluation = () => {
                                   href={`${project.github_url.replace(/\/$/, '')}/pulls?q=is%3Apr+author%3A${member.github_alias}`} 
                                   target="_blank" 
                                   rel="noreferrer" 
-                                  className="text-xs font-bold text-slate-400 hover:text-tul-blue transition-colors flex items-center gap-1.5"
+                                  className="text-xs font-bold text-slate-400 hover:text-fm-orange transition-colors flex items-center gap-1.5"
                                   title={t('student.view_prs')}
                                 >
                                   <GitPullRequest size={12} />
@@ -480,7 +480,7 @@ export const CourseEvaluation = () => {
               <Button
                 type="submit"
                 disabled={submitting || rating === 0 || remainingPoints !== 0}
-                className="w-full md:w-auto rounded-2xl font-bold py-6 px-10 gap-2 shadow-xl shadow-tul-blue/20"
+                className="w-full md:w-auto rounded-2xl font-bold py-6 px-10 gap-2 shadow-xl shadow-fm-orange/20"
               >
                 <Save size={20} />
                 {t('profile.save')}

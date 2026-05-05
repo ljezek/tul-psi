@@ -45,7 +45,7 @@ export const ProjectForm = ({ initialData, onSubmit, isLoading, error }: Project
             required
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
           />
         </div>
 
@@ -59,7 +59,7 @@ export const ProjectForm = ({ initialData, onSubmit, isLoading, error }: Project
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={5}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold text-sm"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold text-sm"
           />
         </div>
 
@@ -72,7 +72,7 @@ export const ProjectForm = ({ initialData, onSubmit, isLoading, error }: Project
               value={githubUrl}
               onChange={e => setGithubUrl(e.target.value)}
               placeholder="https://github.com/..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
             />
           </div>
           <div>
@@ -83,7 +83,7 @@ export const ProjectForm = ({ initialData, onSubmit, isLoading, error }: Project
               value={liveUrl}
               onChange={e => setLiveUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
             />
           </div>
         </div>
@@ -98,7 +98,7 @@ export const ProjectForm = ({ initialData, onSubmit, isLoading, error }: Project
             type="text"
             value={technologies}
             onChange={e => setTechnologies(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
           />
         </div>
       </div>

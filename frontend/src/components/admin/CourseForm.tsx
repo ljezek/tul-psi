@@ -105,7 +105,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   required
                   value={code}
                   onChange={e => setCode(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 />
               </div>
               <div>
@@ -114,7 +114,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   id="course-term"
                   value={term}
                   onChange={e => setTerm(e.target.value as CourseTerm)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 >
                   <option value={CourseTerm.WINTER}>{t('enum.WINTER')}</option>
                   <option value={CourseTerm.SUMMER}>{t('enum.SUMMER')}</option>
@@ -130,7 +130,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                 required
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
               />
             </div>
 
@@ -150,7 +150,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                     value={ownerEmail.includes('@') ? ownerEmail.split('@')[0] : ownerEmail}
                     onChange={e => setOwnerEmail(e.target.value)}
                     placeholder="lecturer"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-16 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-16 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">@tul.cz</span>
                 </div>
@@ -167,7 +167,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                 value={syllabus}
                 onChange={e => setSyllabus(e.target.value)}
                 rows={3}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold text-sm"
               />
             </div>
           </div>
@@ -176,13 +176,13 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                <LinkIcon size={16} className="text-tul-blue" />
+                <LinkIcon size={16} className="text-fm-orange" />
                 {t('course.links')}
               </h3>
               <button
                 type="button"
                 onClick={addLink}
-                className="p-1 hover:bg-tul-blue/10 text-tul-blue rounded-lg transition-colors"
+                className="p-1 hover:bg-fm-orange/10 text-fm-orange rounded-lg transition-colors"
                 title={t('course.add_link')}
               >
                 <Plus size={20} />
@@ -198,7 +198,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                       value={link.label}
                       onChange={e => updateLink(i, 'label', e.target.value)}
                       placeholder="e.g. eLearning"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                     />
                   </div>
                   <div className="flex-[2]">
@@ -208,7 +208,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                       value={link.url}
                       onChange={e => updateLink(i, 'url', e.target.value)}
                       placeholder="https://..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                     />
                   </div>
                   <button
@@ -242,7 +242,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                       setPeerBonusBudget(10);
                     }
                   }}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 >
                   <option value={ProjectType.TEAM}>{t('enum.TEAM')}</option>
                   <option value={ProjectType.INDIVIDUAL}>{t('enum.INDIVIDUAL')}</option>
@@ -257,7 +257,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                   min={0}
                   value={minScore}
                   onChange={e => setMinScore(parseInt(e.target.value, 10))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                 />
               </div>
             </div>
@@ -274,7 +274,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                     min={0}
                     value={peerBonusBudget}
                     onChange={e => setPeerBonusBudget(parseInt(e.target.value, 10) || 0)}
-                    className="w-24 bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                    className="w-24 bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                   />
                   <div className="flex-1 flex items-start gap-2 text-[10px] font-bold text-slate-500 leading-tight">
                     <Info size={14} className="shrink-0 text-slate-400 mt-0.5" />
@@ -289,13 +289,13 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                <ListChecks size={16} className="text-tul-blue" />
+                <ListChecks size={16} className="text-fm-orange" />
                 {t('course.criteria')}
               </h3>
               <button
                 type="button"
                 onClick={addCriterion}
-                className="p-1 hover:bg-tul-blue/10 text-tul-blue rounded-lg transition-colors"
+                className="p-1 hover:bg-fm-orange/10 text-fm-orange rounded-lg transition-colors"
                 title={t('course.add_criterion')}
               >
                 <Plus size={20} />
@@ -321,7 +321,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                         value={c.description}
                         onChange={e => updateCriterion(i, 'description', e.target.value)}
                         placeholder="e.g. Code Quality"
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                       />
                     </div>
                     <div className="flex-1">
@@ -332,7 +332,7 @@ export const CourseForm = ({ initialData, onSubmit, isLoading, error }: CourseFo
                         min={1}
                         value={c.max_score}
                         onChange={e => updateCriterion(i, 'max_score', parseInt(e.target.value, 10))}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                       />
                     </div>
                   </div>

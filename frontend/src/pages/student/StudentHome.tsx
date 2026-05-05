@@ -92,19 +92,19 @@ export const StudentHome = () => {
         </h1>
         <div className="flex items-center gap-2 text-slate-500 font-medium">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          {t('student.logged_as')}: <span className="text-tul-blue font-bold">{user?.name}</span>
+          {t('student.logged_as')}: <span className="text-fm-orange font-bold">{user?.name}</span>
         </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {projects.map(project => {
           return (
-            <div key={project.id} className="group bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-tul-blue/30 transition-all duration-300 overflow-hidden flex flex-col">
+            <div key={project.id} className="group bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-fm-orange/30 transition-all duration-300 overflow-hidden flex flex-col">
               <div className="p-8 flex-grow">
                 <div className="flex justify-between items-start mb-4">
                   <Link 
                     to={`/courses/${project.course.id}`}
-                    className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-tul-blue hover:border-tul-blue/30 transition-colors"
+                    className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-fm-orange hover:border-fm-orange/30 transition-colors"
                   >
                     {project.course.code}
                   </Link>
@@ -115,7 +115,7 @@ export const StudentHome = () => {
                 </div>
 
                 <Link to={`/projects/${project.id}`} className="block group/title">
-                  <h3 className="text-2xl font-black text-slate-800 mb-2 group-hover/title:text-tul-blue transition-colors line-clamp-2">
+                  <h3 className="text-2xl font-black text-slate-800 mb-2 group-hover/title:text-fm-orange transition-colors line-clamp-2">
                     {project.title}
                   </h3>
                 </Link>
@@ -125,7 +125,7 @@ export const StudentHome = () => {
                   <Users size={14} className="text-slate-400" />
                   <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-2">
                     {project.members.map((m, idx) => (
-                      <span key={m.id} className={m.id === user?.id ? 'text-tul-blue' : ''}>
+                      <span key={m.id} className={m.id === user?.id ? 'text-fm-orange' : ''}>
                         {m.name}{idx < project.members.length - 1 ? ',' : ''}
                       </span>
                     ))}
@@ -144,7 +144,7 @@ export const StudentHome = () => {
                             placeholder={t('form.email_placeholder')}
                             value={memberEmail}
                             onChange={e => setMemberEmail(e.target.value.split('@')[0])}
-                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-tul-blue focus:ring-1"
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-16 text-sm text-slate-900 focus:outline-none focus:border-fm-orange focus:ring-1"
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">@tul.cz</span>
                         </div>
@@ -158,7 +158,7 @@ export const StudentHome = () => {
                     ) : (
                       <button 
                         onClick={() => setAddingMemberTo(project.id)}
-                        className="text-[10px] font-bold text-tul-blue hover:text-tul-blue/80 transition-colors uppercase tracking-wider flex items-center group/add"
+                        className="text-[10px] font-bold text-fm-orange hover:text-fm-orange/80 transition-colors uppercase tracking-wider flex items-center group/add"
                       >
                         <Plus size={12} className="mr-1 group-hover/add:scale-110 transition-transform"/> {t('lecturer.add_member')}
                       </button>

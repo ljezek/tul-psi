@@ -145,16 +145,16 @@ export const Login = () => {
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
         {/* TUL Branding Header */}
-        <div className="bg-tul-blue p-8 text-white text-center relative overflow-hidden">
+        <div className="bg-fm-orange p-8 text-white text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12 blur-xl"></div>
           
           <div className="relative z-10">
-            <div className="bg-white text-tul-blue w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="bg-white text-fm-orange w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                <span className="text-2xl font-black">FM</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">{t('login.title')}</h1>
-            <p className="text-blue-100 mt-1 font-medium">{t('app.title')}</p>
+            <p className="text-orange-100 mt-1 font-medium">{t('app.title')}</p>
           </div>
         </div>
 
@@ -167,7 +167,7 @@ export const Login = () => {
                 </label>
                 <div className="relative group flex">
                   <div className="relative flex-grow">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none transition-colors group-focus-within:text-tul-blue text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none transition-colors group-focus-within:text-fm-orange text-slate-400">
                       <Mail className="h-5 w-5" />
                     </div>
                     <input
@@ -177,7 +177,7 @@ export const Login = () => {
                       autoFocus
                       autoComplete="username"
                       disabled={loading}
-                      className="block w-full pl-11 pr-3 py-3.5 border border-slate-200 rounded-l-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue focus:bg-white transition-all text-slate-900 text-right disabled:opacity-50"
+                      className="block w-full pl-11 pr-3 py-3.5 border border-slate-200 rounded-l-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange focus:bg-white transition-all text-slate-900 text-right disabled:opacity-50"
                       placeholder="jan.novak"
                       value={emailPrefix}
                       onChange={(e) => setEmailPrefix(e.target.value.split('@')[0])}
@@ -189,14 +189,14 @@ export const Login = () => {
                 </div>
                 
                 {loading && (
-                  <div className="mt-4 flex items-center justify-center gap-3 text-tul-blue font-bold animate-pulse">
+                  <div className="mt-4 flex items-center justify-center gap-3 text-fm-orange font-bold animate-pulse">
                     <RefreshCw className="h-5 w-5 animate-spin" />
                     <span className="text-sm">{t('login.otp_generating')}</span>
                   </div>
                 )}
 
                 <p className="mt-2.5 text-sm text-slate-500 flex items-start gap-2 ml-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-tul-blue/40 mt-1.5 flex-shrink-0"></span>
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-fm-orange/40 mt-1.5 flex-shrink-0"></span>
                   {t('login.email_info')}
                 </p>
               </div>
@@ -209,7 +209,7 @@ export const Login = () => {
 
               <Button
                 type="submit"
-                className="w-full py-7 rounded-xl text-lg font-bold shadow-lg shadow-tul-blue/20 hover:shadow-tul-blue/30 active:scale-[0.98] transition-all"
+                className="w-full py-7 rounded-xl text-lg font-bold shadow-lg shadow-fm-orange/20 hover:shadow-fm-orange/30 active:scale-[0.98] transition-all"
                 disabled={loading || !emailPrefix.trim()}
               >
                 {loading ? (
@@ -228,7 +228,7 @@ export const Login = () => {
                   <button
                     type="button"
                     onClick={() => setStep('email')}
-                    className="text-sm font-bold text-tul-blue hover:text-tul-blue/80 transition-colors flex items-center gap-1"
+                    className="text-sm font-bold text-fm-orange hover:text-fm-orange/80 transition-colors flex items-center gap-1"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     {t('login.back')}
@@ -250,7 +250,7 @@ export const Login = () => {
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       onPaste={index === 0 ? handlePaste : undefined}
-                      className="w-full h-14 text-center text-2xl font-black border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-4 focus:ring-tul-blue/10 focus:border-tul-blue focus:bg-white transition-all text-slate-900"
+                      className="w-full h-14 text-center text-2xl font-black border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange focus:bg-white transition-all text-slate-900"
                     />
                   ))}
                 </div>
@@ -270,7 +270,7 @@ export const Login = () => {
               <div className="space-y-4">
                 <Button
                   type="submit"
-                  className="w-full py-7 rounded-xl text-lg font-bold shadow-lg shadow-tul-blue/20 hover:shadow-tul-blue/30 active:scale-[0.98] transition-all"
+                  className="w-full py-7 rounded-xl text-lg font-bold shadow-lg shadow-fm-orange/20 hover:shadow-fm-orange/30 active:scale-[0.98] transition-all"
                   disabled={loading || fullOtp.length !== 6}
                 >
                   {loading ? (
@@ -283,7 +283,7 @@ export const Login = () => {
                   type="button"
                   onClick={handleResendOtp}
                   disabled={loading}
-                  className="w-full text-sm font-bold text-slate-500 hover:text-tul-blue transition-colors py-2"
+                  className="w-full text-sm font-bold text-slate-500 hover:text-fm-orange transition-colors py-2"
                 >
                   {t('login.resend')}
                 </button>

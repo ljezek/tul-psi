@@ -260,7 +260,7 @@ This project uses **Azure Communication Services (ACS) Email** for all outgoing 
 ### How it works:
 1. **Automated Provisioning:** The `infrastructure/modules/acs.bicep` module creates a dedicated ACS resource and an **Azure-managed domain** automatically during the first infrastructure deployment.
 2. **Zero-Secret Wiring:** The ACS **connection string** is securely passed as an output to the backend Container App, where it is stored as an encrypted ACA secret. The application container never sees the raw secret in plain text environment variables.
-3. **Sender Address:** Emails are sent from a provisioned address in the format `tul-student-projects-catalogue@<hash>.azurecomm.net`. ACS currently uses the sender e-mail address itself (no separate sender display-name field), so we use a branded local-part. This avoids the need for a custom domain or SPF/DKIM DNS configuration.
+3. **Sender Address:** Emails are sent from a provisioned address in the format `DoNotReply@<hash>.azurecomm.net`. This avoids the need for a custom domain or SPF/DKIM DNS configuration.
 
 ### Setup Steps:
 No manual setup is required if you follow the standard deployment sequence. The first run of the Infrastructure Deployment for an environment (`dev` or `prod`) will provision all necessary email resources.

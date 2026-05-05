@@ -72,8 +72,8 @@ export const CourseList = () => {
 
       {/* Active Filters Info */}
       {(lecturerFilter || searchTerm) && (
-        <div className="bg-tul-blue/5 border border-tul-blue/10 rounded-xl p-4 mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-tul-blue">
+        <div className="bg-fm-orange/5 border border-fm-orange/10 rounded-xl p-4 mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-fm-orange">
             <Info size={20} />
             <span className="font-medium">
               {lecturerFilter && (
@@ -106,7 +106,7 @@ export const CourseList = () => {
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 focus:border-tul-blue transition-all shadow-sm"
+          className="block w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 focus:border-fm-orange transition-all shadow-sm"
           placeholder={t('dashboard.search_placeholder')}
           aria-label={t('dashboard.search_placeholder')}
           value={searchTerm}
@@ -121,10 +121,10 @@ export const CourseList = () => {
             <Link 
               key={course.id} 
               to={`/courses/${course.id}`}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-tul-blue/20 transition-all group flex flex-col h-full"
+              className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-fm-orange/20 transition-all group flex flex-col h-full"
             >
               <div className="flex items-start justify-between mb-4">
-                <span className="px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider">
+                <span className="px-2 py-1 bg-fm-orange/10 text-fm-orange text-xs font-bold rounded uppercase tracking-wider">
                   {course.code}
                 </span>
                 <span className="text-xs text-slate-400 font-medium">
@@ -132,7 +132,7 @@ export const CourseList = () => {
                 </span>
               </div>
               
-              <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-tul-blue transition-colors">
+              <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-fm-orange transition-colors">
                 {course.name}
               </h3>
               
@@ -147,7 +147,7 @@ export const CourseList = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-50 flex items-center text-tul-blue text-sm font-bold mt-auto">
+              <div className="pt-4 border-t border-slate-50 flex items-center text-fm-orange text-sm font-bold mt-auto">
                 {t('courseDetail.view_detail')}
                 <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
               </div>

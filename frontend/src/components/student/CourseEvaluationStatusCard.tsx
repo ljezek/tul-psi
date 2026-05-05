@@ -121,7 +121,7 @@ export const CourseEvaluationStatusCard = ({
 
         {project.results_unlocked && (
           <Link to={`/student/project/${project.id}/results`} className={isCompact ? '' : 'block w-full'}> 
-            <Button variant="outline" size={buttonSize} className={`rounded-xl border-tul-blue text-tul-blue hover:bg-tul-blue/5 font-black tracking-wider ${isCompact ? 'text-[10px] h-7 px-2 gap-1' : 'w-full text-xs py-2 gap-2'}`}>
+            <Button variant="outline" size={buttonSize} className={`rounded-xl border-fm-orange text-fm-orange hover:bg-fm-orange/5 font-black tracking-wider ${isCompact ? 'text-[10px] h-7 px-2 gap-1' : 'w-full text-xs py-2 gap-2'}`}>
               <BarChart3 size={isCompact ? iconSize : 18} />
               {t('student.show_results')}
             </Button>

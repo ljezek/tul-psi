@@ -205,16 +205,16 @@ export const ProjectEvaluation = () => {
               <div className="flex gap-4">
                 {project.github_url && isSafeUrl(project.github_url) && (
                   <>
-                    <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                    <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-fm-orange transition-colors">
                       <GitHubLogo size={14} /> {t('common.repo')}
                     </a>
-                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-fm-orange transition-colors">
                       <Users size={14} /> {t('project.contributors')}
                     </a>
                   </>
                 )}
                 {project.live_url && isSafeUrl(project.live_url) && (
-                  <a href={project.live_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-tul-blue transition-colors">
+                  <a href={project.live_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-fm-orange transition-colors">
                     <Globe size={14} /> {t('common.app')}
                   </a>
                 )}
@@ -255,11 +255,11 @@ export const ProjectEvaluation = () => {
                 <div className="min-w-0">
                   <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
                   <div className="flex flex-col gap-1 mt-1">
-                    <a href={`mailto:${member.email}`} className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
+                    <a href={`mailto:${member.email}`} className="text-[10px] font-bold text-slate-400 hover:text-fm-orange flex items-center gap-1">
                       <Mail size={10} /> {member.email}
                     </a>
                     {member.github_alias && (
-                      <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-tul-blue flex items-center gap-1">
+                      <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-slate-400 hover:text-fm-orange flex items-center gap-1">
                         <GitHubLogo size={10} /> {member.github_alias}
                       </a>
                     )}
@@ -306,7 +306,7 @@ export const ProjectEvaluation = () => {
                       ref={el => { if (formRefs.current[criterion.code]) formRefs.current[criterion.code].score = el; }}
                       onChange={(e) => handleScoreChange(criterion.code, 'score', parseInt(e.target.value, 10))}
                       aria-label={`${criterion.description} - ${t('lecturer.score')}`}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-tul-blue disabled:opacity-50"
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-fm-orange disabled:opacity-50"
                     />
                     <div className="flex justify-between mt-2 text-[8px] font-black text-slate-300 uppercase tracking-widest">
                       <span>0</span>
@@ -371,7 +371,7 @@ export const ProjectEvaluation = () => {
           <button
             onClick={() => handleSubmit(true)}
             disabled={saving}
-            className="inline-flex items-center justify-center px-6 py-3 bg-tul-blue hover:bg-tul-blue/90 text-white rounded-xl shadow-sm hover:shadow-tul-blue/20 transition-all duration-300 disabled:opacity-50 font-black text-sm tracking-wide transform hover:-translate-y-0.5"
+            className="inline-flex items-center justify-center px-6 py-3 bg-fm-orange hover:bg-fm-orange/90 text-white rounded-xl shadow-sm hover:shadow-fm-orange/20 transition-all duration-300 disabled:opacity-50 font-black text-sm tracking-wide transform hover:-translate-y-0.5"
           >
             <Send className="w-4 h-4 mr-2" />
             {t('lecturer.submit_evaluation')}

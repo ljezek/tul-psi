@@ -14,7 +14,7 @@ export const LoadingSpinner = ({
       aria-live="polite"
     >
       <div
-        className="animate-spin rounded-full border-4 border-slate-200 border-t-tul-blue h-8 w-8"
+        className="animate-spin rounded-full border-4 border-slate-200 border-t-fm-orange h-8 w-8"
         aria-hidden="true"
       ></div>
       <span className="sr-only">{label}</span>

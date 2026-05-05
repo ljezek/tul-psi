@@ -2,7 +2,8 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --color-tul-blue: #0077c8;
+  --color-fm-orange: #ea7603;
+  --color-tul-purple: #5948AD;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 

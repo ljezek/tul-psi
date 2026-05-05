@@ -39,7 +39,7 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
         <div className="flex gap-2 items-center pointer-events-auto">
           <Link
             to={`/courses/${project.course.id}`}
-            className="px-2 py-1 bg-tul-blue/10 text-tul-blue text-xs font-bold rounded uppercase tracking-wider hover:bg-tul-blue/20 transition-colors"
+            className="px-2 py-1 bg-fm-orange/10 text-fm-orange text-xs font-bold rounded uppercase tracking-wider hover:bg-fm-orange/20 transition-colors"
           >
             {project.course.code}
           </Link>
@@ -49,7 +49,7 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
                 e.preventDefault();
                 onEditCourse(project.course.id);
               }}
-              className="p-1 text-slate-400 hover:text-tul-blue hover:bg-slate-100 rounded-lg transition-all"
+              className="p-1 text-slate-400 hover:text-fm-orange hover:bg-slate-100 rounded-lg transition-all"
               title={t('admin.edit_course')}
             >
               <Settings size={14} />
@@ -63,7 +63,7 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
 
       {/* Content */}
       <div className="px-4 pb-4 flex-grow relative z-10 pointer-events-none">
-        <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-tul-blue transition-colors">
+        <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-fm-orange transition-colors">
           {project.title}
         </h3>
         <div className="text-slate-600 text-sm line-clamp-2 mb-4 prose-compact">
@@ -127,7 +127,7 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
               href={project.live_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-slate-400 hover:text-tul-blue transition-colors"
+              className="text-slate-400 hover:text-fm-orange transition-colors"
               title={t('project.live_demo')}
             >
               <ExternalLink size={18} />

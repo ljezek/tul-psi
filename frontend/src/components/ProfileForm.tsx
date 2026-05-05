@@ -51,7 +51,7 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
   const RoleBadge = ({ role }: { role: UserRole }) => {
     const roleColors: Record<UserRole, string> = {
       [UserRole.STUDENT]: 'bg-purple-100 text-purple-700 border-purple-200',
-      [UserRole.LECTURER]: 'bg-tul-blue/10 text-tul-blue border-tul-blue/20',
+      [UserRole.LECTURER]: 'bg-fm-orange/10 text-fm-orange border-fm-orange/20',
       [UserRole.ADMIN]: 'bg-slate-800 text-white border-slate-900',
     };
 
@@ -95,13 +95,13 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
             {t('profile.name')}
           </label>
           <div className="relative group">
-            <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-tul-blue transition-colors" />
+            <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-fm-orange transition-colors" />
             <input
               id="profile-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-tul-blue/10 focus:border-tul-blue transition-all bg-slate-50 focus:bg-white"
+              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white"
               required
             />
           </div>
@@ -115,13 +115,13 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
             {t('profile.github')}
           </label>
           <div className="relative group">
-            <GitHubLogo size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-tul-blue transition-colors" />
+            <GitHubLogo size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-fm-orange transition-colors" />
             <input
               id="profile-github"
               type="text"
               value={github}
               onChange={(e) => setGithub(e.target.value)}
-              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-tul-blue/10 focus:border-tul-blue transition-all bg-slate-50 focus:bg-white"
+              className="w-full pl-10 pr-3 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-fm-orange/10 focus:border-fm-orange transition-all bg-slate-50 focus:bg-white"
               placeholder="github-username"
             />
           </div>
@@ -137,7 +137,7 @@ export const ProfileForm = ({ onSuccess }: ProfileFormProps) => {
           type="submit"
           disabled={loading}
           className={`w-full py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
-            success ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'shadow-tul-blue/20'
+            success ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'shadow-fm-orange/20'
           }`}
         >
           {loading ? (

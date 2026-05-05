@@ -89,7 +89,7 @@ export const ProjectResults = () => {
       <div className="space-y-6">
         <button 
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-tul-blue transition-colors group"
+          className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-fm-orange transition-colors group"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           {t('common.back')}
@@ -99,7 +99,7 @@ export const ProjectResults = () => {
           <div className="space-y-6 flex-1">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <span className="bg-tul-blue text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">
+                <span className="bg-fm-orange text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">
                   {project.course.code}
                 </span>
                 <span className="bg-slate-50 px-3 py-1 rounded border border-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -113,20 +113,20 @@ export const ProjectResults = () => {
               <div className="flex flex-wrap gap-4 text-sm font-bold">
                 {project.github_url && (
                   <>
-                    <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                    <a href={project.github_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-fm-orange transition-colors">
                       <GitHubLogo size={14} /> {t('common.repo')}
                     </a>
-                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                    <a href={`${project.github_url}/graphs/contributors`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-fm-orange transition-colors">
                       <Users size={14} /> {t('project.contributors')}
                     </a>
                   </>
                 )}
                 {project.live_url && (
-                  <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-tul-blue transition-colors">
+                  <a href={project.live_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-fm-orange transition-colors">
                     <Globe size={14} /> {t('common.app')}
                   </a>
                 )}
-                <Link to={`/projects/${project.id}`} className="flex items-center gap-1.5 text-tul-blue hover:underline">
+                <Link to={`/projects/${project.id}`} className="flex items-center gap-1.5 text-fm-orange hover:underline">
                   <ExternalLink size={14} /> {t('projectDetail.title')}
                 </Link>
               </div>
@@ -137,11 +137,11 @@ export const ProjectResults = () => {
                 <div key={m.id} className="space-y-1">
                   <div className="text-xs font-black text-slate-800">{m.name}</div>
                   <div className="flex items-center gap-3">
-                    <a href={`mailto:${m.email}`} title={m.email || undefined} className="text-slate-400 hover:text-tul-blue transition-colors">
+                    <a href={`mailto:${m.email}`} title={m.email || undefined} className="text-slate-400 hover:text-fm-orange transition-colors">
                       <Mail size={12} />
                     </a>
                     {m.github_alias && (
-                      <a href={`https://github.com/${m.github_alias}`} target="_blank" rel="noreferrer" title={m.github_alias} className="text-slate-400 hover:text-tul-blue transition-colors">
+                      <a href={`https://github.com/${m.github_alias}`} target="_blank" rel="noreferrer" title={m.github_alias} className="text-slate-400 hover:text-fm-orange transition-colors">
                         <GitHubLogo size={12} />
                       </a>
                     )}
@@ -175,7 +175,7 @@ export const ProjectResults = () => {
           <section className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                <ListChecks size={14} className="text-tul-blue" />
+                <ListChecks size={14} className="text-fm-orange" />
                 {t('lecturer.avg_score')}
               </h3>
             </div>
@@ -201,7 +201,7 @@ export const ProjectResults = () => {
           <section className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                <Users size={14} className="text-tul-blue" />
+                <Users size={14} className="text-fm-orange" />
                 {t('student.results_status')}
               </h3>
             </div>
@@ -221,11 +221,11 @@ export const ProjectResults = () => {
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-black text-slate-800 truncate">{member.name}</div>
                         <div className="flex items-center gap-1.5">
-                          <a href={`mailto:${member.email}`} title={member.email || undefined} className="text-slate-300 hover:text-tul-blue transition-colors">
+                          <a href={`mailto:${member.email}`} title={member.email || undefined} className="text-slate-300 hover:text-fm-orange transition-colors">
                             <Mail size={10} />
                           </a>
                           {member.github_alias && (
-                            <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" title={member.github_alias} className="text-slate-300 hover:text-tul-blue transition-colors">
+                            <a href={`https://github.com/${member.github_alias}`} target="_blank" rel="noreferrer" title={member.github_alias} className="text-slate-300 hover:text-fm-orange transition-colors">
                               <GitHubLogo size={10} />
                             </a>
                           )}
@@ -254,7 +254,7 @@ export const ProjectResults = () => {
           <section className="space-y-8">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
-                <Award size={24} className="text-tul-blue" />
+                <Award size={24} className="text-fm-orange" />
                 {t('lecturer.lecturer_scores')}
               </h2>
             </div>

@@ -28,9 +28,9 @@ export const ProfileDropdown = () => {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-tul-blue transition-all px-2.5 py-1.5 rounded-xl hover:bg-slate-100 group cursor-pointer"
+        className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-fm-orange transition-all px-2.5 py-1.5 rounded-xl hover:bg-slate-100 group cursor-pointer"
       >
-        <div className="w-8 h-8 rounded-full bg-tul-blue/10 flex items-center justify-center text-tul-blue group-hover:bg-tul-blue group-hover:text-white transition-colors">
+        <div className="w-8 h-8 rounded-full bg-fm-orange/10 flex items-center justify-center text-fm-orange group-hover:bg-fm-orange group-hover:text-white transition-colors">
           <User size={18} />
         </div>
         <span className="max-w-[150px] truncate">{user.name}</span>

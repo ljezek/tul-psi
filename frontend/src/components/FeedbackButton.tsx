@@ -80,7 +80,7 @@ export const FeedbackButton = () => {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center text-slate-600 hover:text-tul-blue font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 cursor-pointer"
+        className="flex items-center text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 cursor-pointer"
         title={t('feedback.button')}
       >
         <MessageSquare size={18} />
@@ -112,7 +112,7 @@ export const FeedbackButton = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t('login.email_placeholder')}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold"
                   />
                 </div>
 
@@ -127,7 +127,7 @@ export const FeedbackButton = () => {
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder={t('feedback.placeholder_text')}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-tul-blue/20 font-bold resize-none text-sm"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-fm-orange/20 font-bold resize-none text-sm"
                   />
                 </div>
               </div>
@@ -152,7 +152,7 @@ export const FeedbackButton = () => {
                   type="submit"
                   isLoading={loading}
                   disabled={!feedback.trim()}
-                  className="px-8 shadow-lg shadow-tul-blue/20"
+                  className="px-8 shadow-lg shadow-fm-orange/20"
                 >
                   <Send size={18} className="mr-2" />
                   {t('feedback.submit')}
