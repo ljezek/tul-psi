@@ -7,7 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import require_current_user
 from db.session import get_session
+from models.user import User
 from rate_limit import rate_limit
 from services import auth_service
 from settings import get_settings
@@ -41,6 +43,12 @@ class OtpRequestResponse(BaseModel):
 
 class OtpVerifyResponse(BaseModel):
     """Response body for the OTP verify endpoint."""
+
+    xsrf_token: str
+
+
+class CsrfTokenResponse(BaseModel):
+    """Response body for the CSRF token refresh endpoint."""
 
     xsrf_token: str
 
@@ -196,3 +204,40 @@ async def logout(response: Response) -> dict[str, str]:
         max_age=0,
     )
     return {}
+
+
+@router.get(
+    "/csrf-token",
+    response_model=CsrfTokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Refresh the CSRF token",
+    description=(
+        "Issues a fresh XSRF-TOKEN cookie and returns the token value in the response body.  "
+        "Use this on app load when the user already has a valid session but no CSRF token "
+        "in localStorage (e.g. after upgrading from an older client).  "
+        "Requires an active session; returns HTTP 401 when unauthenticated."
+    ),
+)
+async def refresh_csrf_token(
+    response: Response,
+    _current_user: User = Depends(require_current_user),
+) -> CsrfTokenResponse:
+    """Issue a new XSRF-TOKEN for the authenticated session.
+
+    GET is exempt from the global CSRF check, so this endpoint is safe to call
+    even when the client has no CSRF token yet.
+    """
+    settings = get_settings()
+    secure_cookie = settings.app_env not in ("local", "e2e")
+    samesite_policy = "none" if secure_cookie else "lax"
+
+    xsrf_token = secrets.token_hex(32)
+    response.set_cookie(
+        key="XSRF-TOKEN",
+        value=xsrf_token,
+        httponly=False,
+        secure=secure_cookie,
+        samesite=samesite_policy,
+        max_age=_COOKIE_MAX_AGE_SECONDS,
+    )
+    return CsrfTokenResponse(xsrf_token=xsrf_token)

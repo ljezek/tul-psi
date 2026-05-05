@@ -34,7 +34,7 @@ const _CSRF_STORAGE_KEY = 'xsrf-token';
 // localStorage on each request so that cross-tab logout/login stays consistent.
 let _csrfTokenFallback: string | null = null;
 
-function getStoredCsrfToken(): string | null {
+export function getStoredCsrfToken(): string | null {
   try { return localStorage.getItem(_CSRF_STORAGE_KEY); } catch { return _csrfTokenFallback; }
 }
 
@@ -149,6 +149,11 @@ export async function logout(): Promise<void> {
   } finally {
     clearCsrfToken();
   }
+}
+
+export async function refreshCsrfToken(): Promise<void> {
+  const { xsrf_token } = await apiFetch<{ xsrf_token: string }>('/api/v1/auth/csrf-token');
+  storeCsrfToken(xsrf_token);
 }
 
 export async function getUsers(): Promise<UserPublic[]> {
