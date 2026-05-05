@@ -6,22 +6,96 @@ For Azure resource architecture see [DESIGN.md](DESIGN.md). For the initial Azur
 
 ---
 
+## Pipeline Overview Diagram
+
+```mermaid
+flowchart TD
+    PR([Pull Request])
+    MAIN([Merge to main])
+
+    PR --> BG[BE gate]
+    PR --> FG[FE gate + preview]
+    PR --> IG[Infra gate]
+
+    BG & FG & IG --> MAIN
+
+    MAIN --> BD[BE dev deploy]
+    MAIN --> FD[FE dev deploy]
+    MAIN --> ID[Infra: shared → dev → prod]
+
+    BD -->|workflow_run| E2E[E2E: Playwright]
+    FD -->|workflow_run| E2E
+
+    E2E -->|workflow_run| PP[Promote to prod]
+```
+
+---
+
+## Pipeline Detail Diagram
+
+```mermaid
+flowchart TD
+    PR([Pull Request])
+
+    PR -->|backend/**| BG[Backend Gate]
+    PR -->|frontend/**| FG[Frontend Gate]
+    PR -->|infrastructure/**| IG[Infra Gate]
+    FG -.->|preview| PREV[/SWA Preview/]
+
+    BG & FG & IG --> MAIN([Merge to main])
+
+    MAIN -->|backend/**| BD
+    MAIN -->|frontend/**| FD
+    MAIN -->|infrastructure/**| IS
+
+    subgraph bd [backend-dev.yml]
+        BD[Build image → ACR] --> BM[Run migration job] --> BU[Update dev backend]
+    end
+
+    subgraph fd [frontend-dev.yml]
+        FD[Build & deploy to dev SWA]
+    end
+
+    subgraph infra [infrastructure.yml]
+        IS[Deploy shared] --> IDV[Deploy dev] -->|approval gate| IPR[Deploy prod]
+    end
+
+    BU -->|either completes| E2E
+    FD -->|either completes| E2E
+
+    subgraph e2e [e2e.yml — cancel-in-progress]
+        E2E[Playwright tests]
+    end
+
+    E2E -->|success| GATE
+
+    subgraph ptp [promote-to-prod.yml]
+        GATE[gate — SHA regression + ACR check]
+        GATE --> VD[verify-dev health]
+        VD --> BP[deploy-backend-prod — migrations + ACA]
+        VD --> FP[deploy-frontend-prod — checkout SHA + SWA]
+        BP & FP --> ST[smoke-test — stamp promotedSha]
+    end
+```
+
+---
+
 ## Pipeline Overview
 
 ### Trigger Chain
 
 ```
 Push to main
-  ├─ backend/**   → Backend Deployment (Dev)  ─┐
-  ├─ frontend/**  → Frontend Deployment (Dev) ──┼─→ E2E Tests ─→ Promote to Production
-  ├─ infrastructure/** → Infrastructure Deployment (dev only; prod is manual)
-  └─ data/**      → Validate JSON (PR gate only)
+  ├─ backend/**        → Backend Deployment (Dev)  ─┐
+  ├─ frontend/**       → Frontend Deployment (Dev) ──┼─→ E2E Tests ─→ Promote to Production
+  ├─ infrastructure/** → Infrastructure Deployment (shared → dev auto; prod auto-triggered, gated by GitHub env approval)
+  └─ data/**           → Validate JSON (PR gate only)
 
 Pull Request to main
-  ├─ backend/**   → Backend Gate (pytest + ruff)
-  ├─ frontend/**  → Frontend Gate (vitest + eslint) + Preview SWA deploy
+  ├─ backend/**        → Backend Gate (ruff + pytest)
+  ├─ frontend/**       → Frontend Gate (eslint + vitest) + Preview SWA deploy
   ├─ infrastructure/** → Infrastructure Gate (az bicep build)
-  └─ data/**      → Validate JSON
+  └─ data/**           → Validate JSON
   (no app changes: skip workflows satisfy branch-protection checks)
 ```
 
@@ -34,7 +108,7 @@ Pull Request to main
 | `infrastructure-pr.yml` | PR (infrastructure/**) | Branch protection gate (bicep build) |
 | `backend-dev.yml` | Push to main (backend/**) or manual | Dev backend Container App |
 | `frontend-dev.yml` | Push to main (frontend/**) or manual | Dev Static Web App |
-| `infrastructure.yml` | Push to main (infrastructure/**) or manual | Dev infra (auto) / Prod infra (manual) |
+| `infrastructure.yml` | Push to main (infrastructure/**) or manual | Shared + dev Bicep (auto); prod Bicep (auto-triggered, gated by GitHub environment approval) |
 | `e2e.yml` | After backend-dev or frontend-dev completes | Local docker-compose stack |
 | `promote-to-prod.yml` | After E2E passes or manual | Prod backend + prod SWA |
 
@@ -47,7 +121,7 @@ Pull Request to main
 | **Backend only** | `backend-dev` runs | Yes | Yes | Yes (rebuilt from same SHA — same output) |
 | **Frontend only** | `frontend-dev` runs | Yes | Skipped cleanly (no ACR image for this SHA) | Yes |
 | **All parts** | Both run | Yes (concurrency keeps one E2E) | Yes | Yes |
-| **Infrastructure only** | `infrastructure.yml` runs for dev | No | No | No — prod infra is manual |
+| **Infrastructure only** | `infrastructure.yml` runs: shared → dev auto, prod gated | No | No | No — infra changes do not trigger app promotion |
 | **Data / other** | No | No | No | No |
 
 ### Why frontend rebuilds on backend-only changes
@@ -56,11 +130,11 @@ Pull Request to main
 
 ### Infrastructure changes and prod
 
-Infrastructure changes are automatically deployed to dev. **Prod infrastructure is never auto-deployed.** After merging infra changes, trigger the prod deployment manually:
+Infrastructure changes are automatically deployed to dev. **Prod infrastructure is auto-triggered but gated** — the `infrastructure.yml` workflow runs `shared → dev → prod` sequentially on every push, but the `prod` job requires a reviewer to approve it via the GitHub `prod` environment protection rules before it executes. To deploy prod infrastructure manually (e.g. without a push):
 
 1. Go to **Actions → Infrastructure Deployment → Run workflow**
 2. Set `environment` to `prod`
-3. Monitor and verify in the Azure Portal
+3. Approve the environment gate when prompted, then monitor in the Azure Portal
 
 ---
 
@@ -71,9 +145,9 @@ After E2E tests pass on `main`, `promote-to-prod.yml` runs five jobs in sequence
 ```
 gate
   └── verify-dev
-        ├── deploy-backend-prod  (parallel)
-        └── deploy-frontend-prod (parallel)
-              └── smoke-test
+        ├── deploy-backend-prod ──┐  (parallel)
+        └── deploy-frontend-prod ─┤  (parallel)
+                                  └── smoke-test
 ```
 
 ### gate
@@ -87,10 +161,10 @@ Runs without a GitHub environment (uses the main-branch OIDC credential). Perfor
 Polls the live `ca-spc-dev-backend` `/health` endpoint. Prod promotion is blocked if dev itself is unhealthy.
 
 ### deploy-backend-prod
-Promotes the same Docker image that was deployed to dev (no rebuild). Runs Alembic migrations first; if migrations fail, the Container App update is never attempted and the previous image keeps running.
+Re-reads the live `promotedSha` tag immediately after any approval wait and aborts if it changed (prevents a stale approval from overwriting a newer deployment). Then promotes the same Docker image that was deployed to dev (no rebuild). Runs Alembic migrations first via `job-spc-prod-migrate`; if migrations fail, the Container App update is never attempted and the previous image keeps running.
 
 ### deploy-frontend-prod
-Checks out the exact promoted SHA and rebuilds the frontend with the prod backend URL baked in. Deploys to `swa-spc-prod`.
+Re-reads the live `promotedSha` tag immediately after any approval wait and aborts if it changed (same stale-approval guard as the backend job). Checks out the exact promoted SHA and rebuilds the frontend with the prod backend URL baked in. Deploys to `swa-spc-prod`.
 
 ### smoke-test
 Polls prod `/health` with retries. On success, stamps the `promotedSha` tag on `ca-spc-prod-backend` and writes a summary to the GitHub Actions job summary page.
