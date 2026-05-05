@@ -13,8 +13,7 @@ resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = {
   }
 }
 
-// Azure-managed domain: no DNS setup required.
-// ACS does not expose a sender display-name field, so we use a branded local-part.
+// Azure-managed domain: no DNS setup required, sends from DoNotReply@<hash>.azurecomm.net
 resource managedDomain 'Microsoft.Communication/emailServices/domains@2023-04-01' = {
   parent: emailService
   name: 'AzureManagedDomain'
@@ -39,4 +38,4 @@ resource commService 'Microsoft.Communication/communicationServices@2023-04-01' 
 // Connection string is treated as sensitive by ARM and redacted from deployment history.
 #disable-next-line outputs-should-not-contain-secrets
 output connectionString string = commService.listKeys().primaryConnectionString
-output fromAddress string = 'tul-student-projects-catalogue@${managedDomain.properties.mailFromSenderDomain}'
+output fromAddress string = 'DoNotReply@${managedDomain.properties.mailFromSenderDomain}'
