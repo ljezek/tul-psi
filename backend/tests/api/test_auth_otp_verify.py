@@ -182,8 +182,8 @@ async def test_otp_verify_returns_429_when_attempt_limit_reached(client: AsyncCl
 async def test_otp_verify_success_sets_cookie_and_marks_token_used(
     client: AsyncClient,
 ) -> None:
-    """A valid OTP must return 200 with an empty body, set the session cookie, and mark the token
-    used."""
+    """A valid OTP must return 200 with an xsrf_token in the body, set the session cookie, and
+    mark the token used."""
     mock_user = _make_user()
     mock_token = _make_token(otp="483921")
     with (

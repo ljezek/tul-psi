@@ -29,17 +29,22 @@ import {
 // survives page refreshes and is shared across tabs.
 // ---------------------------------------------------------------------------
 const _CSRF_STORAGE_KEY = 'xsrf-token';
-let _csrfToken: string | null = (() => {
-  try { return localStorage.getItem(_CSRF_STORAGE_KEY); } catch { return null; }
-})();
+// In-memory fallback for environments where localStorage is unavailable (e.g. private browsing
+// with strict storage blocking).  Under normal conditions the token is always read fresh from
+// localStorage on each request so that cross-tab logout/login stays consistent.
+let _csrfTokenFallback: string | null = null;
+
+function getStoredCsrfToken(): string | null {
+  try { return localStorage.getItem(_CSRF_STORAGE_KEY); } catch { return _csrfTokenFallback; }
+}
 
 export function storeCsrfToken(token: string): void {
-  _csrfToken = token;
+  _csrfTokenFallback = token;
   try { localStorage.setItem(_CSRF_STORAGE_KEY, token); } catch { /* storage unavailable */ }
 }
 
 function clearCsrfToken(): void {
-  _csrfToken = null;
+  _csrfTokenFallback = null;
   try { localStorage.removeItem(_CSRF_STORAGE_KEY); } catch { /* storage unavailable */ }
 }
 
@@ -75,7 +80,7 @@ async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof 
   }
 
   if (MUTATING_METHODS.has((options.method ?? 'GET').toUpperCase())) {
-    const xsrfToken = _csrfToken || getCookie('XSRF-TOKEN');
+    const xsrfToken = getStoredCsrfToken() || getCookie('XSRF-TOKEN');
     if (xsrfToken) {
       headers.set('X-XSRF-Token', xsrfToken);
     }
