@@ -38,7 +38,7 @@ omit = [
     "tests/*",
     "seed.py",
     "seed_dev.sql",
-    "seed_production.sql",
+    "seed_prod.sql",
     "alembic.ini",
     "migration_settings.py",
     "*/__init__.py",

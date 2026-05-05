@@ -84,7 +84,7 @@ async def _run(*, reset: bool) -> None:
 
     # Determine which SQL file to use based on APP_ENV.
     # For local/dev we use the same rich seed data (seed_dev.sql).
-    # For production we use the minimal seed data (seed_production.sql).
+    # For production we use the minimal seed data (seed_prod.sql).
     # We look for seed_{app_env}.sql, falling back to seed_dev.sql for local/dev.
     env_name = settings.app_env
     sql_file = Path(__file__).parent / f"seed_{env_name}.sql"
