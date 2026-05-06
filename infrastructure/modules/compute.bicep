@@ -18,12 +18,12 @@ param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
 
-param smtpHost string
+param smtpHost string = 'smtp.tul.cz'
 param smtpPort int = 587
-param smtpUsername string
+param smtpUsername string = 'lukas.jezek@tul.cz'
 @secure()
 param smtpPassword string
-param smtpFromAddress string
+param smtpFromAddress string = 'lukas.jezek@tul.cz'
 
 param tags object
 param minReplicas int = 0
