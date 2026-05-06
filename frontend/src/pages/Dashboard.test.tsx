@@ -106,6 +106,9 @@ describe('Dashboard', () => {
     vi.clearAllMocks();
     (api.getProjects as Mock).mockResolvedValue(mockProjects);
     (api.getCourses as Mock).mockResolvedValue(mockCourses);
+    // Return null (not undefined) so setUser(null) keeps the state unchanged,
+    // preventing a spurious re-fetch triggered by the auth state transition.
+    (api.getCurrentUser as Mock).mockResolvedValue(null);
   });
 
   const renderDashboard = () => {
