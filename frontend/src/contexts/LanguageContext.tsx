@@ -199,6 +199,7 @@ const translations: Record<string, Record<Language, string>> = {
   'login.back': { cs: 'Zpět', en: 'Back' },
   'login.resend': { cs: 'Odeslat znovu', en: 'Resend Code' },
   'login.error_invalid_email': { cs: 'Zadejte platný @tul.cz email.', en: 'Enter a valid @tul.cz email.' },
+  'login.error_incomplete_otp': { cs: 'Zadejte celý 6místný kód.', en: 'Please enter the full 6-digit code.' },
   'login.error_not_registered': { cs: 'Tento email není registrován. Kontaktujte svého přednášejícího nebo správce.', en: 'No account found for this email. Contact your lecturer or administrator to get registered.' },
   'login.error_rate_limited': { cs: 'Příliš mnoho požadavků — chvíli počkejte.', en: 'Too many requests — please wait before trying again.' },
   'login.error_rate_limited_seconds': { cs: 'Příliš mnoho požadavků — zkuste to znovu za {seconds} s.', en: 'Too many requests — try again in {seconds} s.' },

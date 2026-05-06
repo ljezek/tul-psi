@@ -88,7 +88,7 @@ export const Login = () => {
     setError(null);
 
     if (fullOtp.length !== 6) {
-      setError(t('login.error_unexpected'));
+      setError(t('login.error_incomplete_otp'));
       return;
     }
 
