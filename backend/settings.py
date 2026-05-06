@@ -78,13 +78,12 @@ class Settings(BaseSettings):
 
     # SMTP relay settings — used when email_backend is "smtp" (or "auto" in non-local envs).
     # SMTP_PASSWORD is injected from an ACA secret (set via Bicep / GitHub secrets).
-    # All other fields are plain env vars; they are all None in local/e2e environments
-    # where email is printed to stderr instead.
-    smtp_host: str | None = None  # e.g. mail.smtp2go.com
+    # All other fields are plain env vars with sensible defaults for the TUL deployment.
+    smtp_host: str = "smtp.tul.cz"
     smtp_port: int = 587
-    smtp_username: str | None = None
+    smtp_username: str = "lukas.jezek@tul.cz"
     smtp_password: str | None = None  # injected as an encrypted ACA secret
-    smtp_from_address: str | None = None  # e.g. tul-projects@jezci.net
+    smtp_from_address: str = "lukas.jezek@tul.cz"
 
     # Health check URL for the OTel collector sidecar/service.
     # In Azure, it's typically http://localhost:13133.
