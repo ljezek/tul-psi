@@ -75,6 +75,10 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_COLLECTOR_HEALTH_URL=http://otel-collector:13133
       - LOG_LEVEL=debug
+      # Must include the exact origin of the Vite dev server so that the CORS
+      # middleware sets Access-Control-Allow-Credentials: true, which is required
+      # for the browser to store the HttpOnly session cookie on cross-port requests.
+      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
     ports:
       - "8000:8000"
     depends_on:

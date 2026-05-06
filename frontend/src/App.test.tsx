@@ -24,6 +24,15 @@ describe('App', () => {
         });
       }
 
+      // No active announcement — return null so the banner stays hidden.
+      if (url.includes('/api/v1/announcements/active')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve('null'),
+        });
+      }
+
       return Promise.resolve({
         ok: true,
         status: 200,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .announcement import Announcement, AnnouncementSeverity
 from .course import Course, CourseLink, CourseTerm, EvaluationCriterion, ProjectType
 from .course_evaluation import CourseEvaluation
 from .course_lecturer import CourseLecturer
@@ -11,6 +12,8 @@ from .project_member import ProjectMember
 from .user import User, UserRole
 
 __all__ = [
+    "Announcement",
+    "AnnouncementSeverity",
     "Course",
     "CourseEvaluation",
     "CourseLecturer",

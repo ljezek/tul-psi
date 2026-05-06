@@ -23,6 +23,7 @@ const CourseProjects = lazy(() => import('@/pages/lecturer/CourseProjects').then
 const ProjectEvaluation = lazy(() => import('@/pages/lecturer/ProjectEvaluation').then(m => ({ default: m.ProjectEvaluation })));
 const ProjectResults = lazy(() => import('@/pages/lecturer/ProjectResults').then(m => ({ default: m.ProjectResults })));
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement').then(m => ({ default: m.UserManagement })));
+const AnnouncementManagement = lazy(() => import('@/pages/admin/AnnouncementManagement').then(m => ({ default: m.AnnouncementManagement })));
 
 // Loading component
 const PageLoader = () => (
@@ -58,6 +59,7 @@ const router = createBrowserRouter(
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
         <Route path="/admin/users" element={<Suspense fallback={<PageLoader />}><UserManagement /></Suspense>} />
+        <Route path="/admin/announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementManagement /></Suspense>} />
       </Route>
 
     </Route>

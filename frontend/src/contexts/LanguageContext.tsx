@@ -33,6 +33,9 @@ const translations: Record<string, Record<Language, string>> = {
   'enum.SUMMER': { cs: 'Letní semestr', en: 'Summer Term' },
   'enum.TEAM': { cs: 'Týmový projekt', en: 'Team Project' },
   'enum.INDIVIDUAL': { cs: 'Individuální projekt', en: 'Individual Project' },
+  'enum.INFO': { cs: 'Informace', en: 'Info' },
+  'enum.WARNING': { cs: 'Upozornění', en: 'Warning' },
+  'enum.ERROR': { cs: 'Chyba', en: 'Error' },
 
   // Course List & Detail
   'courseList.title': { cs: 'Seznam předmětů', en: 'Course List' },
@@ -338,11 +341,28 @@ const translations: Record<string, Record<Language, string>> = {
   'course.code': { cs: 'Kód kurzu', en: 'Course Code' },
   'course.name': { cs: 'Název kurzu', en: 'Course Name' },
   'common.save': { cs: 'Uložit', en: 'Save' },
+  'common.saving': { cs: 'Ukládám...', en: 'Saving...' },
   'common.cancel': { cs: 'Zrušit', en: 'Cancel' },
   'common.delete': { cs: 'Smazat', en: 'Delete' },
+  'common.edit': { cs: 'Upravit', en: 'Edit' },
   'common.actions': { cs: 'Akce', en: 'Actions' },
   'common.search': { cs: 'Hledat', en: 'Search' },
   'common.all': { cs: 'Všechny', en: 'All' },
+  'common.error_generic': { cs: 'Nastala neočekávaná chyba.', en: 'An unexpected error occurred.' },
+
+  // Announcements
+  'admin.announcements': { cs: 'Oznámení', en: 'Announcements' },
+  'admin.announcements_subtitle': { cs: 'Zobrazujte systémová oznámení studentům a dalším uživatelům.', en: 'Display system-wide notices to students and other users.' },
+  'admin.announcements_empty': { cs: 'Zatím nebyla vytvořena žádná oznámení.', en: 'No announcements created yet.' },
+  'admin.announcement_create': { cs: 'Nové oznámení', en: 'New Announcement' },
+  'admin.announcement_edit': { cs: 'Upravit oznámení', en: 'Edit Announcement' },
+  'admin.announcement_active': { cs: 'Aktivní', en: 'Active' },
+  'admin.announcement_activate': { cs: 'Aktivovat oznámení', en: 'Activate announcement' },
+  'admin.announcement_deactivate': { cs: 'Deaktivovat oznámení', en: 'Deactivate announcement' },
+  'admin.announcement_message': { cs: 'Text oznámení', en: 'Announcement message' },
+  'admin.announcement_message_placeholder': { cs: 'Zadejte text oznámení...', en: 'Enter announcement text...' },
+  'admin.announcement_severity': { cs: 'Typ', en: 'Severity' },
+  'admin.announcement_set_active': { cs: 'Okamžitě aktivovat (zobrazit uživatelům)', en: 'Activate immediately (show to users)' },
 
   // Feedback Form
   'feedback.button': { cs: 'Nahlásit chybu / Zpětná vazba', en: 'Report Bug / Feedback' },
