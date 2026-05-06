@@ -16,21 +16,21 @@ interface SeverityConfig {
 
 const SEVERITY_CONFIG: Record<AnnouncementSeverity, SeverityConfig> = {
   [AnnouncementSeverity.INFO]: {
-    container: 'bg-tul-blue text-white',
-    icon: 'text-blue-100',
-    closeButton: 'hover:bg-blue-700 text-blue-100',
+    container: 'bg-fm-orange/8 border-b border-fm-orange/20 text-slate-600 dark:bg-fm-orange/10 dark:border-fm-orange/25 dark:text-slate-300',
+    icon: 'text-fm-orange/70 dark:text-fm-orange/60',
+    closeButton: 'hover:bg-fm-orange/10 text-slate-400 dark:text-slate-500',
     Icon: Info,
   },
   [AnnouncementSeverity.WARNING]: {
-    container: 'bg-amber-500 text-white',
-    icon: 'text-amber-100',
-    closeButton: 'hover:bg-amber-600 text-amber-100',
+    container: 'bg-amber-50/80 border-b border-amber-200 text-slate-600 dark:bg-amber-950/40 dark:border-amber-800 dark:text-slate-300',
+    icon: 'text-amber-400 dark:text-amber-500',
+    closeButton: 'hover:bg-amber-100/60 text-slate-400 dark:text-slate-500',
     Icon: AlertTriangle,
   },
   [AnnouncementSeverity.ERROR]: {
-    container: 'bg-red-600 text-white',
-    icon: 'text-red-100',
-    closeButton: 'hover:bg-red-700 text-red-100',
+    container: 'bg-red-50/80 border-b border-red-200 text-slate-600 dark:bg-red-950/40 dark:border-red-800 dark:text-slate-300',
+    icon: 'text-red-400 dark:text-red-500',
+    closeButton: 'hover:bg-red-100/60 text-slate-400 dark:text-slate-500',
     Icon: AlertCircle,
   },
 };
@@ -88,10 +88,10 @@ export const AnnouncementBanner = () => {
     <div
       role="alert"
       aria-live="polite"
-      className={`${config.container} py-2.5 px-4 flex items-center justify-center gap-3 shadow-sm`}
+      className={`${config.container} py-1.5 px-4 flex items-center justify-center gap-2`}
     >
       <Icon size={16} className={`shrink-0 ${config.icon}`} aria-hidden />
-      <p className="text-sm font-medium text-center leading-snug">{announcement.message}</p>
+      <p className="text-xs font-medium text-center leading-snug">{announcement.message}</p>
       <button
         onClick={handleDismiss}
         aria-label="Dismiss announcement"

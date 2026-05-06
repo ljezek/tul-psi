@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Globe, LogIn, LogOut, Shield, BookOpen, RefreshCw, Moon, Sun, BellRing } from 'lucide-react';
+import { Menu, X, Globe, LogIn, LogOut, Shield, BookOpen, RefreshCw, Moon, Sun } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,11 +48,7 @@ export const MainLayout = () => {
           </Link>
           <Link to="/admin/users" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2 dark:text-slate-300 dark:hover:bg-slate-800">
             <Shield size={16} />
-            {t('admin.user_management')}
-          </Link>
-          <Link to="/admin/announcements" className="text-slate-600 hover:text-fm-orange font-bold px-3 py-2 rounded-lg transition-all hover:bg-slate-50 flex items-center gap-2 dark:text-slate-300 dark:hover:bg-slate-800">
-            <BellRing size={16} />
-            {t('admin.announcements')}
+            {t('nav.admin_panel')}
           </Link>
         </>
       )}

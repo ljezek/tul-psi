@@ -30,7 +30,7 @@ describe('LanguageContext', () => {
 
       expect(screen.getByTestId('current-language')).toHaveTextContent('cs');
       expect(screen.getByTestId('translated-title')).toHaveTextContent(
-        'Katalog Studentských Projektů'
+        'Katalog Projektů'
       );
     });
 

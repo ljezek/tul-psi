@@ -10,11 +10,12 @@ interface LanguageContextType {
 
 const translations: Record<string, Record<Language, string>> = {
   // Navigation & Roles
-  'app.title': { cs: 'Katalog Studentských Projektů', en: 'Student Projects Catalogue' },
+  'app.title': { cs: 'Katalog Projektů', en: 'Projects Catalogue' },
   'nav.dashboard': { cs: 'Projekty', en: 'Projects' },
   'nav.courses': { cs: 'Předměty', en: 'Courses' },
   'nav.student_zone': { cs: 'Studentská zóna', en: 'Student Zone' },
   'nav.lecturer_panel': { cs: 'Panel lektora', en: 'Lecturer Panel' },
+  'nav.admin_panel': { cs: 'Admin panel', en: 'Admin Panel' },
   'nav.login': { cs: 'Přihlásit', en: 'Log In' },
   'nav.logout': { cs: 'Odhlásit', en: 'Log Out' },
   'nav.open_menu': { cs: 'Otevřít menu', en: 'Open menu' },

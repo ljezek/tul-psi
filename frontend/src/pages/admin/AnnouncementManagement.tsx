@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent } from 'react';
-import { PlusCircle, Edit2, Trash2, BellRing, ToggleLeft, ToggleRight } from 'lucide-react';
+import { PlusCircle, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getAnnouncements,
@@ -131,22 +131,8 @@ export const AnnouncementManagement = () => {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-tul-blue/10 rounded-xl">
-            <BellRing size={24} className="text-tul-blue" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">
-              {t('admin.announcements')}
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              {t('admin.announcements_subtitle')}
-            </p>
-          </div>
-        </div>
+    <div>
+      <div className="flex justify-end mb-6">
         <Button onClick={openCreate} className="flex items-center gap-2 rounded-xl">
           <PlusCircle size={16} />
           {t('admin.announcement_create')}

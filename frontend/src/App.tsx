@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MainLayout } from '@/layouts/MainLayout';
+import { AdminPanel } from '@/pages/admin/AdminPanel';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { UserRole } from '@/types';
 
@@ -58,8 +59,10 @@ const router = createBrowserRouter(
         <Route path="/lecturer/project/:id/results" element={<Suspense fallback={<PageLoader />}><ProjectResults /></Suspense>} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
-        <Route path="/admin/users" element={<Suspense fallback={<PageLoader />}><UserManagement /></Suspense>} />
-        <Route path="/admin/announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementManagement /></Suspense>} />
+        <Route path="/admin" element={<AdminPanel />}>
+          <Route path="users" element={<Suspense fallback={<PageLoader />}><UserManagement /></Suspense>} />
+          <Route path="announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementManagement /></Suspense>} />
+        </Route>
       </Route>
 
     </Route>
