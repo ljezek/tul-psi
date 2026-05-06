@@ -253,19 +253,44 @@ The first full deployment requires two infrastructure runs to bootstrap pgAdmin 
 
 ---
 
-## 7. Email Delivery (Azure Communication Services)
+## 7. Email Delivery (SMTP2Go)
 
-This project uses **Azure Communication Services (ACS) Email** for all outgoing notifications (OTPs, invitations, and status updates). 
+This project uses **SMTP2Go** as a transactional SMTP relay, sending from `tul-projects@jezci.net`,
+for all outgoing notifications (OTPs, invitations, and status updates).
 
-### How it works:
-1. **Automated Provisioning:** The `infrastructure/modules/acs.bicep` module creates a dedicated ACS resource and an **Azure-managed domain** automatically during the first infrastructure deployment.
-2. **Zero-Secret Wiring:** The ACS **connection string** is securely passed as an output to the backend Container App, where it is stored as an encrypted ACA secret. The application container never sees the raw secret in plain text environment variables.
-3. **Sender Address:** Emails are sent from a provisioned address in the format `DoNotReply@<hash>.azurecomm.net`. This avoids the need for a custom domain or SPF/DKIM DNS configuration.
+### How it works
 
-### Setup Steps:
-No manual setup is required if you follow the standard deployment sequence. The first run of the Infrastructure Deployment for an environment (`dev` or `prod`) will provision all necessary email resources.
+1. **External relay** — The backend connects to `mail.smtp2go.com:587` with STARTTLS.
+   No Azure email resource is provisioned.
+2. **Credential wiring** — `SMTP_PASSWORD` is stored as an encrypted ACA secret;
+   the remaining four variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+   `SMTP_FROM_ADDRESS`) are plain env vars set via Bicep parameters.
+3. **Spam-proof sender** — `tul-projects@jezci.net` is verified in SMTP2Go with
+   SPF, DKIM, and DMARC records on `jezci.net`.
 
-> **Note on Sandbox Mode:** Newly created ACS resources might be in "sandbox" mode. If you find that emails are not being delivered to all addresses, check the **Sender Authentication** settings for your ACS resource in the Azure Portal to ensure it has been moved to production or that your recipients are in the allowed list.
+### Required DNS records on jezci.net
+
+Add the following records **before the first production deployment**.
+The exact DKIM key value is generated in the SMTP2Go sender-domain dashboard after
+adding `jezci.net` as a sender domain.
+
+| Type | Name | Value |
+|------|------|-------|
+| TXT  | `jezci.net` | `v=spf1 include:mail.smtp2go.com ~all` |
+| TXT  | `mail._domainkey.jezci.net` | DKIM public key from SMTP2Go |
+| TXT  | `_dmarc.jezci.net` | `v=DMARC1; p=quarantine; rua=mailto:postmaster@jezci.net` |
+
+### GitHub environment secrets
+
+For each GitHub environment (`dev` and `prod`) add:
+
+| Secret name | Value |
+|-------------|-------|
+| `SMTP_PASSWORD` | SMTP2Go SMTP account password |
+
+The other four variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+`SMTP_FROM_ADDRESS`) are provided as non-secret Bicep parameters and can be
+set directly in the workflow or parameter files.
 
 ---
 
