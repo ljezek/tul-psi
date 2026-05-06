@@ -12,6 +12,7 @@ from db.session import get_session
 from models.user import User
 from rate_limit import rate_limit
 from services import auth_service
+from services.email import EmailDeliveryError
 from settings import get_settings
 from validators import validate_tul_email
 
@@ -99,6 +100,12 @@ async def request_otp(
                 "Contact your lecturer or administrator to get registered."
             ),
         ) from None
+    except EmailDeliveryError as exc:
+        logger.error("OTP email delivery failed.", extra={"error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "email_delivery_failed"},
+        ) from exc
 
     return OtpRequestResponse(message="OTP has been sent.")
 

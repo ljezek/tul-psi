@@ -356,14 +356,25 @@ class EmailSender:
         mime_message["Subject"] = message.subject
         mime_message.set_content(message.body)
 
-        await aiosmtplib.send(
-            mime_message,
-            hostname=self._smtp_host,
-            port=self._smtp_port,
-            username=self._smtp_username,
-            password=self._smtp_password,
-            start_tls=True,
-        )
+        try:
+            await aiosmtplib.send(
+                mime_message,
+                hostname=self._smtp_host,
+                port=self._smtp_port,
+                username=self._smtp_username,
+                password=self._smtp_password,
+                start_tls=True,
+                # Fail fast so that a slow or unreachable relay does not hold
+                # the request open long enough for the application gateway to
+                # time out and return a response without CORS headers.
+                timeout=10,
+            )
+        except aiosmtplib.SMTPException as exc:
+            logger.error(
+                "SMTP delivery failed.",
+                extra={"to": message.to, "subject": message.subject, "error": str(exc)},
+            )
+            raise EmailDeliveryError(f"SMTP delivery failed: {exc}") from exc
         logger.info(
             "Email sent via SMTP.",
             extra={"to": message.to, "subject": message.subject},

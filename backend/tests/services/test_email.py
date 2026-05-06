@@ -280,13 +280,16 @@ async def test_email_sender_calls_aiosmtplib_with_correct_params() -> None:
 
 @pytest.mark.asyncio
 async def test_email_sender_smtp_exception_propagates() -> None:
-    """Exceptions from aiosmtplib must propagate out of EmailSender.send."""
+    """aiosmtplib errors must be re-raised as EmailDeliveryError so callers
+    never need to import aiosmtplib to handle delivery failures."""
     import aiosmtplib
+
+    from services.email import EmailDeliveryError
 
     msg = EmailMessage(to="student@tul.cz", subject="Hello", body="Body text")
 
     with patch("aiosmtplib.send", side_effect=aiosmtplib.SMTPException("relay unavailable")):
-        with pytest.raises(aiosmtplib.SMTPException, match="relay unavailable"):
+        with pytest.raises(EmailDeliveryError, match="relay unavailable"):
             await EmailSender(
                 app_env="dev",
                 smtp_host="mail.smtp2go.com",

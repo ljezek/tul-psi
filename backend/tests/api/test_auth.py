@@ -115,6 +115,29 @@ async def test_otp_request_returns_200_for_registered_email(client: AsyncClient)
     assert response.status_code == 200
 
 
+async def test_otp_request_returns_503_when_email_delivery_fails(client: AsyncClient) -> None:
+    """Returns HTTP 503 with code='email_delivery_failed' when the SMTP relay is unreachable."""
+    from services.email import EmailDeliveryError
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens", new_callable=AsyncMock),
+        patch("db.auth.add_otp_token"),
+        patch(
+            "services.auth_service.EmailSender.from_settings",
+            return_value=MagicMock(send=AsyncMock(side_effect=EmailDeliveryError("relay down"))),
+        ),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "jan.novak@tul.cz"},
+        )
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "email_delivery_failed"
+
+
 # ---------------------------------------------------------------------------
 # OTP storage (unit-level)
 # ---------------------------------------------------------------------------

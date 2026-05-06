@@ -70,6 +70,7 @@ describe('Login', () => {
   it('supports pasting a 6-digit OTP code', async () => {
     const user = userEvent.setup();
     (api.requestOtp as Mock).mockResolvedValue({ message: 'Success' });
+    (api.verifyOtp as Mock).mockResolvedValue({ xsrf_token: 'test-xsrf-token' });
     
     await renderLogin();
     
@@ -99,6 +100,7 @@ describe('Login', () => {
   it('auto-submits when all 6 digits are manually typed', async () => {
     const user = userEvent.setup();
     (api.requestOtp as Mock).mockResolvedValue({ message: 'Success' });
+    (api.verifyOtp as Mock).mockResolvedValue({ xsrf_token: 'test-xsrf-token' });
     
     await renderLogin();
     

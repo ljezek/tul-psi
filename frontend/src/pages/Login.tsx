@@ -1,5 +1,5 @@
 import { useState, FormEvent, useRef, KeyboardEvent, ClipboardEvent, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -26,6 +26,7 @@ function parseDetail(err: ApiError): Record<string, unknown> {
 export const Login = () => {
   const { user, login } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [emailPrefix, setEmailPrefix] = useState('');
@@ -64,6 +65,8 @@ export const Login = () => {
           setError(t('login.error_invalid_email'));
         } else if (err.status === 404) {
           setError(t('login.error_not_registered'));
+        } else if (err.status === 503) {
+          setError(t('login.error_email_delivery'));
         } else if (err.status === 429) {
           const d = parseDetail(err);
           const retryAfter = typeof d.retry_after === 'number' ? d.retry_after : null;
@@ -94,7 +97,15 @@ export const Login = () => {
 
     setLoading(true);
     try {
-      await login(fullEmail, fullOtp);
+      const loggedInUser = await login(fullEmail, fullOtp);
+      // Navigate imperatively using the user returned directly from login() so
+      // the redirect is not gated on a React re-render cycle flushing the
+      // AuthContext state update — which can cause a "code expired" error if
+      // the user retries before the re-render fires.
+      if (loggedInUser) {
+        const destination = loggedInUser.role === UserRole.STUDENT ? '/student' : '/lecturer';
+        navigate(destination, { replace: true });
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {

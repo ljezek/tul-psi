@@ -207,6 +207,7 @@ const translations: Record<string, Record<Language, string>> = {
   'login.error_otp_expired': { cs: 'Kód nebyl nalezen nebo expiroval. Vyžádejte si nový.', en: 'Code not found or expired. Please request a new one.' },
   'login.error_too_many_attempts': { cs: 'Příliš mnoho špatných pokusů — vyžádejte si nový kód.', en: 'Too many incorrect attempts — please request a new code.' },
   'login.error_unexpected': { cs: 'Došlo k nečekané chybě. Zkuste to prosím znovu.', en: 'An unexpected error occurred. Please try again.' },
+  'login.error_email_delivery': { cs: 'Kód se nepodařilo odeslat. Zkuste to prosím znovu za chvíli.', en: 'The code could not be sent. Please try again in a moment.' },
   'login.otp_digit': { cs: 'Číslice {index} z 6', en: 'Digit {index} of 6' },
   'login.otp_generating': { cs: 'Generování OTP a odesílání e-mailu...', en: 'Generating OTP and sending email...' },
 
