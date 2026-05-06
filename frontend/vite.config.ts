@@ -29,12 +29,6 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    environmentOptions: {
-      jsdom: {
-        // A valid origin is required for localStorage to work in jsdom.
-        url: 'http://localhost',
-      },
-    },
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     coverage: {

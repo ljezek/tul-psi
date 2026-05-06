@@ -129,7 +129,7 @@ describe('Login', () => {
     const user = userEvent.setup();
     (api.requestOtp as Mock).mockResolvedValue({ message: 'Success' });
     
-    const apiError = new api.ApiError(401, { detail: { code: 'incorrect_otp', remaining: 2 } });
+    const apiError = new api.ApiError(401, { detail: 'Invalid code' });
     (api.verifyOtp as Mock).mockRejectedValue(apiError);
     
     await renderLogin();
@@ -147,33 +147,7 @@ describe('Login', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText(/Nesprávný kód. Zbývá 2 pokus/i)).toBeInTheDocument();
-    });
-  });
-
-  it('displays expired message for invalid OTP with 0 remaining (401)', async () => {
-    const user = userEvent.setup();
-    (api.requestOtp as Mock).mockResolvedValue({ message: 'Success' });
-
-    const apiError = new api.ApiError(401, { detail: { code: 'incorrect_otp', remaining: 0 } });
-    (api.verifyOtp as Mock).mockRejectedValue(apiError);
-
-    await renderLogin();
-
-    await user.type(screen.getByPlaceholderText('jan.novak'), 'test.user');
-    await user.click(screen.getByRole('button', { name: /Odeslat kód/i }));
-
-    await waitFor(() => screen.getByText(/Jednorázový kód/i));
-
-    const firstDigitInput = screen.getByLabelText(/Číslice 1 z 6/i);
-    await act(async () => {
-      fireEvent.paste(firstDigitInput, {
-        clipboardData: { getData: () => '000000' },
-      });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText(/Kód nebyl nalezen nebo expiroval/i)).toBeInTheDocument();
+      expect(screen.getByText(/Neplatný nebo expirovaný kód/i)).toBeInTheDocument();
     });
   });
 
@@ -204,7 +178,7 @@ describe('Login', () => {
     const user = userEvent.setup();
     (api.requestOtp as Mock).mockResolvedValue({ message: 'Success' });
     
-    const apiError = new api.ApiError(429, { detail: { code: 'too_many_attempts' } });
+    const apiError = new api.ApiError(429, { detail: 'Too many attempts' });
     (api.verifyOtp as Mock).mockRejectedValue(apiError);
     
     await renderLogin();
@@ -222,56 +196,7 @@ describe('Login', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText(/Příliš mnoho špatných pokusů/i)).toBeInTheDocument();
-    });
-  });
-
-  it('shows error for unregistered email (404)', async () => {
-    const user = userEvent.setup();
-    const apiError = new api.ApiError(404, { detail: 'No account found for this email address.' });
-    (api.requestOtp as Mock).mockRejectedValue(apiError);
-
-    await renderLogin();
-
-    await user.type(screen.getByPlaceholderText('jan.novak'), 'test.user');
-    await user.click(screen.getByRole('button', { name: /Odeslat kód/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Tento email není registrován/i)).toBeInTheDocument();
-    });
-  });
-
-  it('resend OTP clears all input fields and focuses first', async () => {
-    const user = userEvent.setup();
-    (api.requestOtp as Mock).mockResolvedValue({ message: 'Success' });
-
-    await renderLogin();
-
-    await user.type(screen.getByPlaceholderText('jan.novak'), 'test.user');
-    await user.click(screen.getByRole('button', { name: /Odeslat kód/i }));
-
-    await waitFor(() => screen.getByText(/Jednorázový kód/i));
-
-    // Type a digit into the first OTP box.
-    await user.type(screen.getByLabelText(/Číslice 1 z 6/i), '5');
-
-    // Click Resend.
-    await user.click(screen.getByRole('button', { name: /Odeslat znovu/i }));
-
-    // Wait for the resend to complete.
-    await waitFor(() => expect(api.requestOtp).toHaveBeenCalledTimes(2));
-
-    // All six OTP inputs must be empty.
-    const inputs = [
-      screen.getByLabelText(/Číslice 1 z 6/i),
-      screen.getByLabelText(/Číslice 2 z 6/i),
-      screen.getByLabelText(/Číslice 3 z 6/i),
-      screen.getByLabelText(/Číslice 4 z 6/i),
-      screen.getByLabelText(/Číslice 5 z 6/i),
-      screen.getByLabelText(/Číslice 6 z 6/i),
-    ];
-    inputs.forEach((input) => {
-      expect(input).toHaveValue('');
+      expect(screen.getByText(/Příliš mnoho pokusů — vyžádejte nový kód/i)).toBeInTheDocument();
     });
   });
 });

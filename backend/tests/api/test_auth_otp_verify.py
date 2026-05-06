@@ -109,9 +109,7 @@ async def test_otp_verify_returns_401_for_unknown_email(client: AsyncClient) -> 
             json={"email": "nobody@tul.cz", "otp": "000000"},
         )
     assert response.status_code == 401
-    detail = response.json()["detail"]
-    assert detail["code"] == "incorrect_otp"
-    assert detail["remaining"] == 0
+    assert response.json()["detail"] == "Invalid or expired code"
 
 
 async def test_otp_verify_returns_401_when_no_active_token(client: AsyncClient) -> None:
@@ -126,9 +124,7 @@ async def test_otp_verify_returns_401_when_no_active_token(client: AsyncClient) 
             json={"email": "jan.novak@tul.cz", "otp": "000000"},
         )
     assert response.status_code == 401
-    detail = response.json()["detail"]
-    assert detail["code"] == "incorrect_otp"
-    assert detail["remaining"] == 0
+    assert response.json()["detail"] == "Invalid or expired code"
 
 
 async def test_otp_verify_returns_401_for_wrong_otp(client: AsyncClient) -> None:
@@ -148,10 +144,7 @@ async def test_otp_verify_returns_401_for_wrong_otp(client: AsyncClient) -> None
             json={"email": "jan.novak@tul.cz", "otp": "000000"},
         )
     assert response.status_code == 401
-    detail = response.json()["detail"]
-    assert detail["code"] == "incorrect_otp"
-    # _MAX_OTP_ATTEMPTS=5, increment returns 1 → remaining = 5 - 1 = 4.
-    assert detail["remaining"] == 4
+    assert response.json()["detail"] == "Invalid or expired code"
     mock_increment.assert_called_once()
 
 
@@ -176,7 +169,7 @@ async def test_otp_verify_returns_429_when_attempt_limit_reached(client: AsyncCl
             json={"email": "jan.novak@tul.cz", "otp": "000000"},
         )
     assert response.status_code == 429
-    assert response.json()["detail"]["code"] == "too_many_attempts"
+    assert response.json()["detail"] == "Too many attempts — request a new OTP code"
     # Token must be invalidated so it cannot be resubmitted.
     mock_mark_used.assert_called_once()
 

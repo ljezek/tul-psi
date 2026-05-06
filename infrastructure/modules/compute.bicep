@@ -18,12 +18,9 @@ param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
 
-param smtpHost string = 'smtp.tul.cz'
-param smtpPort int = 587
-param smtpUsername string = 'lukas.jezek@tul.cz'
 @secure()
-param smtpPassword string
-param smtpFromAddress string = 'lukas.jezek@tul.cz'
+param acsConnectionString string
+param acsFromAddress string
 
 param tags object
 param minReplicas int = 0
@@ -123,8 +120,8 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
       ]
       secrets: [
         {
-          name: 'smtp-password'
-          value: smtpPassword
+          name: 'acs-connection-string'
+          value: acsConnectionString
         }
       ]
     }
@@ -144,11 +141,8 @@ resource backend_app 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_MANAGED_IDENTITY_ENABLED', value: 'true' }
             { name: 'AZURE_CLIENT_ID', value: app_identity.properties.clientId }
             { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://localhost:4318' }
-            { name: 'SMTP_HOST', value: smtpHost }
-            { name: 'SMTP_PORT', value: string(smtpPort) }
-            { name: 'SMTP_USERNAME', value: smtpUsername }
-            { name: 'SMTP_PASSWORD', secretRef: 'smtp-password' }
-            { name: 'SMTP_FROM_ADDRESS', value: smtpFromAddress }
+            { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
+            { name: 'ACS_FROM_ADDRESS', value: acsFromAddress }
           ]
           probes: [
             {
