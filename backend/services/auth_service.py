@@ -54,25 +54,28 @@ def _create_jwt(user: User) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
+class UserNotFoundError(Exception):
+    """Raised when the requested email has no active user account."""
+
+
 async def request_otp(email: str, session: AsyncSession) -> None:
     """Generate an OTP for *email* and persist its hash in the database.
-
-    The response is deliberately identical whether or not the email is
-    registered; this prevents user-enumeration attacks (see DESIGN.md).
 
     Any previously active (non-used) tokens for the user are invalidated before
     the new token is inserted to prevent token accumulation and limit the attack
     surface if an earlier code was intercepted.
+
+    Raises:
+        UserNotFoundError: When the email is not registered or the account is inactive.
     """
     user = await db_auth.get_user_by_email(session, email)
 
     if user is None or not user.is_active:
-        # Silent success — do not reveal that the address is not registered or is inactive.
         logger.warning(
-            "OTP requested for unregistered or inactive address; no token created.",
+            "OTP requested for unregistered or inactive address.",
             extra={"email": email},
         )
-        return
+        raise UserNotFoundError
 
     if user.id is None:
         # Guard against a partially-constructed object that was never persisted.
@@ -80,7 +83,7 @@ async def request_otp(email: str, session: AsyncSession) -> None:
             "User record has no primary key; OTP generation skipped.",
             extra={"email": email},
         )
-        return
+        raise UserNotFoundError
 
     await db_auth.invalidate_active_otp_tokens(session, user.id)
 
@@ -108,6 +111,11 @@ async def request_otp(email: str, session: AsyncSession) -> None:
 class IncorrectOtpError(Exception):
     """Raised when the supplied OTP value does not match the stored token hash."""
 
+    def __init__(self, remaining_attempts: int = 0) -> None:
+        super().__init__()
+        # Number of attempts the user still has before the token is invalidated.
+        self.remaining_attempts = remaining_attempts
+
 
 class TooManyAttemptsError(Exception):
     """Raised when the per-token failed-attempt limit has been reached."""
@@ -133,7 +141,7 @@ async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
             "OTP verification attempted for unregistered or inactive address.",
             extra={"email": email},
         )
-        raise IncorrectOtpError
+        raise IncorrectOtpError(remaining_attempts=0)
 
     token = await db_auth.get_active_otp_token(session, user.id)
     if token is None:
@@ -141,7 +149,7 @@ async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
             "No active OTP token found for user during verification.",
             extra={"email": email},
         )
-        raise IncorrectOtpError
+        raise IncorrectOtpError(remaining_attempts=0)
 
     if not bcrypt.checkpw(otp.encode(), token.token_hash.encode()):
         new_attempts = await db_auth.increment_otp_attempts(session, token.id)
@@ -159,7 +167,7 @@ async def verify_otp(email: str, otp: str, session: AsyncSession) -> str:
             "OTP verification failed: hash mismatch.",
             extra={"email": email, "attempts": new_attempts},
         )
-        raise IncorrectOtpError
+        raise IncorrectOtpError(remaining_attempts=_MAX_OTP_ATTEMPTS - new_attempts)
 
     # Hash matched — mark the token consumed and issue a JWT.
     await db_auth.mark_otp_token_used(session, token.id)

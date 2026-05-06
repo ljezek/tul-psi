@@ -51,9 +51,11 @@ def rate_limit(max_calls: int, period_seconds: int = 60) -> Depends:
         while window and window[0] < cutoff:
             window.popleft()
         if len(window) >= max_calls:
+            retry_after = max(1, int((window[0] + timedelta(seconds=period_seconds) - now).total_seconds()) + 1)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many requests — please wait before trying again.",
+                detail={"code": "rate_limited", "retry_after": retry_after},
+                headers={"Retry-After": str(retry_after)},
             )
         window.append(now)
 
