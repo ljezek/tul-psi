@@ -8,6 +8,7 @@ import { UserRole } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { ProfileDropdown } from '@/components/ProfileDropdown';
 import { FeedbackButton } from '@/components/FeedbackButton';
+import { EnvironmentRibbon } from '@/components/EnvironmentRibbon';
 
 export const MainLayout = () => {
   const { t, language, setLanguage } = useLanguage();
@@ -60,6 +61,7 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
+      <EnvironmentRibbon />
       {/* Navigation Bar */}
       <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 shadow-sm dark:bg-slate-900/90 dark:border-slate-700/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

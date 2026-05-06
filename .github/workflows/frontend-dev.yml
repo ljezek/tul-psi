@@ -63,3 +63,4 @@ jobs:
           VITE_API_URL: ${{ steps.fetch_secrets.outputs.backend_url }}
           VITE_LOGIC_APP_FEEDBACK_URL: ${{ secrets.VITE_LOGIC_APP_FEEDBACK_URL }}
           VITE_APPINSIGHTS_CONNECTION_STRING: ${{ steps.fetch_secrets.outputs.ai_conn_str }}
+          VITE_APP_ENV: dev
