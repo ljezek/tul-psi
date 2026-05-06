@@ -7,22 +7,6 @@ import { requestOtp, ApiError } from '@/api';
 import { Button } from '@/components/ui/Button';
 import { UserRole } from '@/types';
 
-/**
- * Extracts the structured error detail object from a FastAPI error response.
- * FastAPI wraps exception detail as {"detail": ...}, so ApiError.detail is the
- * full parsed body. This helper unwraps the inner value as a typed object.
- */
-function parseDetail(err: ApiError): Record<string, unknown> {
-  const body = err.detail;
-  if (body !== null && typeof body === 'object' && 'detail' in (body as object)) {
-    const inner = (body as Record<string, unknown>).detail;
-    if (inner !== null && typeof inner === 'object') {
-      return inner as Record<string, unknown>;
-    }
-  }
-  return {};
-}
-
 export const Login = () => {
   const { user, login } = useAuth();
   const { t } = useLanguage();
@@ -59,21 +43,8 @@ export const Login = () => {
       await requestOtp(fullEmail);
       setStep('otp');
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 422) {
-          setError(t('login.error_invalid_email'));
-        } else if (err.status === 404) {
-          setError(t('login.error_not_registered'));
-        } else if (err.status === 429) {
-          const d = parseDetail(err);
-          const retryAfter = typeof d.retry_after === 'number' ? d.retry_after : null;
-          setError(retryAfter
-            ? t('login.error_rate_limited_seconds').replace('{seconds}', String(retryAfter))
-            : t('login.error_rate_limited'));
-        } else {
-          setError(t('login.error_unexpected'));
-          console.error(err);
-        }
+      if (err instanceof ApiError && err.status === 422) {
+        setError(t('login.error_invalid_email'));
       } else {
         setError(t('login.error_unexpected'));
         console.error(err);
@@ -88,7 +59,7 @@ export const Login = () => {
     setError(null);
 
     if (fullOtp.length !== 6) {
-      setError(t('login.error_incomplete_otp'));
+      setError(t('login.error_invalid_otp'));
       return;
     }
 
@@ -98,21 +69,9 @@ export const Login = () => {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          const d = parseDetail(err);
-          const remaining = typeof d.remaining === 'number' ? d.remaining : null;
-          setError(remaining !== null && remaining > 0
-            ? t('login.error_wrong_otp_remaining').replace('{remaining}', String(remaining))
-            : t('login.error_otp_expired'));
+          setError(t('login.error_invalid_otp'));
         } else if (err.status === 429) {
-          const d = parseDetail(err);
-          if (d.code === 'too_many_attempts') {
-            setError(t('login.error_too_many_attempts'));
-          } else {
-            const retryAfter = typeof d.retry_after === 'number' ? d.retry_after : null;
-            setError(retryAfter
-              ? t('login.error_rate_limited_seconds').replace('{seconds}', String(retryAfter))
-              : t('login.error_rate_limited'));
-          }
+          setError(t('login.error_too_many'));
         } else {
           setError(t('login.error_unexpected'));
         }
@@ -127,22 +86,12 @@ export const Login = () => {
 
   const handleResendOtp = async () => {
     setError(null);
-    setOtpValues(['', '', '', '', '', '']);
-    setTimeout(() => otpRefs.current[0]?.focus(), 0);
     setLoading(true);
     try {
       await requestOtp(fullEmail);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 429) {
-        const d = parseDetail(err);
-        const retryAfter = typeof d.retry_after === 'number' ? d.retry_after : null;
-        setError(retryAfter
-          ? t('login.error_rate_limited_seconds').replace('{seconds}', String(retryAfter))
-          : t('login.error_rate_limited'));
-      } else {
-        setError(t('login.error_unexpected'));
-        console.error(err);
-      }
+      setError(t('login.error_unexpected'));
+      console.error(err);
     } finally {
       setLoading(false);
     }

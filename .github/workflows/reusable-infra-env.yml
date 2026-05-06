@@ -23,8 +23,6 @@ on:
         required: false
       PGADMIN_AAD_CLIENT_SECRET:
         required: false
-      SMTP_PASSWORD:
-        required: true
 
 jobs:
   deploy:
@@ -94,7 +92,6 @@ jobs:
             scriptsSubnetId=${{ env.SCRIPTS_SNET_ID }}
             deployDebugTools=${{ inputs.deploy_debug_tools }}
             jwtSecret=${{ secrets.JWT_SECRET }}
-            smtpPassword=${{ secrets.SMTP_PASSWORD }}
             pgadminAadClientId=${{ secrets.PGADMIN_AAD_CLIENT_ID }}
             pgadminAadClientSecret=${{ secrets.PGADMIN_AAD_CLIENT_SECRET }}
             ${{ env.CURRENT_IMAGE != '' && format('containerImage={0}', env.CURRENT_IMAGE) || '' }}

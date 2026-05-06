@@ -74,8 +74,8 @@ class OtpVerifyBody(BaseModel):
     status_code=status.HTTP_200_OK,
     summary="Request a one-time password",
     description=(
-        "Sends a 6-digit OTP to the supplied ``@tul.cz`` address. "
-        "Returns HTTP 404 when the address is not registered."
+        "Sends a 6-digit OTP to the supplied ``@tul.cz`` address. Always returns HTTP 200 "
+        "regardless of whether the address is registered to prevent user enumeration."
     ),
 )
 async def request_otp(
@@ -89,18 +89,9 @@ async def request_otp(
     Delegates to :func:`auth_service.request_otp` which generates the OTP, hashes it,
     persists it, and sends it to the user via email (depending on environment).
     """
-    try:
-        await auth_service.request_otp(body.email, session)
-    except auth_service.UserNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=(
-                "No account found for this email address. "
-                "Contact your lecturer or administrator to get registered."
-            ),
-        ) from None
+    await auth_service.request_otp(body.email, session)
 
-    return OtpRequestResponse(message="OTP has been sent.")
+    return OtpRequestResponse(message="If this email is registered, an OTP has been sent.")
 
 
 @router.post(
@@ -135,12 +126,12 @@ async def verify_otp(
     except auth_service.TooManyAttemptsError:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail={"code": "too_many_attempts"},
+            detail="Too many attempts — request a new OTP code",
         ) from None
-    except auth_service.IncorrectOtpError as exc:
+    except auth_service.IncorrectOtpError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "incorrect_otp", "remaining": exc.remaining_attempts},
+            detail="Invalid or expired code",
         ) from None
 
     settings = get_settings()

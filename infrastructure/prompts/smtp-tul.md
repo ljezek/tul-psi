@@ -1,78 +1,80 @@
 # Email Delivery — Decision Record
 
-## Chosen approach: SMTP relay via SMTP2Go
+## Chosen approach: Azure Communication Services (ACS) Email
 
-Email delivery uses **SMTP2Go** as a transactional relay with a verified custom sender
-address (`tul-projects@jezci.net`).  The backend connects over SMTP with STARTTLS
-(port 587) using an SMTP2Go account credential stored as an encrypted ACA secret.
+Email delivery uses **Azure Communication Services Email** with an auto-provisioned
+Azure-managed domain. The app authenticates via the ACS **connection string** (an
+API key, not a personal credential), stored as an encrypted ACA secret and injected
+into the container as `ACS_CONNECTION_STRING`.
 
-### Why SMTP2Go over Azure Communication Services (ACS)?
+Emails are sent from `DoNotReply@<hash>.azurecomm.net` (the address provisioned by
+ACS when the `AzureManagedDomain` resource is created).
 
-ACS with an Azure-managed domain sent from `DoNotReply@<hash>.azurecomm.net`.  That
-address cannot be customised, and the domain lacks sender-specific SPF/DKIM alignment,
-which causes many mail servers — including University ones — to classify the messages
-as spam.  SMTP2Go with a verified custom domain solves all three problems:
+### Why not SMTP with `lukas.jezek@tul.cz`?
 
-- **Custom sender** — recipients see `TUL Student Projects <tul-projects@jezci.net>`.
-- **SPF alignment** — `jezci.net` SPF record includes SMTP2Go's sending IPs.
-- **DKIM signing** — SMTP2Go signs each message with a key published on `jezci.net`.
-- **DMARC policy** — `_dmarc.jezci.net` enforces quarantine and enables aggregate reporting.
+TUL's SMTP server (`smtp.tul.cz:587`) requires password authentication. Storing a
+personal TUL account password in any Azure resource (env var, ACA secret, Key Vault)
+creates a credential-theft risk that is disproportionate for a student project. If
+the credential leaked, an attacker would have full access to the TUL email account.
 
-### Why not raw SMTP to jezci.net hosting?
+### Why not a Logic App HTTP trigger?
 
-Shared-hosting outbound SMTP is typically IP-reputation-tainted and queue-managed
-poorly for transactional OTP delivery.  SMTP2Go is purpose-built for transactional
-mail with a strong sending reputation and a generous free tier (1 000 emails/month).
+A Consumption Logic App with an SMTP connector would allow sending from
+`lukas.jezek@tul.cz`, but adds an extra cloud resource, an extra HTTP hop, and a
+trigger URL (acting as a secret) that needs protecting. The marginal benefit of the
+personal sender address does not justify the added complexity.
 
-### Why not the personal `lukas.jezek@tul.cz` address?
+### Why not Managed Identity for ACS?
 
-TUL's SMTP server requires a personal account password.  Storing that credential in
-Azure would create a disproportionate credential-theft risk.  A dedicated
-`tul-projects@jezci.net` address carries no risk beyond this project.
+Azure does have an RBAC role for ACS email sending, but the role name / GUID is not
+stable across documentation sources, and the `azure-communication-email` SDK's
+`TokenCredential` path requires additional verification. The connection string
+approach is well-documented, the key is rotatable at any time via the Azure Portal,
+and it never appears as a plain environment variable (stored as an ACA secret, which
+is encrypted at rest and not visible in the portal env-vars tab).
 
-## Required DNS records on jezci.net
+## Escalation path
 
-These records must be added before the first production deployment.  Exact values
-(especially the DKIM key) are generated in the SMTP2Go sender-domain dashboard.
+If a `@tul.cz` sender address becomes a requirement in the future:
 
-| Type | Name | Value |
-|------|------|-------|
-| TXT  | `jezci.net` | `v=spf1 include:mail.smtp2go.com ~all` |
-| TXT  | `mail._domainkey.jezci.net` | DKIM public key from SMTP2Go dashboard |
-| TXT  | `_dmarc.jezci.net` | `v=DMARC1; p=quarantine; rua=mailto:postmaster@jezci.net` |
+1. Create a **Consumption Logic App** with an SMTP connector pointing at `smtp.tul.cz`.
+2. Store the TUL password in the Logic App connection (encrypted within the Logic App,
+   not accessible to the backend directly).
+3. Expose an HTTP trigger endpoint; the backend calls it with the email payload.
+4. Store only the trigger URL (a SAS token, rotatable) as an ACA secret.
+
+This keeps personal credentials inside the Logic App connection, isolated from the
+backend container.
+
+## Bicep resources
+
+| Resource | Name pattern | Notes |
+|----------|-------------|-------|
+| `Microsoft.Communication/emailServices` | `acs-email-spc-{env}` | Parent email service |
+| `Microsoft.Communication/emailServices/domains` | `AzureManagedDomain` | Auto-provisioned domain |
+| `Microsoft.Communication/communicationServices` | `acs-spc-{env}` | Communication service; connection string sourced here |
 
 ## ACA wiring
 
-`compute.bicep` stores the SMTP password as an ACA secret (`smtp-password`) and
-exposes it to the container via `secretRef`.  All other SMTP settings are plain env
-vars since they are not sensitive.
+`compute.bicep` stores the connection string as an ACA secret (`acs-connection-string`)
+and exposes it to the container via `secretRef`. The from-address is a plain env var
+since it is not sensitive.
 
 ```
-SMTP_HOST         →  plain env var   (mail.smtp2go.com)
-SMTP_PORT         →  plain env var   (587)
-SMTP_USERNAME     →  plain env var   (SMTP2Go SMTP username)
-SMTP_PASSWORD     →  secretRef: smtp-password  (encrypted ACA secret)
-SMTP_FROM_ADDRESS →  plain env var   (tul-projects@jezci.net)
+ACS_CONNECTION_STRING  →  secretRef: acs-connection-string  (encrypted ACA secret)
+ACS_FROM_ADDRESS       →  plain env var
 ```
 
-## Python implementation
+## Python SDK
 
 ```python
-import aiosmtplib
-from email.message import EmailMessage as MIMEMessage
+from azure.communication.email import EmailClient
 
-mime_message = MIMEMessage()
-mime_message["From"] = f"TUL Student Projects <{settings.smtp_from_address}>"
-mime_message["To"] = recipient
-mime_message["Subject"] = subject
-mime_message.set_content(body)
-
-await aiosmtplib.send(
-    mime_message,
-    hostname=settings.smtp_host,
-    port=settings.smtp_port,          # 587
-    username=settings.smtp_username,
-    password=settings.smtp_password,
-    start_tls=True,
-)
+client = EmailClient.from_connection_string(settings.acs_connection_string)
+poller = client.begin_send({
+    "senderAddress": settings.acs_from_address,
+    "recipients": {"to": [{"address": recipient}]},
+    "content": {"subject": subject, "plainText": body},
+})
+poller.result()  # blocks until ACS accepts the message
 ```
