@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -67,11 +68,21 @@ class Settings(BaseSettings):
     azure_managed_identity_enabled: bool = False
     azure_client_id: str | None = None
 
-    # Azure Communication Services — used for email delivery in non-local environments.
-    # ACS_CONNECTION_STRING is injected from an ACA secret (set via Bicep / Key Vault).
-    # ACS_FROM_ADDRESS is the verified sender address provisioned by the ACS managed domain.
-    acs_connection_string: str | None = None
-    acs_from_address: str | None = None
+    # Controls which email backend is used:
+    #   "auto"    — console (stderr) in local/e2e, SMTP in all other environments.
+    #   "smtp"    — always deliver via SMTP (use this locally to test real delivery).
+    #   "console" — always print to stderr (useful to silence email in a live env).
+    # Defaults to "auto" so no change is needed for normal local development.
+    email_backend: Literal["auto", "smtp", "console"] = "auto"
+
+    # SMTP relay settings — used when email_backend is "smtp" (or "auto" in non-local envs).
+    # SMTP_PASSWORD is injected from an ACA secret (set via Bicep / GitHub secrets).
+    # All other fields are plain env vars with sensible defaults for the TUL deployment.
+    smtp_host: str = "smtp.tul.cz"
+    smtp_port: int = 587
+    smtp_username: str = "lukas.jezek@tul.cz"
+    smtp_password: str | None = None  # injected as an encrypted ACA secret
+    smtp_from_address: str = "lukas.jezek@tul.cz"
 
     # Health check URL for the OTel collector sidecar/service.
     # In Azure, it's typically http://localhost:13133.

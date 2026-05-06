@@ -21,8 +21,9 @@ ignore = []
 extend-immutable-calls = ["Depends", "fastapi.Depends", "Query", "fastapi.Query"]
 
 [tool.ruff.lint.per-file-ignores]
-# Test files: relax S101 (assert used) and all annotation rules (ANN*) to keep tests lightweight
-"tests/**/*.py" = ["S101", "ANN"]
+# Test files: relax S101 (assert used), S105/S106 (hardcoded test passwords), and all
+# annotation rules (ANN*) to keep tests lightweight.
+"tests/**/*.py" = ["S101", "S105", "S106", "ANN"]
 # Migration files: generated code may not follow all conventions
 "migrations/versions/*.py" = ["ANN", "I", "UP"]
 

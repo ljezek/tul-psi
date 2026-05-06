@@ -18,6 +18,13 @@ param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-hellowo
 @secure()
 param jwtSecret string
 
+param smtpHost string = 'smtp.tul.cz'
+param smtpPort int = 587
+param smtpUsername string = 'lukas.jezek@tul.cz'
+@secure()
+param smtpPassword string
+param smtpFromAddress string = 'lukas.jezek@tul.cz'
+
 param pgadminAadClientId string = ''
 @secure()
 param pgadminAadClientSecret string = ''
@@ -60,16 +67,6 @@ module alerts './modules/alerts.bicep' = {
   }
 }
 
-// --- Email (Azure Communication Services) ---
-module acs './modules/acs.bicep' = {
-  name: 'acs-${env}-deployment'
-  params: {
-    prefix: prefix
-    env: env
-    tags: tags
-  }
-}
-
 // --- Compute (ACA + SWA) ---
 module compute './modules/compute.bicep' = {
   name: 'compute-${env}-deployment'
@@ -89,8 +86,11 @@ module compute './modules/compute.bicep' = {
     pgadminAadClientSecret: pgadminAadClientSecret
     lawId: monitoring.outputs.workspaceId
     aiConnectionString: monitoring.outputs.connectionString
-    acsConnectionString: acs.outputs.connectionString
-    acsFromAddress: acs.outputs.fromAddress
+    smtpHost: smtpHost
+    smtpPort: smtpPort
+    smtpUsername: smtpUsername
+    smtpPassword: smtpPassword
+    smtpFromAddress: smtpFromAddress
     minReplicas: (env == 'prod') ? 1 : 0
     tags: tags
   }
