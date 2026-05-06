@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from email.message import EmailMessage as MIMEMessage
+from typing import TYPE_CHECKING, Literal
 
-from azure.communication.email.aio import EmailClient
+import aiosmtplib
 
 if TYPE_CHECKING:
     from settings import Settings
@@ -253,54 +254,77 @@ EmailDeliveryNotImplementedError = EmailDeliveryError
 class EmailSender:
     """Delivers email messages.
 
-    In ``local`` environments the full email is printed to stderr (no SMTP or
-    cloud service required).  In all other environments Azure Communication
-    Services is used; the caller must supply ``acs_connection_string`` and
-    ``acs_from_address`` (injected from ACA secrets via Bicep).
+    The active backend is selected by *email_backend*:
+
+    - ``"auto"``    — console (stderr) when *app_env* is ``"local"`` or ``"e2e"``,
+      SMTP otherwise.  This is the production default.
+    - ``"smtp"``    — always deliver via SMTP regardless of *app_env*.  Set
+      ``EMAIL_BACKEND=smtp`` locally to test real delivery end-to-end.
+    - ``"console"`` — always print to stderr.  Useful for silencing email in a
+      live environment during debugging without touching SMTP credentials.
 
     Args:
         app_env: The application environment string (``"local"``, ``"dev"``,
             ``"production"``).
-        acs_connection_string: ACS connection string.  Required in non-local
-            environments.
-        acs_from_address: Verified sender address from the ACS managed domain.
-            Required in non-local environments.
+        email_backend: One of ``"auto"``, ``"smtp"``, or ``"console"``.
+        smtp_host: SMTP relay hostname.  Required when backend resolves to SMTP.
+        smtp_port: SMTP relay port (default 587 for STARTTLS).
+        smtp_username: SMTP authentication username.  Required when backend
+            resolves to SMTP.
+        smtp_password: SMTP authentication password.  Required when backend
+            resolves to SMTP.
+        smtp_from_address: Sender address used in the ``From`` header.  Required
+            when backend resolves to SMTP (e.g. ``tul-projects@jezci.net``).
     """
 
     def __init__(
         self,
         *,
         app_env: str,
-        acs_connection_string: str | None = None,
-        acs_from_address: str | None = None,
+        email_backend: Literal["auto", "smtp", "console"] = "auto",
+        smtp_host: str | None = None,
+        smtp_port: int = 587,
+        smtp_username: str | None = None,
+        smtp_password: str | None = None,
+        smtp_from_address: str | None = None,
     ) -> None:
         self._app_env = app_env
-        self._acs_connection_string = acs_connection_string
-        self._acs_from_address = acs_from_address
+        self._email_backend = email_backend
+        self._smtp_host = smtp_host
+        self._smtp_port = smtp_port
+        self._smtp_username = smtp_username
+        self._smtp_password = smtp_password
+        self._smtp_from_address = smtp_from_address
 
     @classmethod
     def from_settings(cls, settings: Settings) -> EmailSender:
         """Construct an :class:`EmailSender` from application settings."""
         return cls(
             app_env=settings.app_env,
-            acs_connection_string=settings.acs_connection_string,
-            acs_from_address=settings.acs_from_address,
+            email_backend=settings.email_backend,
+            smtp_host=settings.smtp_host,
+            smtp_port=settings.smtp_port,
+            smtp_username=settings.smtp_username,
+            smtp_password=settings.smtp_password,
+            smtp_from_address=settings.smtp_from_address,
         )
 
     async def send(self, message: EmailMessage) -> None:
         """Deliver *message*.
 
-        In ``local`` environments the message is printed to *stderr*.
-        In all other environments the message is sent via Azure Communication
-        Services Email.
+        Routes the message to the console or SMTP depending on *email_backend*
+        and *app_env* (see class docstring).
 
         Args:
             message: The email to deliver.
 
         Raises:
-            EmailDeliveryError: When ACS credentials are missing or delivery fails.
+            EmailDeliveryError: When SMTP credentials are missing or delivery fails.
         """
-        if self._app_env in ("local", "e2e"):
+        use_console = self._email_backend == "console" or (
+            self._email_backend == "auto" and self._app_env in ("local", "e2e")
+        )
+        if use_console:
             print(  # noqa: T201
                 f"\n{'=' * 60}\n"
                 f"[FAKE EMAIL]\n"
@@ -313,26 +337,34 @@ class EmailSender:
             )
             return
 
-        if not self._acs_connection_string or not self._acs_from_address:
+        if not all(
+            [self._smtp_host, self._smtp_username, self._smtp_password, self._smtp_from_address]
+        ):
             logger.error(
-                "ACS email not configured; message not sent.",
+                "SMTP email not configured; message not sent.",
                 extra={"to": message.to, "subject": message.subject},
             )
             raise EmailDeliveryError(
-                "ACS_CONNECTION_STRING and ACS_FROM_ADDRESS must be set for email delivery."
+                "SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM_ADDRESS must be set "
+                "for email delivery."
             )
 
-        client = EmailClient.from_connection_string(self._acs_connection_string)
-        async with client:
-            poller = await client.begin_send(
-                {
-                    "senderAddress": self._acs_from_address,
-                    "recipients": {"to": [{"address": message.to}]},
-                    "content": {"subject": message.subject, "plainText": message.body},
-                }
-            )
-            await poller.result()
-            logger.info(
-                "Email sent via ACS.",
-                extra={"to": message.to, "subject": message.subject},
-            )
+        # Build a MIME message so that the relay receives a well-formed RFC 5322 message.
+        mime_message = MIMEMessage()
+        mime_message["From"] = f"TUL Student Projects <{self._smtp_from_address}>"
+        mime_message["To"] = message.to
+        mime_message["Subject"] = message.subject
+        mime_message.set_content(message.body)
+
+        await aiosmtplib.send(
+            mime_message,
+            hostname=self._smtp_host,
+            port=self._smtp_port,
+            username=self._smtp_username,
+            password=self._smtp_password,
+            start_tls=True,
+        )
+        logger.info(
+            "Email sent via SMTP.",
+            extra={"to": message.to, "subject": message.subject},
+        )
