@@ -6,7 +6,7 @@ interface AuthContextType {
   user: UserPublic | null;
   loading: boolean;
   isResurrecting: boolean;
-  login: (email: string, otp: string) => Promise<void>;
+  login: (email: string, otp: string) => Promise<UserPublic | null>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -48,10 +48,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchUser();
   }, []);
 
-  const login = async (email: string, otp: string) => {
+  const login = async (email: string, otp: string): Promise<UserPublic | null> => {
     const { xsrf_token } = await verifyOtp(email, otp);
     storeCsrfToken(xsrf_token);
-    await fetchUser();
+    // Fetch the user directly so callers receive the authenticated profile
+    // and can navigate imperatively without waiting for a React re-render cycle.
+    let loggedInUser: UserPublic | null = null;
+    try {
+      loggedInUser = await getCurrentUser();
+      setUser(loggedInUser);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setUser(null);
+      }
+    }
+    return loggedInUser;
   };
 
   const logout = async () => {

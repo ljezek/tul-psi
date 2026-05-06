@@ -43,6 +43,8 @@ def _mock_settings() -> Generator[None, None, None]:
     # Provide minimal attributes expected by EmailSender/EmailTemplate.
     mock_settings.app_env = "local"
     mock_settings.frontend_url = "http://frontend.test"
+    # Use the console backend to prevent any real SMTP connection attempts.
+    mock_settings.email_backend = "console"
     # None so that auth_service falls through to _generate_otp() rather than
     # treating the truthy MagicMock as an OTP string and passing it to bcrypt.
     mock_settings.e2e_otp_override = None
@@ -87,15 +89,14 @@ async def test_otp_request_rejects_tul_cz_subdomain(client: AsyncClient) -> None
 # ---------------------------------------------------------------------------
 
 
-async def test_otp_request_returns_200_for_unknown_email(client: AsyncClient) -> None:
-    """Returns HTTP 200 even when no matching user exists (prevents user enumeration)."""
+async def test_otp_request_returns_404_for_unknown_email(client: AsyncClient) -> None:
+    """Returns HTTP 404 when no matching user exists."""
     with patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None):
         response = await client.post(
             "/api/v1/auth/otp/request",
             json={"email": "unknown@tul.cz"},
         )
-    assert response.status_code == 200
-    assert "OTP" in response.json()["message"]
+    assert response.status_code == 404
 
 
 async def test_otp_request_returns_200_for_registered_email(client: AsyncClient) -> None:
@@ -112,6 +113,29 @@ async def test_otp_request_returns_200_for_registered_email(client: AsyncClient)
             json={"email": "jan.novak@tul.cz"},
         )
     assert response.status_code == 200
+
+
+async def test_otp_request_returns_503_when_email_delivery_fails(client: AsyncClient) -> None:
+    """Returns HTTP 503 with code='email_delivery_failed' when the SMTP relay is unreachable."""
+    from services.email import EmailDeliveryError
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens", new_callable=AsyncMock),
+        patch("db.auth.add_otp_token"),
+        patch(
+            "services.auth_service.EmailSender.from_settings",
+            return_value=MagicMock(send=AsyncMock(side_effect=EmailDeliveryError("relay down"))),
+        ),
+    ):
+        response = await client.post(
+            "/api/v1/auth/otp/request",
+            json={"email": "jan.novak@tul.cz"},
+        )
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "email_delivery_failed"
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +217,13 @@ async def test_otp_request_does_not_store_token_for_unknown_user(client: AsyncCl
 
 async def test_otp_request_response_schema(client: AsyncClient) -> None:
     """The 200 response body must contain only a 'message' key."""
-    with patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=None):
+    mock_user = MagicMock()
+    mock_user.id = 1
+    with (
+        patch("db.auth.get_user_by_email", new_callable=AsyncMock, return_value=mock_user),
+        patch("db.auth.invalidate_active_otp_tokens", new_callable=AsyncMock),
+        patch("db.auth.add_otp_token"),
+    ):
         response = await client.post(
             "/api/v1/auth/otp/request",
             json={"email": "anyone@tul.cz"},
@@ -222,7 +252,8 @@ async def test_otp_request_rate_limited_after_five_requests(client: AsyncClient)
                 "/api/v1/auth/otp/request",
                 json={"email": "ratelimit@tul.cz"},
             )
-            assert resp.status_code == 200
+            # Unregistered address returns 404; rate limiting has not triggered yet.
+            assert resp.status_code == 404
 
         resp = await client.post(
             "/api/v1/auth/otp/request",
@@ -252,6 +283,7 @@ async def test_otp_request_not_rate_limited_in_e2e_env(client: AsyncClient) -> N
                 "/api/v1/auth/otp/request",
                 json={"email": "ratelimit@tul.cz"},
             )
-            assert resp.status_code == 200
+            # Unregistered address returns 404; rate limiting is bypassed in e2e.
+            assert resp.status_code == 404
 
     rl._windows.clear()

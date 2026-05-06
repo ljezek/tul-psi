@@ -163,7 +163,7 @@ def test_user_invite_template() -> None:
 
 
 # ---------------------------------------------------------------------------
-# EmailSender — local environment
+# EmailSender — local environment (auto backend)
 # ---------------------------------------------------------------------------
 
 
@@ -182,21 +182,59 @@ async def test_email_sender_local_outputs_to_stderr_and_not_stdout(
 
 
 # ---------------------------------------------------------------------------
-# EmailSender — non-local, ACS not configured
+# EmailSender — email_backend override
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_email_sender_raises_when_acs_not_configured_in_non_local_env() -> None:
-    """Non-local EmailSender with no ACS config must raise EmailDeliveryError."""
+async def test_email_sender_smtp_backend_forces_real_delivery_in_local_env(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """EMAIL_BACKEND=smtp must bypass the console path even when app_env is 'local'."""
+    msg = EmailMessage(to="dev@tul.cz", subject="Test", body="Body")
+    with patch("aiosmtplib.send", new_callable=AsyncMock) as mock_send:
+        await EmailSender(
+            app_env="local",
+            email_backend="smtp",
+            smtp_host="mail.smtp2go.com",
+            smtp_port=587,
+            smtp_username="testuser",
+            smtp_password="testpass",
+            smtp_from_address="tul-projects@jezci.net",
+        ).send(msg)
+    mock_send.assert_awaited_once()
+    # Nothing should have been printed to stderr.
+    assert capsys.readouterr().err == ""
+
+
+@pytest.mark.asyncio
+async def test_email_sender_console_backend_forces_stderr_in_non_local_env(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """EMAIL_BACKEND=console must use the console path even when app_env is 'dev'."""
+    msg = EmailMessage(to="dev@tul.cz", subject="Test", body="Body")
+    with patch("aiosmtplib.send", new_callable=AsyncMock) as mock_send:
+        await EmailSender(app_env="dev", email_backend="console").send(msg)
+    mock_send.assert_not_awaited()
+    assert "dev@tul.cz" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# EmailSender — non-local, SMTP not configured
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_email_sender_raises_when_smtp_not_configured_in_production() -> None:
+    """Non-local EmailSender with no SMTP config must raise EmailDeliveryError."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
     with pytest.raises(EmailDeliveryError):
         await EmailSender(app_env="production").send(msg)
 
 
 @pytest.mark.asyncio
-async def test_email_sender_raises_when_acs_not_configured_in_dev_env() -> None:
-    """EmailSender must raise EmailDeliveryError in the 'dev' environment without ACS config."""
+async def test_email_sender_raises_when_smtp_not_configured_in_dev() -> None:
+    """EmailSender must raise EmailDeliveryError in the 'dev' environment without SMTP config."""
     msg = EmailMessage(to="user@tul.cz", subject="Test", body="Hello")
     with pytest.raises(EmailDeliveryError):
         await EmailSender(app_env="dev").send(msg)
@@ -208,61 +246,57 @@ def test_email_delivery_not_implemented_error_is_alias() -> None:
 
 
 # ---------------------------------------------------------------------------
-# EmailSender — non-local, ACS configured (happy path)
+# EmailSender — non-local, SMTP configured (happy path)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_email_sender_calls_acs_with_correct_payload() -> None:
-    """EmailSender must call ACS begin_send with the correct message payload."""
+async def test_email_sender_calls_aiosmtplib_with_correct_params() -> None:
+    """EmailSender must call aiosmtplib.send with the correct connection params and message."""
     msg = EmailMessage(to="student@tul.cz", subject="Hello", body="Body text")
 
-    mock_poller = AsyncMock()
-    mock_client = AsyncMock()
-    mock_client.begin_send.return_value = mock_poller
-
-    # mock_client needs to be an async context manager
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.__aexit__.return_value = None
-
-    with patch("services.email.EmailClient") as mock_email_client_cls:
-        mock_email_client_cls.from_connection_string.return_value = mock_client
+    with patch("aiosmtplib.send", new_callable=AsyncMock) as mock_send:
         await EmailSender(
             app_env="dev",
-            acs_connection_string="endpoint=https://example.communication.azure.com/;accesskey=abc123==",
-            acs_from_address="DoNotReply@example.azurecomm.net",
+            smtp_host="mail.smtp2go.com",
+            smtp_port=587,
+            smtp_username="testuser",
+            smtp_password="testpass",
+            smtp_from_address="tul-projects@jezci.net",
         ).send(msg)
 
-    mock_email_client_cls.from_connection_string.assert_called_once_with(
-        "endpoint=https://example.communication.azure.com/;accesskey=abc123=="
-    )
-    call_payload = mock_client.begin_send.call_args[0][0]
-    assert call_payload["senderAddress"] == "DoNotReply@example.azurecomm.net"
-    assert call_payload["recipients"]["to"][0]["address"] == "student@tul.cz"
-    assert call_payload["content"]["subject"] == "Hello"
-    assert call_payload["content"]["plainText"] == "Body text"
-    mock_poller.result.assert_called_once()
+    mock_send.assert_awaited_once()
+    _mime_msg, kwargs = mock_send.call_args[0][0], mock_send.call_args[1]
+    assert kwargs["hostname"] == "mail.smtp2go.com"
+    assert kwargs["port"] == 587
+    assert kwargs["username"] == "testuser"
+    assert kwargs["password"] == "testpass"
+    assert kwargs["start_tls"] is True
+    # Verify the MIME message headers.
+    assert _mime_msg["To"] == "student@tul.cz"
+    assert _mime_msg["Subject"] == "Hello"
+    assert "tul-projects@jezci.net" in _mime_msg["From"]
 
 
 @pytest.mark.asyncio
-async def test_email_sender_acs_exception_propagates() -> None:
-    """Exceptions from the ACS SDK must propagate out of EmailSender.send."""
+async def test_email_sender_smtp_exception_propagates() -> None:
+    """aiosmtplib errors must be re-raised as EmailDeliveryError so callers
+    never need to import aiosmtplib to handle delivery failures."""
+    import aiosmtplib
+
+    from services.email import EmailDeliveryError
+
     msg = EmailMessage(to="student@tul.cz", subject="Hello", body="Body text")
 
-    mock_client = AsyncMock()
-    mock_client.begin_send.side_effect = RuntimeError("ACS unavailable")
-
-    # mock_client needs to be an async context manager
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.__aexit__.return_value = None
-
-    with patch("services.email.EmailClient") as mock_email_client_cls:
-        mock_email_client_cls.from_connection_string.return_value = mock_client
-        with pytest.raises(RuntimeError, match="ACS unavailable"):
+    with patch("aiosmtplib.send", side_effect=aiosmtplib.SMTPException("relay unavailable")):
+        with pytest.raises(EmailDeliveryError, match="relay unavailable"):
             await EmailSender(
                 app_env="dev",
-                acs_connection_string="endpoint=https://example.communication.azure.com/;accesskey=abc123==",
-                acs_from_address="DoNotReply@example.azurecomm.net",
+                smtp_host="mail.smtp2go.com",
+                smtp_port=587,
+                smtp_username="testuser",
+                smtp_password="testpass",
+                smtp_from_address="tul-projects@jezci.net",
             ).send(msg)
 
 
@@ -272,14 +306,22 @@ async def test_email_sender_acs_exception_propagates() -> None:
 
 
 def test_from_settings_constructs_sender_from_settings_object() -> None:
-    """from_settings must read app_env, acs_connection_string, and acs_from_address."""
+    """from_settings must read app_env, email_backend, and all five SMTP fields from settings."""
     mock_settings = MagicMock()
     mock_settings.app_env = "dev"
-    mock_settings.acs_connection_string = "endpoint=https://x.communication.azure.com/;accesskey=k"
-    mock_settings.acs_from_address = "DoNotReply@x.azurecomm.net"
+    mock_settings.email_backend = "auto"
+    mock_settings.smtp_host = "mail.smtp2go.com"
+    mock_settings.smtp_port = 587
+    mock_settings.smtp_username = "testuser"
+    mock_settings.smtp_password = "testpass"
+    mock_settings.smtp_from_address = "tul-projects@jezci.net"
 
     sender = EmailSender.from_settings(mock_settings)
 
     assert sender._app_env == "dev"
-    assert sender._acs_connection_string == mock_settings.acs_connection_string
-    assert sender._acs_from_address == mock_settings.acs_from_address
+    assert sender._email_backend == mock_settings.email_backend
+    assert sender._smtp_host == mock_settings.smtp_host
+    assert sender._smtp_port == mock_settings.smtp_port
+    assert sender._smtp_username == mock_settings.smtp_username
+    assert sender._smtp_password == mock_settings.smtp_password
+    assert sender._smtp_from_address == mock_settings.smtp_from_address

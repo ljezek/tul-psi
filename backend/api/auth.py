@@ -12,6 +12,7 @@ from db.session import get_session
 from models.user import User
 from rate_limit import rate_limit
 from services import auth_service
+from services.email import EmailDeliveryError
 from settings import get_settings
 from validators import validate_tul_email
 
@@ -74,8 +75,8 @@ class OtpVerifyBody(BaseModel):
     status_code=status.HTTP_200_OK,
     summary="Request a one-time password",
     description=(
-        "Sends a 6-digit OTP to the supplied ``@tul.cz`` address. Always returns HTTP 200 "
-        "regardless of whether the address is registered to prevent user enumeration."
+        "Sends a 6-digit OTP to the supplied ``@tul.cz`` address. "
+        "Returns HTTP 404 when the address is not registered."
     ),
 )
 async def request_otp(
@@ -89,9 +90,24 @@ async def request_otp(
     Delegates to :func:`auth_service.request_otp` which generates the OTP, hashes it,
     persists it, and sends it to the user via email (depending on environment).
     """
-    await auth_service.request_otp(body.email, session)
+    try:
+        await auth_service.request_otp(body.email, session)
+    except auth_service.UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "No account found for this email address. "
+                "Contact your lecturer or administrator to get registered."
+            ),
+        ) from None
+    except EmailDeliveryError as exc:
+        logger.error("OTP email delivery failed.", extra={"error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "email_delivery_failed"},
+        ) from exc
 
-    return OtpRequestResponse(message="If this email is registered, an OTP has been sent.")
+    return OtpRequestResponse(message="OTP has been sent.")
 
 
 @router.post(
@@ -126,12 +142,12 @@ async def verify_otp(
     except auth_service.TooManyAttemptsError:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many attempts — request a new OTP code",
+            detail={"code": "too_many_attempts"},
         ) from None
-    except auth_service.IncorrectOtpError:
+    except auth_service.IncorrectOtpError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired code",
+            detail={"code": "incorrect_otp", "remaining": exc.remaining_attempts},
         ) from None
 
     settings = get_settings()
