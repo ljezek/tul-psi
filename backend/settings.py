@@ -84,6 +84,20 @@ class Settings(BaseSettings):
     smtp_password: str | None = None  # injected as an encrypted ACA secret
     smtp_from_address: str = "lukas.jezek@tul.cz"
 
+    @field_validator("smtp_password", mode="before")
+    @classmethod
+    def _normalise_smtp_password(cls, v: object) -> object:
+        """Treat an empty-string SMTP_PASSWORD env var as absent (None).
+
+        Azure Container Apps injects a blank string when the ACA secret has no
+        value (e.g. the GitHub secret was not yet configured). An empty string
+        is falsy but is not None, which would silently bypass the None-guard in
+        EmailSender and trigger the 'not configured' error path.
+        """
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
     # Health check URL for the OTel collector sidecar/service.
     # In Azure, it's typically http://localhost:13133.
     # In local Docker Compose, it's http://otel-collector:13133.

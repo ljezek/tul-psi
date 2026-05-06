@@ -57,14 +57,7 @@ jobs:
     with:
       environment: dev
       deploy_debug_tools: true
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      PGADMIN_AAD_CLIENT_ID: ${{ secrets.PGADMIN_AAD_CLIENT_ID }}
-      PGADMIN_AAD_CLIENT_SECRET: ${{ secrets.PGADMIN_AAD_CLIENT_SECRET }}
+    secrets: inherit
 
   deploy-prod:
     name: "Deploy Prod"
@@ -78,9 +71,4 @@ jobs:
     with:
       environment: prod
       deploy_debug_tools: false
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+    secrets: inherit
