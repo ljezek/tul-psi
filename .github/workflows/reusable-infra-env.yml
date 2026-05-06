@@ -24,7 +24,7 @@ on:
       PGADMIN_AAD_CLIENT_SECRET:
         required: false
       SMTP_PASSWORD:
-        required: true
+        required: false
 
 jobs:
   deploy:
