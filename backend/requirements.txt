@@ -9,7 +9,7 @@ greenlet==3.0.3
 # asyncpg is a high-performance async PostgreSQL driver built on Python asyncio.
 # It provides native async/await support, enabling fully non-blocking DB access.
 asyncpg==0.30.0
-aiohttp==3.11.11
+aiosmtplib==3.0.1
 bcrypt==5.0.0
 PyJWT==2.12.1
 python-json-logger==3.3.0
@@ -22,7 +22,6 @@ opentelemetry-instrumentation-sqlalchemy==0.57b0
 opentelemetry-instrumentation-asyncpg==0.57b0
 opentelemetry-instrumentation-logging==0.57b0
 azure-identity==1.19.0
-azure-communication-email==1.0.0
 httpx==0.28.1
 
 # Testing
