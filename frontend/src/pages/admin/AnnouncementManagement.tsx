@@ -139,7 +139,7 @@ export const AnnouncementManagement = () => {
         </Button>
       </div>
 
-      {error && <ErrorMessage message={error} className="mb-6" />}
+      {error && <ErrorMessage message={error} />}
 
       {/* Announcements list */}
       {announcements.length === 0 ? (

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 export interface ProjectFormProps {
-  initialData: ProjectPublic;
+  initialData: ProjectPublic | null;
   onSubmit: (data: ProjectUpdate) => Promise<void>;
   isLoading: boolean;
   error: string | null;
@@ -14,11 +14,11 @@ export interface ProjectFormProps {
 export const ProjectForm = ({ initialData, onSubmit, isLoading, error }: ProjectFormProps) => {
   const { t } = useLanguage();
 
-  const [title, setTitle] = useState(initialData.title || '');
-  const [description, setDescription] = useState(initialData.description || '');
-  const [githubUrl, setGithubUrl] = useState(initialData.github_url || '');
-  const [liveUrl, setLiveUrl] = useState(initialData.live_url || '');
-  const [technologies, setTechnologies] = useState(initialData.technologies.join(', ') || '');
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [githubUrl, setGithubUrl] = useState(initialData?.github_url || '');
+  const [liveUrl, setLiveUrl] = useState(initialData?.live_url || '');
+  const [technologies, setTechnologies] = useState(initialData?.technologies.join(', ') || '');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
