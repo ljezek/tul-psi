@@ -11,7 +11,7 @@ test('admin can unlock and re-lock project results', async ({ adminPage: page })
   await page.goto(`/lecturer/course/${COURSES.psi.id}`);
 
   // Verify project 7 is listed and currently locked (no "Výsledky odemčeny" badge)
-  await expect(page.getByText(PROJECTS.kanban.title)).toBeVisible();
+  await expect(page.getByRole('heading', { name: PROJECTS.kanban.title })).toBeVisible();
 
   // Scope all actions to the Kanban project card
   const kanbanCard = page.locator('div').filter({ has: page.locator('h3, h2').filter({ hasText: PROJECTS.kanban.title }) }).last();
