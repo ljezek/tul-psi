@@ -10,16 +10,16 @@ import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluatio
 
 export interface ProjectCardProps {
   project: ProjectPublic;
-  onEditCourse?: (courseId: number) => void;
+  onEditProject?: (projectId: number) => void;
 }
 
-export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
+export const ProjectCard = ({ project, onEditProject }: ProjectCardProps) => {
   const { t } = useLanguage();
   const { user } = useAuth();
 
   const isMember = project.members.some(m => m.id === user?.id);
   const isCourseOwner = project.course.lecturers.some(l => l.email === user?.email);
-  const canEditCourse = user?.role === UserRole.ADMIN || isCourseOwner;
+  const canEditProject = user?.role === UserRole.ADMIN || isCourseOwner || isMember;
 
   // Truncate members list
   const memberNames = project.members.map(m => m.name.split(' ')[0]);
@@ -43,14 +43,14 @@ export const ProjectCard = ({ project, onEditCourse }: ProjectCardProps) => {
           >
             {project.course.code}
           </Link>
-          {canEditCourse && onEditCourse && (
+          {canEditProject && onEditProject && (
             <button
               onClick={(e) => {
                 e.preventDefault();
-                onEditCourse(project.course.id);
+                onEditProject(project.id);
               }}
               className="p-1 text-slate-400 hover:text-fm-orange hover:bg-slate-100 rounded-lg transition-all"
-              title={t('admin.edit_course')}
+              title={t('admin.edit_project')}
             >
               <Settings size={14} />
             </button>

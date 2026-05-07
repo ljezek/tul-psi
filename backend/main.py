@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger.json import JsonFormatter
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from api.announcements import router as announcements_router
 from api.auth import router as auth_router
 from api.courses import router as courses_router
 from api.deps import verify_csrf_token
@@ -86,6 +87,7 @@ app.add_middleware(CORSMiddleware, **cors_kwargs)
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.include_router(health_router)
+app.include_router(announcements_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(courses_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")

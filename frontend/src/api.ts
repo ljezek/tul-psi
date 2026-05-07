@@ -17,7 +17,10 @@ import {
   CourseEvaluationSubmit,
   CourseEvaluationFormResponse,
   CourseTerm,
-  MemberPublic
+  MemberPublic,
+  AnnouncementPublic,
+  AnnouncementCreate,
+  AnnouncementUpdate,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -301,5 +304,35 @@ export async function deleteProject(projectId: number): Promise<void> {
 export async function deleteProjectMember(projectId: number, userId: number): Promise<void> {
   const path = `/api/v1/projects/${projectId}/members/${userId}`;
   return apiFetch<void>(path, { method: 'DELETE' });
+}
+
+// ---------------------------------------------------------------------------
+// Announcements
+// ---------------------------------------------------------------------------
+
+export async function getActiveAnnouncement(): Promise<AnnouncementPublic | null> {
+  return apiFetch<AnnouncementPublic | null>('/api/v1/announcements/active');
+}
+
+export async function getAnnouncements(): Promise<AnnouncementPublic[]> {
+  return apiFetch<AnnouncementPublic[]>('/api/v1/announcements');
+}
+
+export async function createAnnouncement(data: AnnouncementCreate): Promise<AnnouncementPublic> {
+  return apiFetch<AnnouncementPublic>('/api/v1/announcements', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateAnnouncement(id: number, data: AnnouncementUpdate): Promise<AnnouncementPublic> {
+  return apiFetch<AnnouncementPublic>(`/api/v1/announcements/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteAnnouncement(id: number): Promise<void> {
+  return apiFetch<void>(`/api/v1/announcements/${id}`, { method: 'DELETE' });
 }
 

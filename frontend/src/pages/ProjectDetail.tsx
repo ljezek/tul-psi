@@ -120,6 +120,9 @@ export const ProjectDetail = () => {
   const isMember = user && project?.members.some(m => m.id === user.id);
   const isOwningLecturer = user && project?.course.lecturers.some(l => l.id === user.id);
   const showLecturerControls = user && (user.role === UserRole.ADMIN || (user.role === UserRole.LECTURER && isOwningLecturer));
+  // canEditProject: members and lecturers may edit project details when results are not yet finalized.
+  const canEditProject = (showLecturerControls || isMember) && !project?.results_unlocked;
+  // canEdit: lecturer-only controls (add/remove members).
   const canEdit = showLecturerControls && !project?.results_unlocked;
 
   if (loading) {
@@ -354,36 +357,36 @@ export const ProjectDetail = () => {
                 </div>
               )}
 
-              {showLecturerControls && (
-                <div className="flex flex-col gap-3">
-                  {canEdit && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start gap-3"
-                        onClick={() => setIsEditModalOpen(true)}
-                      >
-                        <Edit2 size={18} className="text-fm-orange" />
-                        {t('admin.update_project')}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start gap-3"
-                        onClick={() => setIsAddMemberModalOpen(true)}
-                      >
-                        <UserPlus size={18} className="text-fm-orange" />
-                        {t('lecturer.add_member')}
-                      </Button>
-                    </>
-                  )}
+              <div className="flex flex-col gap-3">
+                {canEditProject && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-3"
+                    onClick={() => setIsEditModalOpen(true)}
+                  >
+                    <Edit2 size={18} className="text-fm-orange" />
+                    {t('admin.update_project')}
+                  </Button>
+                )}
+                {showLecturerControls && canEdit && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-3"
+                    onClick={() => setIsAddMemberModalOpen(true)}
+                  >
+                    <UserPlus size={18} className="text-fm-orange" />
+                    {t('lecturer.add_member')}
+                  </Button>
+                )}
+                {showLecturerControls && (
                   <Link to={`/lecturer/project/${project.id}/evaluate`} className="block">
                     <Button variant="outline" className="w-full justify-start gap-3">
                       <CheckCircle size={18} className="text-fm-orange" />
                       {t('project.evaluate')}
                     </Button>
                   </Link>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>

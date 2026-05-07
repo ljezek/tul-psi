@@ -13,16 +13,19 @@ import {
   Star,
   Mail,
   X,
-  Plus
+  Plus,
+  Settings
 } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourse, getProjects, addCourseLecturer, deleteCourseLecturer } from '@/api';
-import { CourseDetail, ProjectPublic, UserRole } from '@/types';
+import { getCourse, getProjects, addCourseLecturer, deleteCourseLecturer, updateProject, ApiError } from '@/api';
+import { CourseDetail, ProjectPublic, UserRole, ProjectUpdate } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { ProjectForm } from '@/components/admin/ProjectForm';
 
 export const CourseDetailView = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +39,12 @@ export const CourseDetailView = () => {
   const [isAddingLecturer, setIsAddingLecturer] = useState(false);
   const [newLecturerEmail, setNewLecturerEmail] = useState('');
   const [lecturerError, setLecturerError] = useState<string | null>(null);
+
+  // Edit Project Modal State
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectPublic | null>(null);
+  const [editProjectLoading, setEditProjectLoading] = useState(false);
+  const [editProjectError, setEditProjectError] = useState<string | null>(null);
 
   const fetchCourseData = async () => {
     setLoading(true);
@@ -75,6 +84,14 @@ export const CourseDetailView = () => {
     return course.lecturers.some(l => l.email === currentUser.email);
   }, [currentUser, course]);
 
+  const canEditProject = (project: ProjectPublic): boolean => {
+    if (!currentUser) return false;
+    const isLecturerOrAdmin = currentUser.role === UserRole.ADMIN ||
+      (course?.lecturers.some(l => l.email === currentUser.email) ?? false);
+    const isMember = project.members.some(m => m.id === currentUser.id);
+    return (isLecturerOrAdmin || isMember) && !project.results_unlocked;
+  };
+
   const handleAddLecturer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!course || !newLecturerEmail) return;
@@ -104,6 +121,28 @@ export const CourseDetailView = () => {
       setCourse(updatedCourse);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleOpenEditProject = (project: ProjectPublic) => {
+    setEditingProject(project);
+    setIsEditProjectModalOpen(true);
+  };
+
+  const handleUpdateProject = async (data: ProjectUpdate) => {
+    if (!editingProject) return;
+    setEditProjectLoading(true);
+    setEditProjectError(null);
+    try {
+      await updateProject(editingProject.id, data);
+      setIsEditProjectModalOpen(false);
+      // Re-fetch projects to reflect the updated title/details.
+      const projectsData = await getProjects({ course: course!.code });
+      setProjects(projectsData);
+    } catch (_err) {
+      setEditProjectError(_err instanceof ApiError && typeof _err.detail === 'string' ? _err.detail : t('login.error_unexpected'));
+    } finally {
+      setEditProjectLoading(false);
     }
   };
 
@@ -328,25 +367,36 @@ export const CourseDetailView = () => {
                           <hr className="border-slate-200" />
                         </div>
                       )}
-                      <Link 
-                        to={`/projects/${project.id}`}
-                        className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-fm-orange/20 transition-all group gap-4"
-                      >
-                        <div className="min-w-0 flex-grow">
-                          <h4 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-fm-orange transition-colors truncate">
-                            {project.title}
-                          </h4>
-                          <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider whitespace-nowrap">
-                              {project.academic_year}/{project.academic_year + 1}
-                            </span>
-                            <span className="text-[11px] text-slate-500 truncate italic">
-                              {project.members.map(m => m.name).join(', ')}
-                            </span>
+                      <div className="flex items-center p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-fm-orange/20 transition-all group gap-4">
+                        <Link 
+                          to={`/projects/${project.id}`}
+                          className="flex items-center justify-between flex-1 gap-4 min-w-0"
+                        >
+                          <div className="min-w-0 flex-grow">
+                            <h4 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-fm-orange transition-colors truncate">
+                              {project.title}
+                            </h4>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider whitespace-nowrap">
+                                {project.academic_year}/{project.academic_year + 1}
+                              </span>
+                              <span className="text-[11px] text-slate-500 truncate italic">
+                                {project.members.map(m => m.name).join(', ')}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <ArrowRight size={18} className="text-slate-300 group-hover:text-fm-orange group-hover:translate-x-1 transition-all flex-shrink-0" />
-                      </Link>
+                          <ArrowRight size={18} className="text-slate-300 group-hover:text-fm-orange group-hover:translate-x-1 transition-all flex-shrink-0" />
+                        </Link>
+                        {canEditProject(project) && (
+                          <button
+                            onClick={() => handleOpenEditProject(project)}
+                            className="p-1.5 text-slate-400 hover:text-fm-orange hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all flex-shrink-0"
+                            title={t('admin.edit_project')}
+                          >
+                            <Settings size={14} />
+                          </button>
+                        )}
+                      </div>
                     </Fragment>
                   );
                 })}
@@ -400,6 +450,21 @@ export const CourseDetailView = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Project Modal */}
+      <Modal
+        isOpen={isEditProjectModalOpen}
+        onClose={() => setIsEditProjectModalOpen(false)}
+        title={t('admin.edit_project')}
+        size="xl"
+      >
+        <ProjectForm
+          initialData={editingProject}
+          onSubmit={handleUpdateProject}
+          isLoading={editProjectLoading}
+          error={editProjectError}
+        />
+      </Modal>
     </div>
   );
 };

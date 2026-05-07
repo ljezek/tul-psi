@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, BookOpen, Calendar, Tag, AlertCircle, User } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProjects, getCourses, getCourse, updateCourse, ApiError } from '@/api';
-import { ProjectPublic, CourseListItem, CourseDetail, CourseCreate, CourseUpdate } from '@/types';
+import { getProjects, getCourses, updateProject, ApiError } from '@/api';
+import { ProjectPublic, CourseListItem, ProjectUpdate } from '@/types';
 import { ProjectCard } from '@/components/ProjectCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Modal } from '@/components/ui/Modal';
-import { CourseForm } from '@/components/admin/CourseForm';
+import { ProjectForm } from '@/components/admin/ProjectForm';
 
 export const Dashboard = () => {
   const { t } = useLanguage();
@@ -21,9 +21,9 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Edit Course Modal State
+  // Edit Project Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<CourseDetail | null>(null);
+  const [editingProject, setEditingProject] = useState<ProjectPublic | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -70,25 +70,20 @@ export const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  const handleOpenEdit = async (courseId: number) => {
-    try {
-      setEditLoading(true);
-      const detail = await getCourse(courseId);
-      setEditingCourse(detail);
+  const handleOpenEditProject = (projectId: number) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setEditingProject(project);
       setIsEditModalOpen(true);
-    } catch {
-      alert(t('courseDetail.error_fetching'));
-    } finally {
-      setEditLoading(false);
     }
   };
 
-  const handleUpdateCourse = async (data: CourseCreate | CourseUpdate) => {
-    if (!editingCourse) return;
+  const handleUpdateProject = async (data: ProjectUpdate) => {
+    if (!editingProject) return;
     setEditLoading(true);
     setEditError(null);
     try {
-      await updateCourse(editingCourse.id, data as CourseUpdate);
+      await updateProject(editingProject.id, data);
       setIsEditModalOpen(false);
       fetchData();
     } catch (_err) {
@@ -266,7 +261,7 @@ export const Dashboard = () => {
       {filteredProjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProjects.map(project => (
-            <ProjectCard key={project.id} project={project} onEditCourse={handleOpenEdit} />
+            <ProjectCard key={project.id} project={project} onEditProject={handleOpenEditProject} />
           ))}
         </div>
       ) : (
@@ -289,16 +284,16 @@ export const Dashboard = () => {
         </div>
       )}
 
-      {/* Edit Course Modal */}
+      {/* Edit Project Modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title={t('admin.edit_course')}
+        title={t('admin.edit_project')}
         size="xl"
       >
-        <CourseForm
-          initialData={editingCourse}
-          onSubmit={handleUpdateCourse}
+        <ProjectForm
+          initialData={editingProject}
+          onSubmit={handleUpdateProject}
           isLoading={editLoading}
           error={editError}
         />

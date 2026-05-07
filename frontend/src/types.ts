@@ -4,6 +4,33 @@ export enum UserRole {
   STUDENT = "STUDENT"
 }
 
+export enum AnnouncementSeverity {
+  INFO = "INFO",
+  WARNING = "WARNING",
+  ERROR = "ERROR"
+}
+
+export interface AnnouncementPublic {
+  id: number;
+  message: string;
+  severity: AnnouncementSeverity;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AnnouncementCreate {
+  message: string;
+  severity: AnnouncementSeverity;
+  is_active: boolean;
+}
+
+export interface AnnouncementUpdate {
+  message?: string | null;
+  severity?: AnnouncementSeverity | null;
+  is_active?: boolean | null;
+}
+
 export enum CourseTerm {
   SUMMER = "SUMMER",
   WINTER = "WINTER"

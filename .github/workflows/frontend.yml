@@ -83,6 +83,7 @@ jobs:
         env:
           VITE_API_URL: ${{ steps.fetch_secrets.outputs.backend_url }}
           VITE_LOGIC_APP_FEEDBACK_URL: ${{ secrets.VITE_LOGIC_APP_FEEDBACK_URL }}
+          VITE_APP_ENV: e2e
 
   close-pull-request:
     if: github.event.action == 'closed'

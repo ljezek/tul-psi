@@ -151,14 +151,13 @@ export const UserManagement = () => {
   };
 
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
-  if (error) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error} onRetry={loadUsers} /></div>;
+  if (error) return <div><ErrorMessage message={error} onRetry={loadUsers} /></div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-fade-in">
+    <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900">{t('admin.user_management')}</h1>
-          <p className="text-slate-500 font-bold mt-1">
+          <p className="text-slate-500 font-bold">
             {users.length} {t('admin.role').toLowerCase()}
           </p>
         </div>

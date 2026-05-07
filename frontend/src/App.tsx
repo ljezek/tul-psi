@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MainLayout } from '@/layouts/MainLayout';
+import { AdminPanel } from '@/pages/admin/AdminPanel';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { UserRole } from '@/types';
 
@@ -23,6 +24,7 @@ const CourseProjects = lazy(() => import('@/pages/lecturer/CourseProjects').then
 const ProjectEvaluation = lazy(() => import('@/pages/lecturer/ProjectEvaluation').then(m => ({ default: m.ProjectEvaluation })));
 const ProjectResults = lazy(() => import('@/pages/lecturer/ProjectResults').then(m => ({ default: m.ProjectResults })));
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement').then(m => ({ default: m.UserManagement })));
+const AnnouncementManagement = lazy(() => import('@/pages/admin/AnnouncementManagement').then(m => ({ default: m.AnnouncementManagement })));
 
 // Loading component
 const PageLoader = () => (
@@ -57,7 +59,10 @@ const router = createBrowserRouter(
         <Route path="/lecturer/project/:id/results" element={<Suspense fallback={<PageLoader />}><ProjectResults /></Suspense>} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
-        <Route path="/admin/users" element={<Suspense fallback={<PageLoader />}><UserManagement /></Suspense>} />
+        <Route path="/admin" element={<AdminPanel />}>
+          <Route path="users" element={<Suspense fallback={<PageLoader />}><UserManagement /></Suspense>} />
+          <Route path="announcements" element={<Suspense fallback={<PageLoader />}><AnnouncementManagement /></Suspense>} />
+        </Route>
       </Route>
 
     </Route>
