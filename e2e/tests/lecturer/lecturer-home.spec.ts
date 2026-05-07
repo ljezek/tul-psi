@@ -16,10 +16,10 @@ test('course projects page lists in-progress projects with evaluate action', asy
   await page.goto(`/lecturer/course/${COURSES.psi.id}`);
 
   // All 5 PSI-2026 in-progress project titles should appear
-  await expect(page.getByText(PROJECTS.lectorsSpc.title)).toBeVisible();
-  await expect(page.getByText(PROJECTS.bookstore.title)).toBeVisible();
-  await expect(page.getByText(PROJECTS.kanban.title)).toBeVisible();
-  await expect(page.getByText(PROJECTS.quizApp.title)).toBeVisible();
+  await expect(page.getByRole('heading', { name: PROJECTS.lectorsSpc.title })).toBeVisible();
+  await expect(page.getByRole('heading', { name: PROJECTS.bookstore.title })).toBeVisible();
+  await expect(page.getByRole('heading', { name: PROJECTS.kanban.title })).toBeVisible();
+  await expect(page.getByRole('heading', { name: PROJECTS.quizApp.title })).toBeVisible();
 
   // At least one "Hodnotit" / "Evaluate" link is present
   await expect(
