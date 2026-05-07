@@ -12,7 +12,7 @@ on:
         required: false
         type: string
       force:
-        description: "Skip SHA regression check — use for intentional rollback"
+        description: "Skip SHA regression check — REQUIRED when intentionally rolling back to an older SHA"
         required: false
         default: false
         type: boolean
@@ -39,7 +39,9 @@ jobs:
     outputs:
       sha: ${{ steps.checks.outputs.sha }}
       should_skip: ${{ steps.checks.outputs.should_skip }}
-      has_backend_image: ${{ steps.checks.outputs.has_backend_image }}
+      deploy_backend: ${{ steps.checks.outputs.deploy_backend }}
+      deploy_frontend: ${{ steps.checks.outputs.deploy_frontend }}
+      backend_sha: ${{ steps.checks.outputs.backend_sha }}
       current_prod_sha: ${{ steps.checks.outputs.current_prod_sha }}
       is_forced: ${{ steps.checks.outputs.is_forced }}
     steps:
@@ -97,24 +99,96 @@ jobs:
               echo "⚠️  SHA $SHA is older than currently promoted $CURRENT_SHA."
               echo "    Use workflow_dispatch with force=true for an intentional rollback."
               echo "should_skip=true" >> $GITHUB_OUTPUT
-              echo "has_backend_image=false" >> $GITHUB_OUTPUT
+              echo "deploy_backend=false" >> $GITHUB_OUTPUT
+              echo "deploy_frontend=false" >> $GITHUB_OUTPUT
+              echo "backend_sha=" >> $GITHUB_OUTPUT
               exit 0
             fi
           fi
           echo "should_skip=false" >> $GITHUB_OUTPUT
 
-          # ── ACR image check ──────────────────────────────────────────────
-          # Frontend-only commits have no backend image; backend deploy skips cleanly.
+          # ── Backend image resolution ─────────────────────────────────────
+          # Check the promoted SHA first. If this is a frontend-only commit with no
+          # backend image, walk back through git history (commits that touched backend/)
+          # to find the most recent ancestor that has an ACR image. Any such commit was
+          # built by CI and passed E2E on dev before reaching main, so it is safe to
+          # promote. Searching is bounded to the last 20 backend commits to stay fast.
           ACR_NAME=$(az acr list -g rg-spc-shared-pl --query "[0].name" -o tsv)
-          EXISTS=$(az acr repository show-tags \
-            --name "$ACR_NAME" \
-            --repository backend \
-            --query "contains(@, '$SHA')" -o tsv 2>/dev/null || echo "false")
-          echo "has_backend_image=$EXISTS" >> $GITHUB_OUTPUT
+          BACKEND_SHA=""
 
-          if [[ "$EXISTS" != "true" ]]; then
-            echo "ℹ️  No backend image for SHA $SHA (frontend-only change)."
-            echo "   Backend deployment will be skipped; frontend will still deploy."
+          if az acr repository show-tags \
+              --name "$ACR_NAME" --repository backend \
+              --query "contains(@, '$SHA')" -o tsv 2>/dev/null | grep -q "^true$"; then
+            BACKEND_SHA="$SHA"
+            echo "Backend image found for promoted SHA $SHA."
+          else
+            echo "ℹ️  No backend image for SHA $SHA (frontend-only commit)."
+            echo "   Searching git history for the most recent ancestor with a backend image..."
+            while IFS= read -r COMMIT; do
+              HAS=$(az acr repository show-tags \
+                --name "$ACR_NAME" --repository backend \
+                --query "contains(@, '$COMMIT')" -o tsv 2>/dev/null || echo "false")
+              if [[ "$HAS" == "true" ]]; then
+                BACKEND_SHA="$COMMIT"
+                echo "   Found validated backend image at ancestor commit $BACKEND_SHA."
+                break
+              fi
+            done < <(git log --format="%H" -20 "$SHA" -- backend/)
+            if [[ -z "$BACKEND_SHA" ]]; then
+              echo "   No backend image found in the last 20 backend commits."
+            fi
+          fi
+          echo "backend_sha=$BACKEND_SHA" >> $GITHUB_OUTPUT
+
+          # ── Per-component deploy decision ────────────────────────────────
+          # Read the component-level stamps written by the smoke-test job after each
+          # successful prod deployment. These track independently which backend image
+          # and which frontend source commit are currently live in production.
+          PROD_BACKEND_SHA=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "tags.promotedBackendSha" -o tsv 2>/dev/null || echo "")
+          PROD_FRONTEND_SHA=$(az containerapp show \
+            -n ca-spc-prod-backend -g rg-spc-prod-pl \
+            --query "tags.promotedFrontendSha" -o tsv 2>/dev/null || echo "")
+          echo "Current prod backend image SHA : ${PROD_BACKEND_SHA:-(none)}"
+          echo "Current prod frontend source SHA: ${PROD_FRONTEND_SHA:-(none)}"
+
+          # Backend: deploy when the resolved image differs from what is already live,
+          # or always on a forced rollback.
+          if [[ "$FORCE" == "true" && -n "$BACKEND_SHA" ]]; then
+            echo "deploy_backend=true" >> $GITHUB_OUTPUT
+            echo "Force mode: backend will be deployed ($BACKEND_SHA)."
+          elif [[ -z "$BACKEND_SHA" ]]; then
+            echo "deploy_backend=false" >> $GITHUB_OUTPUT
+            echo "No backend image available; backend deployment skipped."
+          elif [[ "$BACKEND_SHA" == "$PROD_BACKEND_SHA" ]]; then
+            echo "deploy_backend=false" >> $GITHUB_OUTPUT
+            echo "Backend image $BACKEND_SHA already running in prod; skipping backend deployment."
+          else
+            echo "deploy_backend=true" >> $GITHUB_OUTPUT
+            echo "Backend will be deployed: ${PROD_BACKEND_SHA:-(none)} → $BACKEND_SHA"
+          fi
+
+          # Frontend: deploy when frontend/ source changed since the last deployed commit,
+          # or always on a forced rollback or first-ever deployment.
+          if [[ "$FORCE" == "true" ]]; then
+            echo "deploy_frontend=true" >> $GITHUB_OUTPUT
+            echo "Force mode: frontend will be deployed."
+          elif [[ -z "$PROD_FRONTEND_SHA" ]]; then
+            echo "deploy_frontend=true" >> $GITHUB_OUTPUT
+            echo "No prior prod frontend SHA found; deploying frontend (first deployment)."
+          elif [[ "$PROD_FRONTEND_SHA" == "$SHA" ]]; then
+            echo "deploy_frontend=false" >> $GITHUB_OUTPUT
+            echo "Frontend already at SHA $SHA; skipping frontend deployment."
+          else
+            DIFF=$(git diff --name-only "$PROD_FRONTEND_SHA" "$SHA" -- frontend/ 2>/dev/null | head -1 || echo "")
+            if [[ -n "$DIFF" ]]; then
+              echo "deploy_frontend=true" >> $GITHUB_OUTPUT
+              echo "Frontend source changed since $PROD_FRONTEND_SHA; deploying frontend."
+            else
+              echo "deploy_frontend=false" >> $GITHUB_OUTPUT
+              echo "Frontend source unchanged since $PROD_FRONTEND_SHA; skipping frontend deployment."
+            fi
           fi
 
           # ── Infrastructure change warning ────────────────────────────────
@@ -137,9 +211,13 @@ jobs:
   verify-dev:
     name: "Verify Dev is Healthy"
     needs: gate
-    # Skip when: SHA regression blocked everything, OR this is a forced rollback
-    # (a prod incident rollback must not be blocked by a dev health failure).
-    if: needs.gate.outputs.should_skip == 'false' && needs.gate.outputs.is_forced != 'true'
+    # Skip when: SHA regression blocked everything; this is a forced rollback
+    # (a prod incident rollback must not be blocked by a dev health failure);
+    # or both components are already up to date in prod (nothing to deploy).
+    if: >
+      needs.gate.outputs.should_skip == 'false' &&
+      needs.gate.outputs.is_forced != 'true' &&
+      (needs.gate.outputs.deploy_backend == 'true' || needs.gate.outputs.deploy_frontend == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: dev
@@ -174,9 +252,10 @@ jobs:
   deploy-backend-prod:
     name: "Deploy Backend (prod)"
     needs: [gate, verify-dev]
-    # Skipped cleanly when there is no backend image (frontend-only or infra-only SHA).
-    # verify-dev is skipped on force=true; GitHub evaluates skipped as satisfied for needs.
-    if: needs.gate.outputs.has_backend_image == 'true'
+    # Skipped when the resolved backend image is already running in prod, or when no
+    # backend image exists anywhere in ACR. verify-dev is skipped on force=true or
+    # no-op; GitHub evaluates skipped as satisfied for downstream needs.
+    if: needs.gate.outputs.deploy_backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: prod
@@ -218,7 +297,7 @@ jobs:
           az containerapp job update \
             --name job-spc-prod-migrate \
             --resource-group rg-spc-prod-pl \
-            --image ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ needs.gate.outputs.sha }}
+            --image ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ needs.gate.outputs.backend_sha }}
 
       - name: Run Migrations
         run: |
@@ -280,11 +359,12 @@ jobs:
             --resource-group rg-spc-prod-pl \
             --query "[?properties.active].name | [0]" -o tsv)
 
+          echo "Deploying backend image: ${{ needs.gate.outputs.backend_sha }} (frontend commit: ${{ needs.gate.outputs.sha }})"
           az containerapp update \
             --name ca-spc-prod-backend \
             --resource-group rg-spc-prod-pl \
             --container-name backend \
-            --image ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ needs.gate.outputs.sha }} \
+            --image ${{ steps.get_acr.outputs.acr_name }}.azurecr.io/backend:${{ needs.gate.outputs.backend_sha }} \
             --set-env-vars FRONTEND_URL=https://$FRONTEND_URL || \
           (echo "Deploy failed — rolling back to $PREV_REVISION" && \
            az containerapp revision activate \
@@ -296,7 +376,8 @@ jobs:
   deploy-frontend-prod:
     name: "Deploy Frontend (prod)"
     needs: [gate, verify-dev]
-    if: needs.gate.outputs.should_skip == 'false'
+    # Skipped when frontend/ source is identical to the last deployed commit.
+    if: needs.gate.outputs.should_skip == 'false' && needs.gate.outputs.deploy_frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: prod
@@ -407,22 +488,75 @@ jobs:
           echo "Health check failed after 10 attempts."
           exit 1
 
-      - name: Stamp promotedSha tag on Container App
-        # Stamped after smoke test passes so the SHA regression check in gate
-        # always reflects what is actually healthy in production.
+      - name: Stamp promotion tags on Container App
+        # Three tags are stamped after the smoke test passes:
+        # - promotedSha: the overall commit SHA used for the SHA regression check.
+        # - promotedBackendSha: the backend image SHA now running; used as the
+        #   fallback source when a future frontend-only commit has no backend image.
+        # - promotedFrontendSha: the commit SHA the frontend was built from; used
+        #   to detect whether frontend/ source has changed since the last deployment.
+        # Only the component tags that were actually deployed are updated so that a
+        # backend-only promotion does not overwrite the frontend stamp and vice-versa.
         run: |
+          SHA="${{ needs.gate.outputs.sha }}"
+          BACKEND_SHA="${{ needs.gate.outputs.backend_sha }}"
+
           az containerapp update \
             --name ca-spc-prod-backend \
             --resource-group rg-spc-prod-pl \
-            --tags promotedSha=${{ needs.gate.outputs.sha }}
+            --tags promotedSha="$SHA"
+
+          if [[ "${{ needs.deploy-backend-prod.result }}" == "success" ]]; then
+            az containerapp update \
+              --name ca-spc-prod-backend \
+              --resource-group rg-spc-prod-pl \
+              --tags promotedBackendSha="$BACKEND_SHA"
+          fi
+
+          if [[ "${{ needs.deploy-frontend-prod.result }}" == "success" ]]; then
+            az containerapp update \
+              --name ca-spc-prod-backend \
+              --resource-group rg-spc-prod-pl \
+              --tags promotedFrontendSha="$SHA"
+          fi
 
       - name: Write deployment summary
         run: |
           echo "## Prod Deployment — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
           echo "| | |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **SHA** | \`${{ needs.gate.outputs.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Promoted SHA** | \`${{ needs.gate.outputs.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend image SHA** | \`${{ needs.gate.outputs.backend_sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Forced rollback** | ${{ needs.gate.outputs.is_forced }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Backend** | ${{ needs.deploy-backend-prod.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Frontend** | ${{ needs.deploy-frontend-prod.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Smoke test** | passed |" >> $GITHUB_STEP_SUMMARY
+
+  # ── No-op Summary ─────────────────────────────────────────────────────────
+  notify-no-op:
+    name: "Nothing to deploy (FE and BE already up to date)"
+    needs: [gate, verify-dev, deploy-backend-prod, deploy-frontend-prod]
+    # Runs when the gate determined both components are already current in prod.
+    # verify-dev will have been skipped in this case; the deploy jobs will also
+    # be skipped. Surfacing an explicit summary prevents silent "successful" runs
+    # that deployed nothing.
+    if: |
+      always() &&
+      needs.gate.result == 'success' &&
+      needs.gate.outputs.should_skip == 'false' &&
+      (needs.verify-dev.result == 'success' || needs.verify-dev.result == 'skipped') &&
+      needs.deploy-backend-prod.result == 'skipped' &&
+      needs.deploy-frontend-prod.result == 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write no-op summary
+        run: |
+          echo "## Prod Deployment — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Both frontend and backend are already up to date in production." >> $GITHUB_STEP_SUMMARY
+          echo "No deployment was performed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **SHA** | \`${{ needs.gate.outputs.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend image SHA** | \`${{ needs.gate.outputs.backend_sha }}\` |" >> $GITHUB_STEP_SUMMARY

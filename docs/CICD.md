@@ -70,11 +70,12 @@ flowchart TD
     E2E -->|success| GATE
 
     subgraph ptp [promote-to-prod.yml]
-        GATE[gate — SHA regression + ACR check]
+        GATE[gate — SHA regression + per-component skip decision]
         GATE --> VD[verify-dev health]
         VD --> BP[deploy-backend-prod — migrations + ACA]
         VD --> FP[deploy-frontend-prod — checkout SHA + SWA]
-        BP & FP --> ST[smoke-test — stamp promotedSha]
+        BP & FP --> ST[smoke-test — stamp 3 prod tags]
+        BP & FP --> NOP[notify-no-op — nothing to deploy]
     end
 ```
 
@@ -118,15 +119,20 @@ Pull Request to main
 
 | Change type | Dev auto-deploy | E2E triggered | Backend promoted to prod | Frontend promoted to prod |
 |---|---|---|---|---|
-| **Backend only** | `backend-dev` runs | Yes | Yes | Yes (rebuilt from same SHA — same output) |
-| **Frontend only** | `frontend-dev` runs | Yes | Skipped cleanly (no ACR image for this SHA) | Yes |
+| **Backend only** | `backend-dev` runs | Yes | Yes | Skipped — `frontend/` source unchanged since last prod deploy |
+| **Frontend only** | `frontend-dev` runs | Yes | Yes — falls back to the last E2E-validated backend image (walks git history, not "latest in ACR") | Yes |
 | **All parts** | Both run | Yes (concurrency keeps one E2E) | Yes | Yes |
 | **Infrastructure only** | `infrastructure.yml` runs: shared → dev auto, prod gated | No | No | No — infra changes do not trigger app promotion |
 | **Data / other** | No | No | No | No |
+| **Re-run of same SHA** | n/a | n/a | Skipped — backend image already running in prod | Skipped — frontend source unchanged |
 
-### Why frontend rebuilds on backend-only changes
+### Why frontend is skipped on backend-only changes
 
-`VITE_API_URL` is compiled into the JavaScript bundle at build time. The dev build points at the dev backend. The promote workflow always rebuilds the frontend from source with the prod backend URL. On a backend-only change the source is identical to the previous prod frontend build, so the output is functionally the same — it is a harmless but necessary rebuild.
+The gate compares `frontend/` source between `promotedFrontendSha` (the commit the current prod frontend was built from) and the incoming SHA using `git diff --name-only`. On a backend-only commit the diff is empty, so the frontend deploy job is skipped entirely. This avoids an unnecessary SWA build/deploy whose output would be byte-for-byte identical to what is already live.
+
+### Why backend is always deployed on frontend-only changes
+
+When a frontend-only commit has no backend Docker image in ACR, the gate walks `git log -- backend/` backwards (up to 20 commits) and picks the most recent ancestor that has an image. Any commit that has an image was built by `backend-dev.yml`, deployed to dev, and had E2E tests pass against it — it is E2E-validated, not just "latest in ACR". The deploy decision then compares that resolved image against `promotedBackendSha`; if they are the same, the backend is skipped too.
 
 ### Infrastructure changes and prod
 
@@ -140,46 +146,69 @@ Infrastructure changes are automatically deployed to dev. **Prod infrastructure 
 
 ## Automatic Promotion: How It Works
 
-After E2E tests pass on `main`, `promote-to-prod.yml` runs five jobs in sequence:
+After E2E tests pass on `main`, `promote-to-prod.yml` runs up to six jobs:
 
 ```
 gate
-  └── verify-dev
-        ├── deploy-backend-prod ──┐  (parallel)
-        └── deploy-frontend-prod ─┤  (parallel)
-                                  └── smoke-test
+  └── verify-dev          (skipped if both components are already up to date)
+        ├── deploy-backend-prod ──┐  (parallel; skipped if backend image unchanged)
+        └── deploy-frontend-prod ─┤  (parallel; skipped if frontend/ source unchanged)
+                                  ├── smoke-test      (runs if at least one deploy succeeded)
+                                  └── notify-no-op    (runs if both deploys were skipped)
 ```
 
 ### gate
-Runs without a GitHub environment (uses the main-branch OIDC credential). Performs three checks:
+Runs without a GitHub environment (uses the main-branch OIDC credential). Performs the following checks and decisions:
 
 1. **E2E conclusion**: for `workflow_run` triggers, skips everything if E2E didn't succeed.
-2. **SHA regression check**: reads the `promotedSha` Azure tag from `ca-spc-prod-backend`. Uses `git merge-base --is-ancestor` to detect if the incoming SHA is older than what is currently live. Blocks promotion silently if so.
-3. **ACR image check**: verifies whether a backend Docker image exists for this SHA. Outputs `has_backend_image=false` for frontend-only commits so the backend job skips cleanly.
+2. **SHA regression check**: reads the `promotedSha` Azure tag from `ca-spc-prod-backend`. Uses `git merge-base --is-ancestor` to detect if the incoming SHA is older than what is currently live. Blocks all downstream jobs if so.
+3. **Backend image resolution**: checks ACR for an image tagged with the promoted SHA. If none exists (frontend-only commit), walks `git log -- backend/` (up to 20 commits) to find the most recent ancestor commit that has an ACR image — this is guaranteed to be E2E-validated. Outputs `backend_sha` with the resolved image tag.
+4. **Per-component deploy decision**: reads two component-level Container App tags — `promotedBackendSha` (image currently running) and `promotedFrontendSha` (commit the current prod frontend was built from) — and independently sets `deploy_backend` and `deploy_frontend`:
+   - `deploy_backend=true` when `backend_sha ≠ promotedBackendSha`
+   - `deploy_frontend=true` when `git diff promotedFrontendSha sha -- frontend/` is non-empty
+   - Both are `true` unconditionally when `force=true` or on the first-ever deployment
 
 ### verify-dev
-Polls the live `ca-spc-dev-backend` `/health` endpoint. Prod promotion is blocked if dev itself is unhealthy.
+Polls the live `ca-spc-dev-backend` `/health` endpoint. Skipped automatically when both `deploy_backend` and `deploy_frontend` are false (nothing to deploy). Prod promotion is blocked if dev itself is unhealthy.
 
 ### deploy-backend-prod
-Re-reads the live `promotedSha` tag immediately after any approval wait and aborts if it changed (prevents a stale approval from overwriting a newer deployment). Then promotes the same Docker image that was deployed to dev (no rebuild). Runs Alembic migrations first via `job-spc-prod-migrate`; if migrations fail, the Container App update is never attempted and the previous image keeps running.
+Skipped when `deploy_backend=false` (image already running in prod). Otherwise: re-reads the live `promotedSha` tag immediately after any approval wait and aborts if it changed (prevents a stale approval from overwriting a newer deployment). Promotes the same Docker image that was deployed to dev — no rebuild. Runs Alembic migrations first via `job-spc-prod-migrate`; if migrations fail, the Container App update is never attempted and the previous image keeps running.
 
 ### deploy-frontend-prod
-Re-reads the live `promotedSha` tag immediately after any approval wait and aborts if it changed (same stale-approval guard as the backend job). Checks out the exact promoted SHA and rebuilds the frontend with the prod backend URL baked in. Deploys to `swa-spc-prod`.
+Skipped when `deploy_frontend=false` (frontend source unchanged). Otherwise: re-reads the live `promotedSha` tag immediately after any approval wait and aborts if it changed (same stale-approval guard as the backend job). Checks out the exact promoted SHA and rebuilds the frontend with the prod backend URL baked in. Deploys to `swa-spc-prod`.
 
 ### smoke-test
-Polls prod `/health` with retries. On success, stamps the `promotedSha` tag on `ca-spc-prod-backend` and writes a summary to the GitHub Actions job summary page.
+Polls prod `/health` with retries. On success, stamps **three tags** on `ca-spc-prod-backend`:
+- `promotedSha` — always; used by the SHA regression check.
+- `promotedBackendSha` — only if backend was deployed; records the image now running.
+- `promotedFrontendSha` — only if frontend was deployed; records the source commit the frontend was built from.
+
+Each tag is only updated for the component that was actually deployed, so a backend-only promotion does not overwrite the frontend stamp and vice-versa.
+
+### notify-no-op
+Runs instead of smoke-test when both deploy jobs were skipped (both components already up to date in prod). Writes a step summary confirming nothing was deployed so the successful workflow run is not mistakenly interpreted as a deployment.
 
 ---
 
 ## SHA Anti-Regression
 
-The `promotedSha` tag on `ca-spc-prod-backend` records the last SHA that successfully completed a prod smoke test. On every promotion attempt the gate checks:
+Three tags on `ca-spc-prod-backend` track what is currently live in production:
+
+| Tag | Meaning | Updated by |
+|---|---|---|
+| `promotedSha` | Overall commit SHA last successfully smoke-tested | Every successful smoke test |
+| `promotedBackendSha` | Backend Docker image SHA currently running | Smoke test, only when backend was deployed |
+| `promotedFrontendSha` | Commit SHA the live frontend was built from | Smoke test, only when frontend was deployed |
+
+The SHA regression check uses `promotedSha`:
 
 ```
-git merge-base --is-ancestor <new-sha> <promoted-sha>
+git merge-base --is-ancestor <new-sha> <promotedSha>
 ```
 
 If this returns true, the new SHA is an ancestor (i.e. older) of what is already live → promotion is blocked with a clear log message.
+
+`promotedBackendSha` and `promotedFrontendSha` are used for the per-component skip decisions described in the gate section above. Keeping them independent means a backend-only deployment never incorrectly resets the frontend stamp, and vice-versa.
 
 **Parallel-PR scenario**: PR1 (all changes) and PR2 (frontend-only) are merged close together. PR2's pipeline is faster and promotes first, stamping its SHA. PR1's SHA is older in git history → gate blocks PR1's promotion. Prod retains PR2's (newer) frontend.
 
@@ -198,7 +227,7 @@ Use this when you want to deploy a specific commit without waiting for the full 
 3. Leave `force` unchecked (unless rolling back — see below)
 4. Click **Run workflow** and monitor the run
 
-The SHA must have a corresponding Docker image in ACR (i.e. `backend-dev.yml` must have run for it). For frontend-only SHAs, the backend deploy is skipped automatically.
+The gate will resolve the correct backend image for the SHA (either the SHA's own image, or the most recent E2E-validated ancestor) and independently decide whether each component needs deploying.
 
 ### Rollback prod
 
@@ -206,16 +235,17 @@ The SHA must have a corresponding Docker image in ACR (i.e. `backend-dev.yml` mu
 
 1. Find the target SHA:
    - `git log --oneline main` — shows recent commits
-   - Azure Portal → `ca-spc-prod-backend` → Revisions → check image tag of the previous revision
+   - Azure Portal → `ca-spc-prod-backend` → Tags → check `promotedBackendSha` for the image currently running; check revision history for the previous image tag
 2. Confirm the image exists in ACR:
    ```bash
    az acr repository show-tags --name <acr-name> --repository backend | grep <short-sha>
    ```
 3. Go to **Actions → Promote to Production → Run workflow**
 4. Enter the SHA and check **"Skip SHA regression check"** (`force: true`)
+   - `force=true` bypasses the regression check **and** skips the per-component skip logic — both FE and BE are deployed unconditionally from the target SHA.
 5. Click **Run workflow** and monitor
 
-After a successful rollback, `promotedSha` is stamped with the older SHA. Future automatic promotions from E2E will be blocked until a newer commit is merged and its pipeline succeeds.
+After a successful rollback, all three tags (`promotedSha`, `promotedBackendSha`, `promotedFrontendSha`) are stamped with values from the rollback target. Future automatic promotions from E2E will be blocked until a newer commit is merged and its pipeline succeeds.
 
 ### Deploy infrastructure to prod
 
@@ -248,16 +278,31 @@ Both `backend-dev.yml` and `frontend-dev.yml` support `workflow_dispatch`. Go to
 
 ---
 
-### Backend deploy skipped on a full-stack PR
+### `deploy-backend-prod` skipped on a full-stack PR
 
 **Symptom:** `deploy-backend-prod` shows as "skipped" even though both backend and frontend changed.
 
-**Cause:** The gate's ACR check found no backend image for this SHA. This usually means `backend-dev.yml` hasn't completed yet, or it failed.
+**Cause:** The gate resolved `backend_sha` to the same image already running in prod (`promotedBackendSha`). This can happen if the backend image for this SHA was already promoted by an earlier pipeline run that E2E validated.
+
+**Fix:** No action needed — the correct backend image is already live. The frontend will still be deployed if source changed.
+
+If you believe the backend *should* have changed, check:
+1. Whether `backend-dev.yml` completed successfully for this SHA
+2. The `promotedBackendSha` tag on `ca-spc-prod-backend` in the Azure Portal
+3. If the image is genuinely different, use `workflow_dispatch` with the SHA and `force=true`
+
+---
+
+### Backend image missing for a specific SHA
+
+**Symptom:** Gate logs show *"No backend image found in the last 20 backend commits"* — `deploy_backend=false` unexpectedly.
+
+**Cause:** `backend-dev.yml` failed (or was never triggered) for the last 20 commits that touched `backend/`.
 
 **Fix:**
-1. Check whether `backend-dev.yml` completed successfully for this SHA
-2. If it failed, fix the issue and re-run via `workflow_dispatch`
-3. Once a backend image exists in ACR, use `workflow_dispatch` to promote the SHA manually
+1. Check whether `backend-dev.yml` completed successfully for any recent backend-touching commit
+2. If it failed, fix the issue and re-run via `workflow_dispatch` on that commit
+3. Once an image exists in ACR, use `workflow_dispatch` to promote the desired SHA
 
 ---
 
@@ -296,7 +341,7 @@ Both `backend-dev.yml` and `frontend-dev.yml` support `workflow_dispatch`. Go to
 **Cause:** The backend was deployed but is not healthy — likely a runtime error, misconfigured environment variable, or database connectivity issue.
 
 **Fix:**
-1. The `promotedSha` tag was NOT updated (stamp only happens after smoke test passes)
+1. The `promotedSha`, `promotedBackendSha`, and `promotedFrontendSha` tags were NOT updated (stamps only happen after smoke test passes)
 2. Check `ca-spc-prod-backend` → Log stream in the Azure Portal
 3. Check Application Insights → `ai-spc-prod` for exceptions
 4. If needed, activate the previous Container App revision:
