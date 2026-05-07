@@ -1,18 +1,21 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Calendar, 
-  ClipboardCheck, 
+import {
+  Calendar,
+  ClipboardCheck,
   Globe,
   Users,
-  Plus
+  Plus,
+  Edit2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getProjects, addProjectMember, ApiError } from '@/api';
-import { ProjectPublic } from '@/types';
+import { getProjects, addProjectMember, updateProject, ApiError } from '@/api';
+import { ProjectPublic, ProjectUpdate } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Modal } from '@/components/ui/Modal';
+import { ProjectForm } from '@/components/admin/ProjectForm';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { CourseEvaluationStatusCard } from '@/components/student/CourseEvaluationStatusCard';
 
@@ -26,6 +29,12 @@ export const StudentHome = () => {
   // Add Member State
   const [addingMemberTo, setAddingMemberTo] = useState<number | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
+
+  // Edit Project State
+  const [editingProject, setEditingProject] = useState<ProjectPublic | null>(null);
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [editProjectLoading, setEditProjectLoading] = useState(false);
+  const [editProjectError, setEditProjectError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -50,6 +59,22 @@ export const StudentHome = () => {
       fetchData();
     }
   }, [user]);
+
+  const handleUpdateProject = async (data: ProjectUpdate) => {
+    if (!editingProject) return;
+    setEditProjectLoading(true);
+    setEditProjectError(null);
+    try {
+      await updateProject(editingProject.id, data);
+      setIsEditProjectModalOpen(false);
+      setEditingProject(null);
+      await fetchData();
+    } catch (err) {
+      setEditProjectError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
+    } finally {
+      setEditProjectLoading(false);
+    }
+  };
 
   const handleAddMember = async (e: FormEvent, projectId: number) => {
     e.preventDefault();
@@ -114,11 +139,22 @@ export const StudentHome = () => {
                   </div>
                 </div>
 
-                <Link to={`/projects/${project.id}`} className="block group/title">
-                  <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2 group-hover/title:text-fm-orange transition-colors line-clamp-2">
-                    {project.title}
-                  </h3>
-                </Link>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <Link to={`/projects/${project.id}`} className="block group/title flex-1">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover/title:text-fm-orange transition-colors line-clamp-2">
+                      {project.title}
+                    </h3>
+                  </Link>
+                  {!project.results_unlocked && (
+                    <button
+                      onClick={() => { setEditingProject(project); setIsEditProjectModalOpen(true); }}
+                      className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-xl transition-colors border border-slate-100 flex-shrink-0"
+                      title={t('admin.edit_project')}
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                  )}
+                </div>
 
                 {/* Team Members */}
                 <div className="flex items-center gap-2 mb-2">
@@ -202,6 +238,20 @@ export const StudentHome = () => {
           );
         })}
       </div>
+
+      <Modal
+        isOpen={isEditProjectModalOpen}
+        onClose={() => { setIsEditProjectModalOpen(false); setEditingProject(null); }}
+        title={t('admin.edit_project')}
+        size="xl"
+      >
+        <ProjectForm
+          initialData={editingProject}
+          onSubmit={handleUpdateProject}
+          isLoading={editProjectLoading}
+          error={editProjectError}
+        />
+      </Modal>
     </div>
   );
 };

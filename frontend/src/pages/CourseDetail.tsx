@@ -14,7 +14,7 @@ import {
   Mail,
   X,
   Plus,
-  Settings
+  Edit2
 } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -393,7 +393,7 @@ export const CourseDetailView = () => {
                             className="p-1.5 text-slate-400 hover:text-fm-orange hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all flex-shrink-0"
                             title={t('admin.edit_project')}
                           >
-                            <Settings size={14} />
+                            <Edit2 size={14} />
                           </button>
                         )}
                       </div>

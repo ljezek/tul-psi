@@ -1,15 +1,17 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock, Trash2, X, Edit2, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, lockProject, addCourseLecturer, updateCourse, ApiError, deleteProject, deleteProjectMember } from '@/api';
-import { CourseDetail, ProjectPublic, UserRole, CourseUpdate } from '@/types';
+import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, lockProject, addCourseLecturer, updateCourse, updateProject, ApiError, deleteProject, deleteProjectMember } from '@/api';
+import { CourseDetail, ProjectPublic, UserRole, CourseUpdate, ProjectUpdate } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Modal } from '@/components/ui/Modal';
 import { CourseForm } from '@/components/admin/CourseForm';
+import { ProjectForm } from '@/components/admin/ProjectForm';
 import { Button } from '@/components/ui/Button';
+import { GitHubLogo } from '@/components/icons/GitHubLogo';
 
 export const CourseProjects = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +46,12 @@ export const CourseProjects = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Edit Project State
+  const [editingProject, setEditingProject] = useState<ProjectPublic | null>(null);
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [editProjectLoading, setEditProjectLoading] = useState(false);
+  const [editProjectError, setEditProjectError] = useState<string | null>(null);
   
   const loadData = async () => {
     try {
@@ -183,6 +191,22 @@ export const CourseProjects = () => {
       setEditError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleUpdateProject = async (data: ProjectUpdate) => {
+    if (!editingProject) return;
+    setEditProjectLoading(true);
+    setEditProjectError(null);
+    try {
+      await updateProject(editingProject.id, data);
+      setIsEditProjectModalOpen(false);
+      setEditingProject(null);
+      await loadData();
+    } catch (err) {
+      setEditProjectError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('login.error_unexpected'));
+    } finally {
+      setEditProjectLoading(false);
     }
   };
 
@@ -468,7 +492,28 @@ export const CourseProjects = () => {
                     <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 transition-colors">
                       {project.title}
                     </h3>
-                    
+
+                    {project.description && (
+                      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{project.description}</p>
+                    )}
+
+                    {(project.github_url || project.live_url) && (
+                      <div className="flex gap-4">
+                        {project.github_url && (
+                          <a href={project.github_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider">
+                            <GitHubLogo size={14} />
+                            {t('common.repo')}
+                          </a>
+                        )}
+                        {project.live_url && (
+                          <a href={project.live_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider">
+                            <Globe size={14} />
+                            {t('common.app')}
+                          </a>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2">
                       <Users size={14} className="text-slate-400" />
                       <div className="text-xs font-bold text-slate-500 flex flex-wrap gap-x-3 gap-y-2">
@@ -600,6 +645,15 @@ export const CourseProjects = () => {
                       </div>
 
                       <div className="flex gap-2">
+                        {(user?.role === UserRole.ADMIN || isCourseOwner) && (
+                          <button
+                            onClick={() => { setEditingProject(project); setIsEditProjectModalOpen(true); }}
+                            className="p-2.5 bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 rounded-xl transition-colors flex items-center justify-center border border-slate-200"
+                            title={t('admin.edit_project')}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
                         {!project.results_unlocked && (user?.role === UserRole.ADMIN || isCourseOwner) && (
                           <button
                             onClick={() => handleDeleteProject(project.id)}
@@ -666,6 +720,21 @@ export const CourseProjects = () => {
           onSubmit={handleUpdateCourse}
           isLoading={editLoading}
           error={editError}
+        />
+      </Modal>
+
+      {/* Edit Project Modal */}
+      <Modal
+        isOpen={isEditProjectModalOpen}
+        onClose={() => { setIsEditProjectModalOpen(false); setEditingProject(null); }}
+        title={t('admin.edit_project')}
+        size="xl"
+      >
+        <ProjectForm
+          initialData={editingProject}
+          onSubmit={handleUpdateProject}
+          isLoading={editProjectLoading}
+          error={editProjectError}
         />
       </Modal>
     </div>

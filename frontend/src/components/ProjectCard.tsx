@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { ExternalLink, Users, Tag, Settings } from 'lucide-react';
+import { ExternalLink, Users, Tag, Edit2 } from 'lucide-react';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
 import { ProjectPublic, UserRole } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -52,7 +52,7 @@ export const ProjectCard = ({ project, onEditProject }: ProjectCardProps) => {
               className="p-1 text-slate-400 hover:text-fm-orange hover:bg-slate-100 rounded-lg transition-all"
               title={t('admin.edit_project')}
             >
-              <Settings size={14} />
+              <Edit2 size={14} />
             </button>
           )}
         </div>
