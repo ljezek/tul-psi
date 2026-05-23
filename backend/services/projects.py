@@ -27,6 +27,7 @@ from db.projects import (
     get_project_evaluations_for_projects,
     get_project_members,
     get_projects,
+    get_submitted_course_evaluations_for_projects,
     is_course_lecturer,
     is_project_member,
     replace_peer_feedback,
@@ -399,6 +400,9 @@ class ProjectsService:
         # For lecturers, we want to see their own evaluations even if not unlocked.
         project_evals: dict[int, list[ProjectEvaluationDetail]] = {}
         peer_feedback: dict[int, list[PeerFeedbackDetail]] = {}
+        # Submitted student course evaluations per project, attached for lecturers/admins
+        # on unlocked projects so the catalogue page can aggregate them per academic year.
+        course_evals_by_project: dict[int, list[CourseEvaluationDetail]] = {}
         if user is not None and user.id is not None:
             member_project_ids = [
                 pid
@@ -467,6 +471,22 @@ class ProjectsService:
                             if ev and pid not in project_evals:
                                 project_evals[pid] = [_to_project_evaluation_detail(ev)]
 
+                    # Attach submitted student course evaluations for unlocked projects.
+                    # The catalogue page aggregates these anonymously per academic year.
+                    unlocked_lecturer_project_ids = [
+                        pid
+                        for pid in lecturer_project_ids
+                        if any(p.id == pid and p.results_unlocked for p, _ in rows)
+                    ]
+                    if unlocked_lecturer_project_ids:
+                        raw_course_evals_map = await get_submitted_course_evaluations_for_projects(
+                            self._session, unlocked_lecturer_project_ids
+                        )
+                        for pid, evs in raw_course_evals_map.items():
+                            course_evals_by_project[pid] = [
+                                _to_course_evaluation_detail(ev) for ev in evs
+                            ]
+
         return [
             _build_project(
                 p,
@@ -475,7 +495,11 @@ class ProjectsService:
                 lecturers_by_course.get(c.id, []) if c.id is not None else [],
                 authenticated=(user is not None),
                 project_evaluations=project_evals.get(p.id) if p.id is not None else None,
-                course_evaluations=[user_evals[p.id]] if p.id in user_evals else [],
+                course_evaluations=(
+                    course_evals_by_project.get(p.id, [])
+                    if user is not None and user.role in (UserRole.ADMIN, UserRole.LECTURER)
+                    else ([user_evals[p.id]] if p.id in user_evals else [])
+                ),
                 received_peer_feedback=peer_feedback.get(p.id, [])
                 if user is not None and user.role in (UserRole.ADMIN, UserRole.LECTURER)
                 else [
