@@ -426,9 +426,7 @@ async def test_service_get_projects_attaches_course_evals_for_lecturer_when_unlo
             new_callable=AsyncMock,
             return_value={},
         ),
-        patch(
-            "services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]
-        ),
+        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
         patch(
             "services.projects.get_all_peer_feedback_for_project",
             new_callable=AsyncMock,
