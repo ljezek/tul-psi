@@ -334,6 +334,199 @@ async def test_service_get_projects_calculates_total_points_when_unlocked() -> N
     assert results[0].total_points == 55.0
 
 
+async def test_service_get_projects_attaches_course_evals_for_lecturer_when_unlocked() -> None:
+    """``get_projects`` must attach submitted student course evaluations for an assigned
+    lecturer on an unlocked project so the catalogue can aggregate them per year."""
+    from datetime import datetime
+
+    from models.course import Course, ProjectType
+    from models.course_evaluation import CourseEvaluation
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "Test Course"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    p = MagicMock(spec=Project)
+    p.id = 1
+    p.course_id = 10
+    p.title = "My Project"
+    p.description = None
+    p.github_url = None
+    p.live_url = None
+    p.technologies = []
+    p.academic_year = 2025
+    p.results_unlocked = True
+
+    lecturer = MagicMock(spec=User)
+    lecturer.id = 7
+    lecturer.role = UserRole.LECTURER
+
+    # The lecturer is assigned to the project's course.
+    assigned_lecturer = MagicMock(spec=User)
+    assigned_lecturer.id = 7
+    assigned_lecturer.name = "Dr. Lecturer"
+    assigned_lecturer.github_alias = "lecturer"
+    assigned_lecturer.email = "lecturer@tul.cz"
+
+    member = MagicMock(spec=User)
+    member.id = 5
+    member.name = "Alice"
+    member.github_alias = "alice"
+    member.email = "alice@tul.cz"
+
+    def _make_eval(eval_id: int, student_id: int, rating: int) -> MagicMock:
+        ce = MagicMock(spec=CourseEvaluation)
+        ce.id = eval_id
+        ce.student_id = student_id
+        ce.rating = rating
+        ce.strengths = "Great course"
+        ce.improvements = "More examples"
+        ce.submitted = True
+        ce.updated_at = datetime.now()
+        return ce
+
+    ce1 = _make_eval(1, 5, 4)
+    ce2 = _make_eval(2, 6, 5)
+
+    session = MagicMock()
+    with (
+        patch("services.projects.get_projects", new_callable=AsyncMock, return_value=[(p, course)]),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: [member]},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [assigned_lecturer]},
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={1: (1, 2)},
+        ),
+        patch(
+            "services.projects.get_course_evaluations_for_student",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_project_evaluations_by_lecturer_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch("services.projects.get_project_evaluations", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "services.projects.get_all_peer_feedback_for_project",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "services.projects.get_submitted_course_evaluations_for_projects",
+            new_callable=AsyncMock,
+            return_value={1: [ce1, ce2]},
+        ) as mock_course_evals,
+    ):
+        results = await ProjectsService(session).get_projects(user=lecturer)
+
+    assert len(results) == 1
+    mock_course_evals.assert_called_once_with(session, [1])
+    assert results[0].course_evaluations is not None
+    assert len(results[0].course_evaluations) == 2
+    assert sorted(ce.rating for ce in results[0].course_evaluations) == [4, 5]
+
+
+async def test_service_get_projects_omits_course_evaluations_for_lecturer_when_locked() -> None:
+    """``get_projects`` must not fetch student course evaluations for locked projects."""
+    from models.course import Course, ProjectType
+    from models.project import Project
+    from models.user import User
+
+    course = MagicMock(spec=Course)
+    course.id = 10
+    course.code = "PSI"
+    course.name = "Test Course"
+    course.syllabus = None
+    course.term = CourseTerm.WINTER
+    course.project_type = ProjectType.TEAM
+    course.min_score = 50
+    course.peer_bonus_budget = None
+    course.evaluation_criteria = []
+    course.links = []
+
+    p = MagicMock(spec=Project)
+    p.id = 1
+    p.course_id = 10
+    p.title = "My Project"
+    p.description = None
+    p.github_url = None
+    p.live_url = None
+    p.technologies = []
+    p.academic_year = 2025
+    p.results_unlocked = False
+
+    lecturer = MagicMock(spec=User)
+    lecturer.id = 7
+    lecturer.role = UserRole.LECTURER
+
+    assigned_lecturer = MagicMock(spec=User)
+    assigned_lecturer.id = 7
+    assigned_lecturer.name = "Dr. Lecturer"
+    assigned_lecturer.github_alias = "lecturer"
+    assigned_lecturer.email = "lecturer@tul.cz"
+
+    session = MagicMock()
+    with (
+        patch("services.projects.get_projects", new_callable=AsyncMock, return_value=[(p, course)]),
+        patch(
+            "services.projects.get_project_members",
+            new_callable=AsyncMock,
+            return_value={1: []},
+        ),
+        patch(
+            "services.projects.get_course_lecturers",
+            new_callable=AsyncMock,
+            return_value={10: [assigned_lecturer]},
+        ),
+        patch(
+            "services.projects.get_evaluation_counts_for_projects",
+            new_callable=AsyncMock,
+            return_value={1: (0, 0)},
+        ),
+        patch(
+            "services.projects.get_course_evaluations_for_student",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_project_evaluations_by_lecturer_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ),
+        patch(
+            "services.projects.get_submitted_course_evaluations_for_projects",
+            new_callable=AsyncMock,
+            return_value={},
+        ) as mock_course_evals,
+    ):
+        results = await ProjectsService(session).get_projects(user=lecturer)
+
+    assert len(results) == 1
+    mock_course_evals.assert_not_called()
+    assert results[0].course_evaluations == []
+
+
 # ---------------------------------------------------------------------------
 # ProjectsService.get_project unit tests
 # ---------------------------------------------------------------------------

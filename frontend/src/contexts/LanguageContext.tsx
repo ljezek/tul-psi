@@ -149,6 +149,12 @@ const translations: Record<string, Record<Language, string>> = {
   'lecturer.error_missing_improvements': { cs: 'Chybí popis prostoru pro zlepšení.', en: 'Description of areas for improvement is missing.' },
   'lecturer.no_members': { cs: 'žádní členové', en: 'no members' },
   'lecturer.cancel': { cs: 'Zrušit', en: 'Cancel' },
+  'lecturer.total_points': { cs: 'Celkem bodů', en: 'Total Points' },
+  'lecturer.course_evaluations': { cs: 'Hodnocení předmětu studenty', en: 'Student Course Evaluations' },
+  'lecturer.course_evaluations_hint': { cs: 'Anonymní souhrn napříč všemi projekty s odemčenými výsledky.', en: 'Anonymous summary across all projects with unlocked results.' },
+  'lecturer.avg_rating': { cs: 'Průměrné hodnocení', en: 'Average Rating' },
+  'lecturer.responses': { cs: 'odpovědí', en: 'responses' },
+  'lecturer.no_written_feedback': { cs: 'Žádná písemná zpětná vazba.', en: 'No written feedback.' },
 
   // Student pages & Results
   'student.results.title': { cs: 'Výsledky', en: 'Results' },

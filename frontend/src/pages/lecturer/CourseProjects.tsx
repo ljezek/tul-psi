@@ -1,10 +1,10 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock, Trash2, X, Edit2, Globe } from 'lucide-react';
+import { ArrowLeft, Plus, LockOpen, CheckCircle, Clock, AlertCircle, Users, ExternalLink, BookOpen, ListChecks, UserPlus, Settings, Lock, Trash2, X, Edit2, Globe, MessageSquare, Star } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCourse, getProjects, createCourseProject, addProjectMember, unlockProject, lockProject, addCourseLecturer, updateCourse, updateProject, ApiError, deleteProject, deleteProjectMember } from '@/api';
-import { CourseDetail, ProjectPublic, UserRole, CourseUpdate, ProjectUpdate } from '@/types';
+import { CourseDetail, ProjectPublic, UserRole, CourseUpdate, ProjectUpdate, CourseEvaluationDetail } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Modal } from '@/components/ui/Modal';
@@ -12,6 +12,66 @@ import { CourseForm } from '@/components/admin/CourseForm';
 import { ProjectForm } from '@/components/admin/ProjectForm';
 import { Button } from '@/components/ui/Button';
 import { GitHubLogo } from '@/components/icons/GitHubLogo';
+
+/**
+ * Anonymized summary of the student course evaluations for a single academic year,
+ * aggregated across every project of that year whose results are unlocked. Individual
+ * responses are not attributed to a student or a project, preserving anonymity.
+ */
+const YearCourseEvaluations = ({ evaluations, year }: { evaluations: CourseEvaluationDetail[]; year: number }) => {
+  const { t } = useLanguage();
+
+  const rated = evaluations.filter(e => e.rating !== null);
+  const avgRating = rated.length > 0 ? rated.reduce((sum, e) => sum + (e.rating || 0), 0) / rated.length : 0;
+  const strengths = evaluations.map(e => e.strengths?.trim()).filter((s): s is string => !!s);
+  const improvements = evaluations.map(e => e.improvements?.trim()).filter((s): s is string => !!s);
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 shadow-sm p-8 space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
+            <MessageSquare size={16} className="text-fm-orange" />
+            {t('lecturer.course_evaluations')} &middot; {year} / {year + 1}
+          </h3>
+          <p className="text-xs font-medium text-slate-400 mt-1">{t('lecturer.course_evaluations_hint')}</p>
+        </div>
+        <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-600">
+          <div className="flex items-baseline gap-1" title={t('lecturer.avg_rating')}>
+            <Star size={16} className="text-amber-400 fill-amber-400 self-center" />
+            <span className="text-lg font-black text-slate-800 dark:text-slate-100">{rated.length > 0 ? Math.round(avgRating * 10) / 10 : '—'}</span>
+            <span className="text-slate-300 font-bold text-sm">/ 5</span>
+          </div>
+          <span className="text-slate-300">&bull;</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{evaluations.length} {t('lecturer.responses')}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('student.label_strengths')}</h4>
+          {strengths.length > 0 ? (
+            <ul className="space-y-2">
+              {strengths.map((s, i) => (
+                <li key={i} className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl px-3 py-2 whitespace-pre-line">{s}</li>
+              ))}
+            </ul>
+          ) : <p className="text-xs italic text-slate-400">{t('lecturer.no_written_feedback')}</p>}
+        </div>
+        <div className="space-y-2">
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('student.label_improvements')}</h4>
+          {improvements.length > 0 ? (
+            <ul className="space-y-2">
+              {improvements.map((s, i) => (
+                <li key={i} className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl px-3 py-2 whitespace-pre-line">{s}</li>
+              ))}
+            </ul>
+          ) : <p className="text-xs italic text-slate-400">{t('lecturer.no_written_feedback')}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const CourseProjects = () => {
   const { id } = useParams<{ id: string }>();
@@ -236,6 +296,20 @@ export const CourseProjects = () => {
     return sortedProjects.filter(p => p.academic_year === parseInt(yearFilter, 10));
   }, [sortedProjects, yearFilter]);
 
+  // Aggregate the anonymized student course evaluations per academic year, collecting
+  // them from every project of that year whose results are unlocked.
+  const courseEvalsByYear = useMemo(() => {
+    const map = new Map<number, CourseEvaluationDetail[]>();
+    for (const p of filteredProjects) {
+      if (p.results_unlocked && p.course_evaluations && p.course_evaluations.length > 0) {
+        const existing = map.get(p.academic_year) ?? [];
+        existing.push(...p.course_evaluations);
+        map.set(p.academic_year, existing);
+      }
+    }
+    return map;
+  }, [filteredProjects]);
+
   if (loading) return <div className="py-20"><LoadingSpinner /></div>;
   if (error || !course) return <div className="max-w-7xl mx-auto px-4 py-12"><ErrorMessage message={error || t('courseDetail.not_found')} onRetry={loadData} /></div>;
 
@@ -454,6 +528,7 @@ export const CourseProjects = () => {
             // Calculate stats for unlocked projects
             let criteriaAverages: { code: string; avg: number; max_score: number }[] = [];
             let totalLecturerAvg = 0;
+            let totalPossible = 0;
             if (project.results_unlocked) {
               const evaluations = project.project_evaluations || [];
               criteriaAverages = course.evaluation_criteria.map(criterion => {
@@ -462,7 +537,12 @@ export const CourseProjects = () => {
                 return { code: criterion.code, avg, max_score: criterion.max_score };
               });
               totalLecturerAvg = criteriaAverages.reduce((sum, c) => sum + c.avg, 0);
+              totalPossible = criteriaAverages.reduce((sum, c) => sum + c.max_score, 0);
             }
+
+            const isLastOfYear = index === filteredProjects.length - 1
+              || filteredProjects[index + 1].academic_year !== project.academic_year;
+            const yearCourseEvals = courseEvalsByYear.get(project.academic_year);
 
             return (
               <div key={project.id} className="space-y-6">
@@ -559,7 +639,11 @@ export const CourseProjects = () => {
                     <div className="py-2">
                       {project.results_unlocked && (
                         <div className="space-y-4">
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-2 items-center">
+                            <div className="bg-fm-orange/[0.06] px-3 py-1.5 rounded-xl border border-fm-orange/20 text-[10px] font-black uppercase tracking-widest text-fm-orange flex items-center gap-2">
+                              <span>{t('lecturer.total_points')}</span>
+                              <span>{Math.round(totalLecturerAvg * 10) / 10} / {totalPossible}</span>
+                            </div>
                             {criteriaAverages.map(c => (
                               <div key={c.code} className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                                 <span>{c.code}</span>
@@ -702,6 +786,9 @@ export const CourseProjects = () => {
                     </div>
                   </div>
                 </div>
+                {isLastOfYear && canSeeEvaluations && yearCourseEvals && yearCourseEvals.length > 0 && (
+                  <YearCourseEvaluations evaluations={yearCourseEvals} year={project.academic_year} />
+                )}
               </div>
             );
           })
