@@ -334,7 +334,7 @@ async def test_service_get_projects_calculates_total_points_when_unlocked() -> N
     assert results[0].total_points == 55.0
 
 
-async def test_service_get_projects_attaches_course_evaluations_for_lecturer_when_unlocked() -> None:
+async def test_service_get_projects_attaches_course_evals_for_lecturer_when_unlocked() -> None:
     """``get_projects`` must attach submitted student course evaluations for an assigned
     lecturer on an unlocked project so the catalogue can aggregate them per year."""
     from datetime import datetime
