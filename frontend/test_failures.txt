@@ -1,8 +1,0 @@
-Frontend test notes.
-
-This file intentionally does not store transient test runner output.
-Run the frontend test suite locally with:
-
-  npm test
-
-If a test fails, record the reproducible failure details in the relevant issue or pull request instead of committing terminal output artifacts to the repository.
