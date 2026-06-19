@@ -66,7 +66,10 @@ const router = createBrowserRouter(
       </Route>
 
     </Route>
-  )
+  ),
+  {
+    basename: import.meta.env.VITE_BASE_URL || '/',
+  }
 );
 
 function App() {

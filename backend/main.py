@@ -54,6 +54,7 @@ settings = get_settings()
 app = FastAPI(
     title="Student Projects Catalogue API",
     dependencies=[Depends(verify_csrf_token)],
+    root_path=settings.root_path,
 )
 
 # Setup OpenTelemetry BEFORE including routers to ensure all requests are traced.
@@ -86,9 +87,9 @@ app.add_middleware(CORSMiddleware, **cors_kwargs)
 # own, so trusting all sources here is safe within the ACA environment.
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
-app.include_router(health_router)
-app.include_router(announcements_router, prefix="/api/v1")
-app.include_router(auth_router, prefix="/api/v1")
-app.include_router(courses_router, prefix="/api/v1")
-app.include_router(projects_router, prefix="/api/v1")
-app.include_router(users_router, prefix="/api/v1")
+app.include_router(health_router, prefix=settings.api_prefix)
+app.include_router(announcements_router, prefix=f"{settings.api_prefix}/v1")
+app.include_router(auth_router, prefix=f"{settings.api_prefix}/v1")
+app.include_router(courses_router, prefix=f"{settings.api_prefix}/v1")
+app.include_router(projects_router, prefix=f"{settings.api_prefix}/v1")
+app.include_router(users_router, prefix=f"{settings.api_prefix}/v1")

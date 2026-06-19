@@ -1,0 +1,33 @@
+name: Deploy Development
+on:
+  push:
+    branches: [ 'feature/**' ]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Deploy to VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/spc
+            git fetch origin
+            git checkout ${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
+            
+            # Build and restart development services
+            docker compose build backend-dev frontend-dev
+            docker compose up -d backend-dev frontend-dev nginx
+            
+            # Run database migrations for dev
+            docker compose exec -T backend-dev alembic upgrade head
