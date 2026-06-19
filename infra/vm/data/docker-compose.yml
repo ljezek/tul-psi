@@ -1,0 +1,50 @@
+# Shared PostgreSQL server for ALL apps on the VM.
+#
+# A single Postgres instance hosts one database (+ DML app role) per app: SPC now
+# (student_projects, student_projects_dev), a wiki later, etc. It is NOT published on a
+# host port — only services attached to the external `data` network (app backends) can
+# reach it. The edge proxy never touches the database.
+#
+# Roles (created by the init scripts on FIRST start only):
+#   admin role (POSTGRES_ADMIN_USER)  — full DDL+DML; used by Alembic migrations.
+#   app role   (POSTGRES_APP_USER)    — DML only; used by the running backend.
+# See ../../../database/init-db.sh for the role/grant logic (reused verbatim).
+#
+# Bring-up:
+#   docker network create data        # once, shared by all stacks
+#   cp .env.example .env               # set REAL passwords
+#   docker compose up -d
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: data-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # The official entrypoint creates this superuser + POSTGRES_DB on first start.
+      # We point POSTGRES_USER at the admin role so init-db.sh ($POSTGRES_ADMIN_USER) and
+      # the entrypoint agree on a single owner.
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Reuse the reviewed app-role script as the FIRST init step (single source of truth).
+      - ../../../database/init-db.sh:/docker-entrypoint-initdb.d/10-init-db.sh:ro
+      # Create any additional per-app databases (e.g. the dev DB) with the same grants.
+      - ./init/20-create-databases.sh:/docker-entrypoint-initdb.d/20-create-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data
+
+volumes:
+  pgdata:
+
+networks:
+  data:
+    external: true

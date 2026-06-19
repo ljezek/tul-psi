@@ -1,0 +1,29 @@
+# Edge routing for swe.fm.tul.cz.
+#
+# STEP 1 (this commit): minimal config that only proves TLS works — there are no apps
+# wired in yet. Once the SPC app stacks land, this file gains the path routes, e.g.:
+#
+#   handle_path /api/*      { reverse_proxy spc-backend-prod:8000 }
+#   handle      /projects/* { reverse_proxy spc-frontend-prod:80 }
+#   handle_path /dev/api/*  { reverse_proxy spc-backend-dev:8000 }
+#   handle      /dev/projects/* { reverse_proxy spc-frontend-dev:3000 }   # Vite HMR WS auto-handled
+#   handle /grafana/* { basic_auth { ... }  reverse_proxy grafana:3000 }
+#
+# Caddy redirects HTTP->HTTPS automatically for a site defined with a hostname.
+
+{
+	# ACME account contact; also where Let's Encrypt expiry warnings would be sent.
+	email lukas.jezek@tul.cz
+}
+
+swe.fm.tul.cz {
+	encode gzip
+
+	# Liveness endpoint for the edge itself (used by the Step 1 verification curl).
+	respond /healthz "ok" 200
+
+	# Placeholder landing response until the app routes are added in the next step.
+	handle {
+		respond "SPC edge online" 200
+	}
+}
