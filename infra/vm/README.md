@@ -46,7 +46,7 @@ docker compose ps                          # expect "healthy"
 ```
 Verify roles and databases were created (first start only):
 ```bash
-SU=pg_superadmin   # whatever you set as POSTGRES_USER
+SU=spc_superadmin   # whatever you set as POSTGRES_USER
 docker compose exec postgres psql -U "$SU" -d postgres -c '\du'   # spc_prod_owner/app + spc_dev_owner/app
 docker compose exec postgres psql -U "$SU" -d postgres -c '\l'    # student_projects + _dev, correct owners
 # Prove isolation — the dev app role must NOT reach the prod DB:
@@ -86,7 +86,7 @@ ones. Add a nightly cron entry (as the deploy user):
 ```
 Restore a database (as the superuser set in `.env`):
 ```bash
-docker exec -i data-postgres pg_restore -U pg_superadmin -d student_projects \
+docker exec -i data-postgres pg_restore -U spc_superadmin -d student_projects \
   --clean --if-exists -1 < backups/student_projects-YYYYmmdd-HHMMSS.dump
 ```
 
