@@ -34,21 +34,32 @@ docker network create data
 ```
 
 ## 1. Bring up the shared database
+Each database has its **own** owner role (DDL, for migrations) and app role (DML, for the
+running backend), so prod and dev — and any future app — are fully isolated.
+
 ```bash
 cd infra/vm/data
-cp .env.example .env          # set REAL passwords for the admin and app roles
+cp .env.example .env                       # superuser password (bootstrap + backups only)
+cp provision.conf.example provision.conf   # per-database owner/app role passwords
 docker compose up -d
-docker compose ps             # expect "healthy"
+docker compose ps                          # expect "healthy"
 ```
 Verify roles and databases were created (first start only):
 ```bash
-docker compose exec postgres pg_isready
-docker compose exec postgres psql -U tul_psi_admin -d student_projects -c '\du'   # app role present
-docker compose exec postgres psql -U tul_psi_admin -d student_projects -c '\l'    # student_projects (+ _dev)
+SU=pg_superadmin   # whatever you set as POSTGRES_USER
+docker compose exec postgres psql -U "$SU" -d postgres -c '\du'   # spc_prod_owner/app + spc_dev_owner/app
+docker compose exec postgres psql -U "$SU" -d postgres -c '\l'    # student_projects + _dev, correct owners
+# Prove isolation — the dev app role must NOT reach the prod DB:
+docker compose exec postgres psql -U spc_dev_app -d student_projects -c 'select 1'   # expect: permission denied
 ```
-> The DML app role and per-DB grants come from `../../database/init-db.sh` (reused) and
-> `init/20-create-databases.sh`. They run **only on first start** (empty volume). To
-> re-run them you must `docker compose down -v` (destroys data).
+> Roles and databases are provisioned by `init/10-provision-databases.sh` from
+> `provision.conf`. This runs **only on first start** (empty volume). After editing
+> `.env`/`provision.conf` on an already-initialised volume, recreate with
+> `docker compose down -v` (destroys data — fine before the real data import).
+>
+> The app stacks (added later) build their DSNs from these roles: the prod backend uses
+> `spc_prod_app` (runtime) + `spc_prod_owner` (migrations) against `student_projects`; the
+> dev backend uses the `spc_dev_*` pair against `student_projects_dev`.
 
 ## 2. Bring up the edge proxy
 ```bash
@@ -73,9 +84,9 @@ ones. Add a nightly cron entry (as the deploy user):
 ```
 30 2 * * * cd /path/to/infra/vm/data && ./backup.sh >> backups/backup.log 2>&1
 ```
-Restore a database:
+Restore a database (as the superuser set in `.env`):
 ```bash
-docker exec -i data-postgres pg_restore -U tul_psi_admin -d student_projects \
+docker exec -i data-postgres pg_restore -U pg_superadmin -d student_projects \
   --clean --if-exists -1 < backups/student_projects-YYYYmmdd-HHMMSS.dump
 ```
 

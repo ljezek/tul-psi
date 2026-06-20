@@ -1,18 +1,24 @@
 # Shared PostgreSQL server for ALL apps on the VM.
 #
-# A single Postgres instance hosts one database (+ DML app role) per app: SPC now
-# (student_projects, student_projects_dev), a wiki later, etc. It is NOT published on a
-# host port — only services attached to the external `data` network (app backends) can
-# reach it. The edge proxy never touches the database.
+# A single Postgres instance hosts one database per app environment, each with its OWN
+# isolated role pair, so a leak of one env's credentials cannot touch another's data:
+#   SPC prod  -> student_projects      owner spc_prod_owner / app spc_prod_app
+#   SPC dev   -> student_projects_dev  owner spc_dev_owner  / app spc_dev_app
+#   (future)  -> wiki, ...             one more line in provision.conf
 #
-# Roles (created by the init scripts on FIRST start only):
-#   admin role (POSTGRES_ADMIN_USER)  — full DDL+DML; used by Alembic migrations.
-#   app role   (POSTGRES_APP_USER)    — DML only; used by the running backend.
-# See ../../../database/init-db.sh for the role/grant logic (reused verbatim).
+# Per database:
+#   owner role (DDL+DML, owns the DB)  — used by Alembic migrations.
+#   app role   (DML only)              — used by the running backend.
+# A dedicated SUPERUSER (.env POSTGRES_USER) only bootstraps + runs backups; it owns no
+# application data (POSTGRES_DB=postgres, the default maintenance DB).
+#
+# Postgres is NOT published on a host port — only services on the external `data` network
+# (app backends) can reach it. The edge proxy never touches the database.
 #
 # Bring-up:
-#   docker network create data        # once, shared by all stacks
-#   cp .env.example .env               # set REAL passwords
+#   docker network create data                 # once, shared by all stacks
+#   cp .env.example .env                        # set the superuser password
+#   cp provision.conf.example provision.conf    # set per-database role passwords
 #   docker compose up -d
 services:
   postgres:
@@ -21,21 +27,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      # The official entrypoint creates this superuser + POSTGRES_DB on first start.
-      # We point POSTGRES_USER at the admin role so init-db.sh ($POSTGRES_ADMIN_USER) and
-      # the entrypoint agree on a single owner.
-      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Reuse the reviewed app-role script as the FIRST init step (single source of truth).
-      - ../../../database/init-db.sh:/docker-entrypoint-initdb.d/10-init-db.sh:ro
-      # Create any additional per-app databases (e.g. the dev DB) with the same grants.
-      - ./init/20-create-databases.sh:/docker-entrypoint-initdb.d/20-create-databases.sh:ro
+      # Generic multi-tenant provisioner: one owner+app role pair per database.
+      - ./init/10-provision-databases.sh:/docker-entrypoint-initdb.d/10-provision-databases.sh:ro
+      - ./provision.conf:/provision.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
