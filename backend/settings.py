@@ -18,12 +18,10 @@ class Settings(BaseSettings):
     app_env: str = "local"
     app_version: str = "0.0.0-local"
 
-    # The base path of the API behind a reverse proxy (e.g. /api).
-    # Used by FastAPI to generate correct URLs for OpenAPI docs and health checks.
+    # The base path of the API behind a reverse proxy (e.g. /api or /dev).
+    # Used by FastAPI to generate correct URLs for OpenAPI docs. The edge proxy strips
+    # this prefix before forwarding, so routes are always registered at /health and /api/v1.
     root_path: str = ""
-
-    # The prefix for all API routes (e.g. /api).
-    api_prefix: str = "/api"
 
     # Application connection URL (DML only — no DDL / schema changes).
     # Used by the FastAPI application at runtime.
@@ -70,6 +68,14 @@ class Settings(BaseSettings):
     jwt_secret: str = _JWT_SECRET_PLACEHOLDER
     # HMAC-SHA256 is the recommended symmetric signing algorithm for JWTs.
     jwt_algorithm: str = "HS256"
+
+    # Cookie names for the session JWT and the double-submit CSRF token. These are
+    # configurable so that multiple environments sharing one host (e.g. prod and dev both
+    # under swe.fm.tul.cz) do not clobber each other's login. Prod keeps the defaults; the
+    # dev deployment overrides them (e.g. SESSION_COOKIE_NAME=session_dev). The frontend
+    # reads the XSRF cookie name from VITE_XSRF_COOKIE_NAME to match.
+    session_cookie_name: str = "session"
+    xsrf_cookie_name: str = "XSRF-TOKEN"
 
     # Support for Entra ID (Azure Managed Identity) for DB authentication.
     azure_managed_identity_enabled: bool = False

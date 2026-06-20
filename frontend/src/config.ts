@@ -9,4 +9,7 @@ export const config = {
   logicAppFeedbackUrl: import.meta.env.VITE_LOGIC_APP_FEEDBACK_URL ?? '',
   /** Deployment environment identifier shown in the UI ribbon ('local' | 'e2e' | 'dev'). Defaults to 'prod' so production builds are silent unless explicitly overridden. */
   appEnv: import.meta.env.VITE_APP_ENV ?? 'prod',
+  /** Name of the CSRF cookie to read. Configurable so multiple environments on one host
+   *  (e.g. prod and dev under the same domain) can use distinct cookie names. */
+  xsrfCookieName: import.meta.env.VITE_XSRF_COOKIE_NAME ?? 'XSRF-TOKEN',
 } as const;

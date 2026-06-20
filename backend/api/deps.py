@@ -32,12 +32,12 @@ async def get_current_user(
     CSRF protection is enforced separately via the ``verify_csrf_token``
     dependency registered at the application level.
     """
-    token = request.cookies.get("session")
+    settings = get_settings()
+    token = request.cookies.get(settings.session_cookie_name)
     if token is None:
         # Unauthenticated request — not an error; callers decide whether auth is required.
         return None
 
-    settings = get_settings()
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except jwt.PyJWTError:
@@ -95,12 +95,13 @@ async def verify_csrf_token(request: Request) -> None:
     if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
         return
 
+    settings = get_settings()
     # If there is no session cookie, this is an unauthenticated request.
     # We skip CSRF check for these as there is no session to hijack.
-    if not request.cookies.get("session"):
+    if not request.cookies.get(settings.session_cookie_name):
         return
 
-    cookie_token = request.cookies.get("XSRF-TOKEN")
+    cookie_token = request.cookies.get(settings.xsrf_cookie_name)
     if not cookie_token:
         # If session exists, XSRF-TOKEN should have been set during login.
         raise HTTPException(

@@ -18,6 +18,8 @@ def _mock_settings() -> Generator[None, None, None]:
     # Use "local" so the route does not set the Secure flag on the cookie — the
     # test HTTP client uses plain HTTP, and a Secure cookie would be dropped.
     mock_settings.app_env = "local"
+    mock_settings.session_cookie_name = "session"
+    mock_settings.xsrf_cookie_name = "XSRF-TOKEN"
     with patch("api.auth.get_settings", return_value=mock_settings):
         yield
 

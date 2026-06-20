@@ -87,9 +87,13 @@ app.add_middleware(CORSMiddleware, **cors_kwargs)
 # own, so trusting all sources here is safe within the ACA environment.
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
-app.include_router(health_router, prefix=settings.api_prefix)
-app.include_router(announcements_router, prefix=f"{settings.api_prefix}/v1")
-app.include_router(auth_router, prefix=f"{settings.api_prefix}/v1")
-app.include_router(courses_router, prefix=f"{settings.api_prefix}/v1")
-app.include_router(projects_router, prefix=f"{settings.api_prefix}/v1")
-app.include_router(users_router, prefix=f"{settings.api_prefix}/v1")
+# Routes are registered at fixed paths (/health, /api/v1/...) in every environment.
+# Per-environment public prefixes (e.g. /dev) are applied by the edge proxy, which strips
+# them before forwarding; FastAPI is told about the stripped prefix via root_path so that
+# generated OpenAPI/doc URLs remain correct.
+app.include_router(health_router)
+app.include_router(announcements_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(courses_router, prefix="/api/v1")
+app.include_router(projects_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
