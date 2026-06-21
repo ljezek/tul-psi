@@ -153,12 +153,12 @@ async def verify_otp(
     settings = get_settings()
     # Secure cookies require HTTPS; disable only for the local development environment.
     secure_cookie = settings.app_env not in ("local", "e2e")
-    # SameSite=None is required for cross-site AJAX (e.g., Azure Container Apps default URLs),
-    # but it MUST be paired with Secure=True.  For local development (HTTP), we use Lax.
-    samesite_policy = "none" if secure_cookie else "lax"
+    # Same-origin on the VM (frontend and API share one host), so Lax is correct and
+    # more restrictive than the cross-site None previously needed for Azure SWA.
+    samesite_policy = "lax"
 
     response.set_cookie(
-        key="session",
+        key=settings.session_cookie_name,
         value=jwt_token,
         httponly=True,
         secure=secure_cookie,
@@ -171,7 +171,7 @@ async def verify_otp(
     # it and echo it back as X-XSRF-Token on mutating requests.
     xsrf_token = secrets.token_hex(32)
     response.set_cookie(
-        key="XSRF-TOKEN",
+        key=settings.xsrf_cookie_name,
         value=xsrf_token,
         httponly=False,
         secure=secure_cookie,
@@ -201,10 +201,12 @@ async def logout(response: Response) -> dict[str, str]:
     settings = get_settings()
     # Mirror the Secure and SameSite flags used during login.
     secure_cookie = settings.app_env not in ("local", "e2e")
-    samesite_policy = "none" if secure_cookie else "lax"
+    # Same-origin on the VM (frontend and API share one host), so Lax is correct and
+    # more restrictive than the cross-site None previously needed for Azure SWA.
+    samesite_policy = "lax"
 
     response.set_cookie(
-        key="session",
+        key=settings.session_cookie_name,
         value="",
         httponly=True,
         secure=secure_cookie,
@@ -212,7 +214,7 @@ async def logout(response: Response) -> dict[str, str]:
         max_age=0,
     )
     response.set_cookie(
-        key="XSRF-TOKEN",
+        key=settings.xsrf_cookie_name,
         value="",
         httponly=False,
         secure=secure_cookie,
@@ -245,11 +247,13 @@ async def refresh_csrf_token(
     """
     settings = get_settings()
     secure_cookie = settings.app_env not in ("local", "e2e")
-    samesite_policy = "none" if secure_cookie else "lax"
+    # Same-origin on the VM (frontend and API share one host), so Lax is correct and
+    # more restrictive than the cross-site None previously needed for Azure SWA.
+    samesite_policy = "lax"
 
     xsrf_token = secrets.token_hex(32)
     response.set_cookie(
-        key="XSRF-TOKEN",
+        key=settings.xsrf_cookie_name,
         value=xsrf_token,
         httponly=False,
         secure=secure_cookie,

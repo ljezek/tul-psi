@@ -1,0 +1,67 @@
+# Student Projects Catalogue — DEVELOPMENT stack.
+#
+# Mirrors the prod stack but with the dev image variants, dev database/roles, the /dev
+# public prefix, and distinct cookie names so prod and dev sessions don't clash on the
+# shared host. Separate compose project (and DB) from prod, so a dev deploy can never
+# touch prod.
+#
+# Bring-up (first time, build locally):
+#   cp .env.example .env                       # set DSNs (spc_dev_* roles), JWT_SECRET, SMTP
+#   IMAGE_TAG=local docker compose build
+#   docker compose --profile migrate run --rm spc-migrate-dev
+#   docker compose up -d
+#   # optional dev seed data:
+#   docker compose run --rm spc-backend-dev python seed.py
+services:
+  spc-backend-dev:
+    image: ghcr.io/ljezek/tul-psi/backend:${IMAGE_TAG:-local}
+    build:
+      context: ../../../backend
+      dockerfile: Dockerfile
+    container_name: spc-backend-dev
+    env_file: .env
+    environment:
+      APP_ENV: dev
+      ROOT_PATH: "/dev"
+    networks:
+      - edge
+      - data
+    restart: unless-stopped
+
+  spc-frontend-dev:
+    image: ghcr.io/ljezek/tul-psi/frontend:${IMAGE_TAG:-local}-dev
+    build:
+      context: ../../../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_URL: /dev/projects/
+        VITE_API_URL: "/dev"
+        VITE_APP_ENV: dev
+        VITE_XSRF_COOKIE_NAME: XSRF-TOKEN-dev
+    container_name: spc-frontend-dev
+    networks:
+      - edge
+    restart: unless-stopped
+
+  # One-shot migration runner (owner/DDL role). Invoke explicitly:
+  #   docker compose --profile migrate run --rm spc-migrate-dev
+  spc-migrate-dev:
+    image: ghcr.io/ljezek/tul-psi/backend:${IMAGE_TAG:-local}
+    build:
+      context: ../../../backend
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      APP_ENV: dev
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - data
+    profiles:
+      - migrate
+    restart: "no"
+
+networks:
+  edge:
+    external: true
+  data:
+    external: true

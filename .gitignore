@@ -72,6 +72,10 @@ web_modules/
 .env.*
 !.env.example
 
+# VM infra secrets / artifacts (real credentials + local backup dumps)
+infra/vm/**/provision.conf
+infra/vm/data/backups/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

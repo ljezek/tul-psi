@@ -29,6 +29,8 @@ def _override_session() -> Generator[None, None, None]:
 def _mock_settings() -> Generator[None, None, None]:
     mock_settings = MagicMock()
     mock_settings.app_env = "local"
+    mock_settings.session_cookie_name = "session"
+    mock_settings.xsrf_cookie_name = "XSRF-TOKEN"
     with patch("api.auth.get_settings", return_value=mock_settings):
         yield
 

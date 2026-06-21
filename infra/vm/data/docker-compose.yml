@@ -1,0 +1,48 @@
+# Shared PostgreSQL server for ALL apps on the VM.
+#
+# A single Postgres instance hosts one database per app environment, each with its OWN
+# isolated role pair, so a leak of one env's credentials cannot touch another's data:
+#   SPC prod  -> student_projects      owner spc_prod_owner / app spc_prod_app
+#   SPC dev   -> student_projects_dev  owner spc_dev_owner  / app spc_dev_app
+#   (future)  -> wiki, ...             one more line in provision.conf
+#
+# Per database:
+#   owner role (DDL+DML, owns the DB)  — used by Alembic migrations.
+#   app role   (DML only)              — used by the running backend.
+# A dedicated SUPERUSER (.env POSTGRES_USER) only bootstraps + runs backups; it owns no
+# application data (POSTGRES_DB=postgres, the default maintenance DB).
+#
+# Postgres is NOT published on a host port — only services on the external `data` network
+# (app backends) can reach it. The edge proxy never touches the database.
+#
+# Bring-up:
+#   docker network create data                 # once, shared by all stacks
+#   cp .env.example .env                        # set the superuser password
+#   cp provision.conf.example provision.conf    # set per-database role passwords
+#   docker compose up -d
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: data-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Generic multi-tenant provisioner: one owner+app role pair per database.
+      - ./init/10-provision-databases.sh:/docker-entrypoint-initdb.d/10-provision-databases.sh:ro
+      - ./provision.conf:/provision.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data
+
+volumes:
+  pgdata:
+
+networks:
+  data:
+    external: true

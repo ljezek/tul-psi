@@ -1,0 +1,38 @@
+# Edge reverse proxy for the whole VM (swe.fm.tul.cz).
+#
+# Owns ports 80/443 and TLS for every app on the host. Apps (SPC, future wiki, ...)
+# are SEPARATE compose projects that join the external `edge` network; Caddy reaches
+# them by service/container name and routes by URL path. App deploys never touch this
+# stack.
+#
+# TLS: Caddy automatically obtains and renews a Let's Encrypt certificate for the
+# hostname(s) in the Caddyfile. DNS for swe.fm.tul.cz points directly at this VM, so the
+# VM terminates TLS itself. The `caddy_data` volume persists ACME account + certs across
+# restarts — DO NOT delete it (rate limits apply to re-issuance).
+#
+# Bring-up:
+#   docker network create edge        # once, shared by all stacks
+#   docker compose up -d
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: edge-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (QUIC)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # ACME account + issued certificates (MUST persist)
+      - caddy_config:/config
+    networks:
+      - edge
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+    external: true

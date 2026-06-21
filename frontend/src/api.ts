@@ -83,7 +83,7 @@ async function apiFetch<T>(path: string, options: NonNullable<Parameters<typeof 
   }
 
   if (MUTATING_METHODS.has((options.method ?? 'GET').toUpperCase())) {
-    const xsrfToken = getStoredCsrfToken() || getCookie('XSRF-TOKEN');
+    const xsrfToken = getStoredCsrfToken() || getCookie(config.xsrfCookieName);
     if (xsrfToken) {
       headers.set('X-XSRF-Token', xsrfToken);
     }

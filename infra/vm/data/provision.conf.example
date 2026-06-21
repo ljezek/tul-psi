@@ -1,0 +1,13 @@
+# Per-database provisioning for the shared Postgres server.
+# Copy to `provision.conf` and set REAL passwords. `provision.conf` is gitignored.
+#
+# One row per database. Whitespace-separated columns; '#' starts a comment.
+# Each database gets its own OWNER role (DDL+DML, used by Alembic migrations) and APP role
+# (DML only, used by the running backend) — fully isolated from other databases.
+#
+# db                    owner_user       owner_password         app_user       app_password
+student_projects        spc_prod_owner   change-me-prod-owner   spc_prod_app   change-me-prod-app
+student_projects_dev    spc_dev_owner    change-me-dev-owner    spc_dev_app    change-me-dev-app
+
+# Future apps slot in the same way, e.g.:
+# wiki                  wiki_owner       change-me              wiki_app       change-me

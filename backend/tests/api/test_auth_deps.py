@@ -60,6 +60,8 @@ async def test_get_current_user_returns_user_for_valid_token() -> None:
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         result = await get_current_user(request, session)
 
     assert result is user
@@ -77,6 +79,8 @@ async def test_get_current_user_raises_401_for_invalid_token() -> None:
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
@@ -96,6 +100,8 @@ async def test_get_current_user_raises_401_for_missing_user_id_in_payload() -> N
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
@@ -116,6 +122,8 @@ async def test_get_current_user_raises_401_when_user_not_in_db() -> None:
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
@@ -135,6 +143,8 @@ async def test_get_current_user_raises_401_for_non_integer_user_id() -> None:
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         await get_current_user(request, session)
 
     assert exc_info.value.status_code == 401
@@ -178,6 +188,8 @@ async def test_endpoint_returns_401_for_tampered_cookie(client: AsyncClient) -> 
 
     with patch("api.deps.get_settings") as mock_settings:
         mock_settings.return_value.jwt_secret = _JWT_SECRET
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         # Use a protected endpoint (PATCH /projects/{id}) that requires authentication.
         response = await client.patch(
             "/api/v1/projects/1", json={"title": "x"}, headers={"X-XSRF-Token": token}
@@ -205,6 +217,8 @@ async def test_get_optional_current_user_returns_none_for_expired_token() -> Non
     with patch("api.deps.get_settings") as mock_settings:
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         result = await get_optional_current_user(request, session)
 
     assert result is None
@@ -219,6 +233,8 @@ async def test_get_optional_current_user_returns_none_for_invalid_token() -> Non
     with patch("api.deps.get_settings") as mock_settings:
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         result = await get_optional_current_user(request, session)
 
     assert result is None
@@ -321,6 +337,8 @@ async def test_get_optional_current_user_returns_user_for_valid_token() -> None:
     ):
         mock_settings.return_value.jwt_secret = _JWT_SECRET
         mock_settings.return_value.jwt_algorithm = "HS256"
+        mock_settings.return_value.session_cookie_name = "session"
+        mock_settings.return_value.xsrf_cookie_name = "XSRF-TOKEN"
         result = await get_optional_current_user(request, session)
 
     assert result is user

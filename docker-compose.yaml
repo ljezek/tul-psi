@@ -1,96 +1,57 @@
+# Local development stack: PostgreSQL + backend (hot-reload).
+#
+# This is for LOCAL development on a workstation. The frontend runs separately via
+# `npm run dev` (see frontend/README.md); the VM deployment lives under infra/vm/ and the
+# e2e stack in docker-compose.e2e.yaml.
+#
+# Usage:
+#   docker compose up -d            # start db + backend
+#   docker compose logs -f backend
+#   docker compose down             # stop (add -v to wipe the database)
 services:
-  nginx:
-    image: nginx:alpine
+  db:
+    image: postgres:17-alpine
+    container_name: tul-psi-db
+    environment:
+      POSTGRES_DB: student_projects
+      POSTGRES_ADMIN_USER: tul_psi_admin
+      POSTGRES_ADMIN_PASSWORD: tul_psi_admin
+      POSTGRES_USER: tul_psi_admin
+      POSTGRES_PASSWORD: tul_psi_admin
+      POSTGRES_APP_USER: tul_psi_app
+      POSTGRES_APP_PASSWORD: tul_psi_app
     ports:
-      - "80:80"
+      - "5432:5432"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - frontend-prod
-      - backend-prod
-      - frontend-dev
-      - backend-dev
-    networks:
-      - spc-network
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tul_psi_admin -d student_projects"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # --- Production ---
-  backend-prod:
+  backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    environment:
-      - DATABASE_URL=${PROD_DATABASE_URL}
-      - APP_ENV=prod
-      - ROOT_PATH=/api
-      - API_PREFIX=/api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
-    networks:
-      - spc-network
-    restart: always
-
-  frontend-prod:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    environment:
-      - VITE_API_URL=/api/v1
-      - VITE_BASE_URL=/projects/
-      - VITE_APP_ENV=prod
-    networks:
-      - spc-network
-    restart: always
-
-  # --- Development ---
-  backend-dev:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    environment:
-      - DATABASE_URL=${DEV_DATABASE_URL}
-      - APP_ENV=dev
-      - ROOT_PATH=/dev/api
-      - API_PREFIX=/dev/api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
-    networks:
-      - spc-network
-    restart: always
-
-  frontend-dev:
-    build:
-      context: ./frontend
       dockerfile: Dockerfile.dev
+    container_name: tul-psi-backend
+    volumes:
+      - ./backend:/app # Bind mount for --reload
     environment:
-      - VITE_API_URL=/dev/api/v1
-      - VITE_BASE_URL=/dev/projects/
-      - VITE_APP_ENV=dev
-    networks:
-      - spc-network
-    restart: always
-
-  # --- Observability ---
-  jaeger:
-    image: jaegertracing/all-in-one:latest
+      - APP_ENV=local
+      - DATABASE_MIGRATION_URL=postgresql+asyncpg://tul_psi_admin:tul_psi_admin@db:5432/student_projects
+      - DATABASE_URL=postgresql+asyncpg://tul_psi_app:tul_psi_app@db:5432/student_projects
+      - LOG_LEVEL=debug
+      # Vite dev server origins so CORS allows credentialed requests (session cookie).
+      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      # No OpenTelemetry collector locally.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=
     ports:
-      - "16686:16686" # UI
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-    networks:
-      - spc-network
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./otel/prometheus:/etc/prometheus
-    networks:
-      - spc-network
-
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - ./otel/grafana:/var/lib/grafana
-    networks:
-      - spc-network
-
-networks:
-  spc-network:
-    driver: bridge
+volumes:
+  postgres-data:

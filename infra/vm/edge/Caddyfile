@@ -1,0 +1,45 @@
+# Edge routing for swe.fm.tul.cz.
+#
+# STEP 3: real routes for the SPC app (prod + dev). The edge owns TLS and routes by URL
+# path to each app's containers on the shared `edge` network. Backends serve /health and
+# /api/v1/* in both envs; the edge applies/strips the per-env public prefix.
+#
+# Caddy redirects HTTP->HTTPS automatically for a site defined with a hostname.
+
+{
+	# ACME account contact; also where Let's Encrypt expiry warnings would be sent.
+	email lukas.jezek@tul.cz
+}
+
+swe.fm.tul.cz {
+	encode gzip
+
+	# Liveness endpoint for the edge itself.
+	respond /healthz "ok" 200
+
+	# --- DEV (match the more specific /dev/* routes before the prod ones) ---
+	# Dev API: strip only /dev so the backend still sees /api/v1/*.
+	@dev_api path /dev/api/*
+	handle @dev_api {
+		uri strip_prefix /dev
+		reverse_proxy spc-backend-dev:8000
+	}
+	# Dev frontend: strip /dev/projects so nginx serves from its document root.
+	handle_path /dev/projects/* {
+		reverse_proxy spc-frontend-dev:80
+	}
+
+	# --- PROD ---
+	# Prod API: no strip — the backend serves routes under /api/v1.
+	handle /api/* {
+		reverse_proxy spc-backend-prod:8000
+	}
+	# Prod frontend: strip /projects so nginx serves from its document root.
+	handle_path /projects/* {
+		reverse_proxy spc-frontend-prod:80
+	}
+
+	# Bare domain -> production app.
+	redir / /projects/
+}
+
