@@ -1,0 +1,69 @@
+# Student Projects Catalogue — PRODUCTION stack.
+#
+# Image-based: CI builds and pushes images tagged by commit SHA to GHCR, and prod runs the
+# exact same backend image verified in dev (promotion by SHA). A `build:` section is kept
+# so the stack can also be built locally on the VM for the first manual bring-up
+# (IMAGE_TAG defaults to "local").
+#
+# Joins the shared external networks: backend on `edge` (reached by Caddy) + `data`
+# (reaches Postgres); frontend on `edge` only. Nothing is published on a host port — the
+# edge proxy is the only public entry point.
+#
+# Bring-up (first time, build locally):
+#   cp .env.example .env                       # set DSNs (spc_prod_* roles), JWT_SECRET, SMTP
+#   IMAGE_TAG=local docker compose build
+#   docker compose --profile migrate run --rm spc-migrate-prod
+#   docker compose up -d
+services:
+  spc-backend-prod:
+    image: ghcr.io/ljezek/tul-psi/backend:${IMAGE_TAG:-local}
+    build:
+      context: ../../../backend
+      dockerfile: Dockerfile
+    container_name: spc-backend-prod
+    env_file: .env
+    environment:
+      APP_ENV: prod
+      ROOT_PATH: ""
+    networks:
+      - edge
+      - data
+    restart: unless-stopped
+
+  spc-frontend-prod:
+    image: ghcr.io/ljezek/tul-psi/frontend:${IMAGE_TAG:-local}-prod
+    build:
+      context: ../../../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_URL: /projects/
+        VITE_API_URL: ""
+        VITE_APP_ENV: prod
+        VITE_XSRF_COOKIE_NAME: XSRF-TOKEN
+    container_name: spc-frontend-prod
+    networks:
+      - edge
+    restart: unless-stopped
+
+  # One-shot migration runner (owner/DDL role). Not started by `up`; invoke explicitly:
+  #   docker compose --profile migrate run --rm spc-migrate-prod
+  spc-migrate-prod:
+    image: ghcr.io/ljezek/tul-psi/backend:${IMAGE_TAG:-local}
+    build:
+      context: ../../../backend
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      APP_ENV: prod
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - data
+    profiles:
+      - migrate
+    restart: "no"
+
+networks:
+  edge:
+    external: true
+  data:
+    external: true
