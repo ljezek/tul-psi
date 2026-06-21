@@ -1,11 +1,10 @@
 name: "E2E Tests"
 
 on:
-  # Run after backend or frontend deployments complete on main.
+  # Run after the dev deployment completes on main.
   workflow_run:
     workflows:
-      - "Backend Deployment (Dev)"
-      - "Frontend Deployment (Dev)"
+      - "Deploy to VM (Dev)"
     types: [completed]
     branches: [main]
   # Also callable from other workflows (e.g. the prod deployment gate).

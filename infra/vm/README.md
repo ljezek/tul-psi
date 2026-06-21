@@ -124,9 +124,41 @@ docker exec -i data-postgres pg_restore -U spc_superadmin -d student_projects \
   --clean --if-exists -1 < backups/student_projects-YYYYmmdd-HHMMSS.dump
 ```
 
+## CI/CD (automated deploys)
+
+Deploys are driven by GitHub Actions (`.github/workflows/`), not by building on the VM.
+
+- **`Deploy to VM (Dev)`** (`deploy-dev.yml`) — on every push to `main`, builds three
+  SHA-tagged images and pushes them to GHCR:
+  `ghcr.io/ljezek/tul-psi/backend:<sha>`, `frontend:<sha>-dev`, `frontend:<sha>-prod`
+  (all three every push, so any SHA is promotable). It then SSHes to the VM and redeploys the
+  **dev** stack: `git checkout <sha>` → `docker compose pull` → `spc-migrate-dev` →
+  `up -d` → reload Caddy.
+- **`Promote to Prod`** (`promote-to-prod.yml`) — **manual** `workflow_dispatch`; paste the
+  green dev `sha`. Runs the E2E suite as a gate, then (if the `prod` GitHub environment has
+  required reviewers, after approval) redeploys the **prod** stack from the *same* images and
+  smoke-tests `https://swe.fm.tul.cz/projects/`.
+
+### Required GitHub repo secrets
+| Secret | Value |
+|--------|-------|
+| `VM_SSH_HOST` | `swe.fm.tul.cz` |
+| `VM_SSH_USER` | deploy user on the VM |
+| `VM_SSH_KEY` | that user's **private** SSH key (public key in `~/.ssh/authorized_keys`) |
+| `VM_SSH_PORT` | optional, defaults to `22` |
+| `VM_REPO_PATH` | path to this repo's checkout on the VM, e.g. `~/tul-psi` |
+
+GHCR pulls on the VM use the workflow's ephemeral `GITHUB_TOKEN` (passed over SSH) — no
+long-lived token to manage. Optionally create a `prod` GitHub **environment** with required
+reviewers to gate promotion.
+
+### VM prerequisites for CI deploys (one-time)
+- A git checkout of this repo at `VM_REPO_PATH`, with each stack's `.env` and
+  `infra/vm/data/provision.conf` already configured (these are gitignored and survive
+  `git checkout`).
+- The deploy user is in the `docker` group and the VM has outbound access to `ghcr.io`.
+
 ## Next steps (later)
-- **CI/CD:** GitHub Actions builds SHA-tagged GHCR images on push to `main`, auto-deploys
-  dev, and a manual workflow promotes the same SHA to prod.
 - **Observability:** a shared `observability/` stack (Jaeger/Prometheus/Grafana) behind
   edge auth; then set `OTEL_EXPORTER_OTLP_ENDPOINT` in the app `.env` files.
 - **Data migration:** import the Azure database into the shared Postgres (see

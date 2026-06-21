@@ -1,0 +1,63 @@
+name: "Promote to Prod"
+
+# Manual promotion of a dev-verified commit SHA to the PROD stack on the VM.
+# The prod images (backend:<sha>, frontend:<sha>-prod) were already built by the
+# "Deploy to VM (Dev)" run for this SHA, so this only pulls + migrates + restarts.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to promote (the green dev SHA)"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  # Gate: run the self-contained E2E suite before touching prod.
+  e2e:
+    uses: ./.github/workflows/e2e.yml
+
+  deploy-prod:
+    needs: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Requires approval if the `prod` GitHub environment has required reviewers configured.
+    environment: prod
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy prod stack over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_SSH_HOST }}
+          username: ${{ secrets.VM_SSH_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          envs: GHCR_TOKEN,GITHUB_ACTOR,IMAGE_TAG,REPO_PATH
+          script: |
+            set -euo pipefail
+            cd "$REPO_PATH"
+            git fetch origin --prune
+            git checkout -f "$IMAGE_TAG"     # exact tree for this SHA; .env/provision.conf are gitignored and survive
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+            cd infra/vm/spc
+            IMAGE_TAG="$IMAGE_TAG" docker compose pull
+            IMAGE_TAG="$IMAGE_TAG" docker compose --profile migrate run --rm spc-migrate-prod
+            IMAGE_TAG="$IMAGE_TAG" docker compose up -d
+            docker compose ps
+            cd ../edge && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+            docker logout ghcr.io
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          IMAGE_TAG: ${{ inputs.sha }}
+          REPO_PATH: ${{ secrets.VM_REPO_PATH }}
+
+      - name: Smoke test
+        run: |
+          code=$(curl -fsS -o /dev/null -w '%{http_code}' https://swe.fm.tul.cz/projects/)
+          echo "GET /projects/ -> $code"
+          test "$code" = "200"
